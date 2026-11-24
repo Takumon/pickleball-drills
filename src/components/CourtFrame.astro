@@ -24,6 +24,8 @@ interface Line {
 	mid: Point;
 	label?: string;
 	bounces?: { pt: Point; at: number }[];
+	/** アニメーションのボールの半径の列（高さの表現） */
+	radii?: string;
 }
 interface Props {
 	figures: Figure[];
@@ -93,6 +95,7 @@ const isSub = (t: string) => t === 'move';
 						data-kind={animated ? (l.type === 'move' ? 'move' : 'ball') : undefined}
 						data-player={animated && l.type === 'move' && typeof l.from === 'string' ? l.from : undefined}
 						data-ms={animated ? shotDurationMs[l.type as ShotType] : undefined}
+						data-r={animated ? l.radii : undefined}
 					/>
 				</>
 			);

@@ -93,7 +93,40 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 	const mid = candidates.find(clear) ?? candidates.find((p) => Math.abs(p[1] - COURT.net) >= 1.6) ?? candidates[0];
 	const label =
 		s.label ?? (s.type === 'move' ? '移動' : s.feed ? `球出し（${shotLabels[s.type]}）` : shotLabels[s.type]);
-	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces: bouncesOf(s, b.anchor, pointAt) };
+	const bounces = bouncesOf(s, b.anchor, pointAt);
+	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, radii: radiiOf(s, b.anchor, bounces) };
+}
+
+/**
+ * アニメーションのボールの大きさ（高さの表現）。真上から見た図なので、高い球ほど大きく、地面に近いほど小さく描く。
+ * 打つ高さ → 山（打球の種類ごとの高さ）→ 着地（0）または受ける高さ、を放物線でつなぎ、
+ * 線の長さに沿って区切った半径の列にする（Court の script で補間して使う）。
+ */
+const BALL_PEAK: Record<string, number> = {
+	lob: 14, smash: 8, serve: 6, return: 6, drop: 6, drive: 4, speedup: 3.5, dink: 3.5, reset: 3.5, volley: 3,
+};
+const HIT_HEIGHT = 2.5;
+const ballR = (h: number) => Math.min(1.3, 0.3 + h * 0.09);
+function radiiOf(s: Shot, toAnchor: 'paddle' | 'body' | 'point', bounces: { at: number }[]) {
+	if (s.type === 'move' || diagram.bounceMark === 'none') return undefined;
+	const peak = BALL_PEAK[s.type] ?? 4;
+	const h0 = s.type === 'smash' ? 8 : HIT_HEIGHT;
+	// 高さの放物線（2次ベジェ）。山の高さが両端より低ければ、ほぼまっすぐつなぐ
+	const hop = (ha: number, hb: number, p: number) => {
+		const c = p > Math.max(ha, hb) ? 2 * p - (ha + hb) / 2 : (ha + hb) / 2;
+		return (u: number) => (1 - u) ** 2 * ha + 2 * u * (1 - u) * c + u ** 2 * hb;
+	};
+	const b = bounces[0]?.at;
+	let height: (t: number) => number;
+	if (b !== undefined && b < 0.999) {
+		// 途中で弾む: 着地まで1つ目の山、弾んでから受けるまで小さな山
+		const first = hop(h0, 0, peak);
+		const second = hop(0, 2, 2.5);
+		height = (t) => (t <= b ? first(t / b) : second((t - b) / (1 - b)));
+	} else {
+		height = hop(h0, b !== undefined || toAnchor === 'point' ? 0 : HIT_HEIGHT, peak);
+	}
+	return Array.from({ length: 41 }, (_, i) => ballR(height(i / 40)).toFixed(3)).join(',');
 }
 
 /** サーブ・リターンでバウンド位置を書かなかったときの位置（線の長さに対する割合） */
@@ -353,6 +386,13 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 						const p = b.getPointAtLength(lens[k] * eb);
 						ball.setAttribute('cx', `${p.x}`);
 						ball.setAttribute('cy', `${p.y}`);
+						// 高さに合わせてボールの大きさを変える（data-r: 線に沿った半径の列）
+						const radii = b.dataset.r?.split(',').map(Number);
+						if (radii) {
+							const x = eb * (radii.length - 1);
+							const i = Math.min(Math.floor(x), radii.length - 2);
+							ball.setAttribute('r', `${radii[i] + (radii[i + 1] - radii[i]) * (x - i)}`);
+						} else ball.setAttribute('r', '0.55');
 					}
 				});
 				movers.forEach(({ g, dx, dy }) => g?.setAttribute('transform', `translate(${dx * e} ${dy * e})`));

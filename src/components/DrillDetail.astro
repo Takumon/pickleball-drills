@@ -44,7 +44,7 @@ const hidden = detailFields.filter(hasContent);
 		[{ fields: shown, inDetails: false }, { fields: hidden, inDetails: true }].map(({ fields, inDetails }) => {
 			const body = fields.map((field) => (
 				<section class="field">
-					<h3>{fieldLabels[field]}</h3>
+					{field !== 'diagram' && <h3>{fieldLabels[field]}</h3>}
 					{field === 'setup' && <p>{drill.setup}</p>}
 					{field === 'feed' && <p>{drill.feed}</p>}
 					{field === 'purpose' && <p>{drill.purpose}</p>}

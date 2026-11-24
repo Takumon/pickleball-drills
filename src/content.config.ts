@@ -3,7 +3,7 @@ import { z } from 'astro/zod';
 import { docsLoader } from '@astrojs/starlight/loaders';
 import { docsSchema } from '@astrojs/starlight/schema';
 import { categoryCodes } from './config/categories';
-import { roleLabels, shotLabels, zoneRects, type Role, type ShotType, type ZoneName } from './config/court';
+import { heightLevels, roleLabels, shotLabels, zoneRects, type HeightLevel, type Role, type ShotType, type ZoneName } from './config/court';
 
 const keysOf = <T extends string>(o: Record<T, unknown>) => Object.keys(o) as [T, ...T[]];
 const point = z.tuple([z.number(), z.number()]);
@@ -47,6 +47,9 @@ const diagram = z.object({
 				 * false なら印を付けない（ノーバウンド）。
 				 */
 				bounce: z.union([point, z.literal(false)]).optional(),
+				/** 打つ高さ・山の高さ（config/court.ts の heightLevels）。省略時は打球の種類で決まる。例: ロールのスピードアップは hit: underTape */
+				hit: z.enum(keysOf<HeightLevel>(heightLevels)).optional(),
+				peak: z.enum(keysOf<HeightLevel>(heightLevels)).optional(),
 			}),
 		)
 		.default([]),

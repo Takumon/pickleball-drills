@@ -77,3 +77,41 @@ export const zoneRects = {
 	'right-bottom': [10, 22, 10, 22],
 } as const satisfies Record<string, readonly [number, number, number, number]>;
 export type ZoneName = keyof typeof zoneRects;
+
+/**
+ * ボールの高さの段階（フィート。値はあとで調整する）。低い順。
+ * アニメーションのボールの大きさに使う（真上から見た図なので、高い球ほど大きく描く）。
+ */
+export const heightLevels = {
+	ground: { label: '地面', note: 'バウンドする位置', ft: 0 },
+	belowWaist: { label: '腰の下', note: 'サーブの打点', ft: 2.0 },
+	underTape: { label: '白帯のちょい下', note: 'ロールの打点', ft: 2.5 },
+	tape: { label: 'ネットの白帯', note: 'ネットの高さ', ft: 2.9 },
+	overTape: { label: '白帯のちょい上', note: 'フリックの打点、ディンクの頂点', ft: 3.3 },
+	waistToShoulder: { label: '腰上〜肩下', note: 'ボレー・ドライブの打点', ft: 4.0 },
+	head: { label: '肩より上・頭付近', note: '強めのボレーの打点', ft: 5.5 },
+	aboveTape: { label: '白帯から上', note: 'サーブ・リターン・ドロップの頂点', ft: 6.0 },
+	overhead: { label: '頭より上', note: 'スマッシュの打点', ft: 7.5 },
+	sky: { label: 'かなり上', note: 'ロブの頂点', ft: 14 },
+} as const;
+export type HeightLevel = keyof typeof heightLevels;
+
+/**
+ * 打球の種類ごとの、打つ高さ（hit）と山の高さ（peak）の既定値。
+ * 山が打つ高さ・受ける高さより低いときは、山を作らずにそのままつなぐ。
+ * 受ける高さは、受けた人が次に打つ球の打点（次がなければ「腰上〜肩下」）。
+ */
+export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; peak: HeightLevel }> = {
+	serve: { hit: 'belowWaist', peak: 'aboveTape' },
+	return: { hit: 'belowWaist', peak: 'aboveTape' },
+	drop: { hit: 'belowWaist', peak: 'aboveTape' },
+	dink: { hit: 'underTape', peak: 'overTape' },
+	reset: { hit: 'underTape', peak: 'overTape' },
+	drive: { hit: 'waistToShoulder', peak: 'tape' },
+	volley: { hit: 'waistToShoulder', peak: 'waistToShoulder' },
+	speedup: { hit: 'overTape', peak: 'overTape' },
+	smash: { hit: 'overhead', peak: 'overhead' },
+	lob: { hit: 'belowWaist', peak: 'sky' },
+};
+/** 次に打つ球がないときの、受ける高さ */
+export const defaultReceiveHeight: HeightLevel = 'waistToShoulder';

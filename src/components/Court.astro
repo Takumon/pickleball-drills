@@ -271,14 +271,18 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 				movers.forEach(({ g, dx, dy }) => g?.setAttribute('transform', `translate(${dx} ${dy})`));
 				return;
 			}
+			// 打球の種類ごとの時間（data-ms）。1つの場面に複数あるときは一番長いものに合わせる
+			const durations = [...balls, ...moves].map((p) => Number(p.dataset.ms) || SHOT_MS);
+			const duration = durations.length ? Math.max(...durations) : SHOT_MS;
 			const t0 = performance.now();
 			const tick = (now: number) => {
-				const t = Math.min(1, (now - t0) / SHOT_MS);
-				const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // ease-in-out
+				const t = Math.min(1, (now - t0) / duration);
+				const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // 人の動き: ease-in-out
+				const eb = Math.sin((t * Math.PI) / 2); // ボール: 打った瞬間が速く、少しずつ減速する
 				balls.forEach((b, k) => {
-					b.style.strokeDashoffset = `${lens[k] * (1 - e)}`;
+					b.style.strokeDashoffset = `${lens[k] * (1 - eb)}`;
 					if (k === 0) {
-						const p = b.getPointAtLength(lens[k] * e);
+						const p = b.getPointAtLength(lens[k] * eb);
 						ball.setAttribute('cx', `${p.x}`);
 						ball.setAttribute('cy', `${p.y}`);
 					}

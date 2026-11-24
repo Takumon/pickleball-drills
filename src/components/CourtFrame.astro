@@ -4,7 +4,7 @@
  * Court.astro から、コマ割りの各コマとアニメーションの各場面の両方で使う。
  * スタイルは Court.astro の .court 配下（is:global）で当てる。
  */
-import { COURT, zoneRects, type ZoneName } from '../config/court';
+import { COURT, zoneRects, shotDurationMs, type ShotType, type ZoneName } from '../config/court';
 
 type Point = [number, number];
 interface Figure {
@@ -77,6 +77,7 @@ const isSub = (t: string) => t === 'feed' || t === 'move';
 				marker-end={`url(#${uid}-${isSub(l.type) ? 'arrow-sub' : 'arrow'})`}
 				data-kind={animated ? (l.type === 'move' ? 'move' : 'ball') : undefined}
 				data-player={animated && l.type === 'move' && typeof l.from === 'string' ? l.from : undefined}
+				data-ms={animated ? shotDurationMs[l.type as ShotType] : undefined}
 			/>
 		))
 	}

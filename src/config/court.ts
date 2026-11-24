@@ -33,6 +33,22 @@ export const shotLabels = {
 } as const;
 export type ShotType = keyof typeof shotLabels;
 
+/** アニメーションで、打球（ボール）が飛ぶ時間・人が動く時間（ミリ秒）。小さいほど速い */
+export const shotDurationMs: Record<ShotType, number> = {
+	speedup: 450,
+	smash: 450,
+	volley: 550,
+	drive: 650,
+	feed: 1100,
+	serve: 1100,
+	return: 1100,
+	reset: 1200,
+	dink: 1300,
+	drop: 1400,
+	lob: 1600,
+	move: 1000,
+};
+
 /** 強調できるエリア（名前 → 矩形 [x, y, 幅, 高さ]） */
 export const zoneRects = {
 	left: [0, 0, 10, 44],

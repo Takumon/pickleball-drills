@@ -39,9 +39,6 @@ export const zoneRects = {
 	right: [10, 0, 10, 44],
 	'kitchen-top': [0, 15, 20, 7],
 	'kitchen-bottom': [0, 22, 20, 7],
-	// トランの位置を中心に、前後3.5ft（キッチンラインとベースラインの間の真ん中あたり）
-	'tran-top': [0, 4, 20, 7],
-	'tran-bottom': [0, 33, 20, 7],
 	'left-top': [0, 0, 10, 22],
 	'right-top': [10, 0, 10, 22],
 	'left-bottom': [0, 22, 10, 22],

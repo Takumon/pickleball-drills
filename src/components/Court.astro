@@ -78,7 +78,7 @@ const shots = diagram.shots.map((s) => {
 });
 
 // 表示範囲: crop=auto なら、人と打球が入る縦の範囲だけを切り出す（横はコート全幅、ネットは必ず入れる）。
-// ただし、トランが関わる側（人や打球がキッチンラインより3ft以上後ろにある、またはトランを強調している）は
+// ただし、トランが関わる側（人や打球がキッチンラインより3ft以上後ろにある）は
 // 位置関係が分かるように必ずベースラインまで入れる。
 let top = -pad;
 let bottom = COURT.length + pad;
@@ -90,8 +90,8 @@ if (diagram.crop === 'auto') {
 	];
 	const k1 = COURT.net - COURT.kitchen;
 	const k2 = COURT.net + COURT.kitchen;
-	const backTop = Math.min(...ys) <= k1 - 3 || diagram.zones.includes('tran-top');
-	const backBottom = Math.max(...ys) >= k2 + 3 || diagram.zones.includes('tran-bottom');
+	const backTop = Math.min(...ys) <= k1 - 3;
+	const backBottom = Math.max(...ys) >= k2 + 3;
 	const baselineMargin = 1.5;
 	top = backTop ? -baselineMargin : Math.max(-pad, Math.min(...ys) - 3.5);
 	bottom = backBottom ? COURT.length + baselineMargin : Math.min(COURT.length + pad, Math.max(...ys) + 3.5);

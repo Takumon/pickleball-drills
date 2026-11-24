@@ -18,6 +18,8 @@ export default defineConfig({
 			],
 			// ドリルページの見出しは目次に出ない作りで、目次が役に立たないため表示しない（スマホの「目次」バーも消える）
 			tableOfContents: false,
+			// ページ下の「前へ」「次へ」は使わないので出さない
+			pagination: false,
 			customCss: ['./src/styles/custom.css'],
 			components: {
 				MarkdownContent: './src/components/MarkdownContent.astro',

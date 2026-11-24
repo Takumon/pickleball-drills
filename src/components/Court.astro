@@ -26,9 +26,9 @@ const figures = diagram.players.map((p) => {
 	// 構えごとの、手の位置とパドルの先の位置（体の中心からの「右」「前」の距離）
 	// 腕 = 体→手の細線、パドル = 手→先の太線
 	const pose = {
-		ready: { hand: [1.9, 2.1], tip: [2.3, 3.9] },
-		fh: { hand: [2.8, 0.8], tip: [4.6, 1.4] },
-		bh: { hand: [-1.0, 2.5], tip: [-2.8, 3.2] },
+		ready: { hand: [1.9, 2.1], tip: [2.15, 3.3] },
+		fh: { hand: [2.8, 0.8], tip: [4.0, 1.15] },
+		bh: { hand: [-1.0, 2.5], tip: [-2.15, 2.95] },
 	}[p.paddle];
 	const hand = at(pose.hand[0], pose.hand[1]);
 	const tip = at(pose.tip[0], pose.tip[1]);
@@ -38,27 +38,31 @@ const figures = diagram.players.map((p) => {
 });
 const figureById = new Map(figures.map((p) => [p.id, p]));
 
-function resolve(ref: string | Point, end: 'from' | 'to'): { pt: Point; isPlayer: boolean } {
+type Anchor = 'paddle' | 'body' | 'point';
+/** 人を指す参照は、打球ならパドルの真ん中、人の動きなら体の中心に解決する */
+function resolve(ref: string | Point, target: 'paddle' | 'body'): { pt: Point; anchor: Anchor } {
 	if (typeof ref === 'string') {
 		const p = figureById.get(ref);
 		if (!p) throw new Error(`コート図: 人 "${ref}" が players にありません`);
-		// 打つ側はパドルの面から、受ける側は体の中心へ
-		return end === 'from' ? { pt: p.face, isPlayer: false } : { pt: [p.x, p.y], isPlayer: true };
+		return target === 'paddle' ? { pt: p.face, anchor: 'paddle' } : { pt: [p.x, p.y], anchor: 'body' };
 	}
-	return { pt: ref, isPlayer: false };
+	return { pt: ref, anchor: 'point' };
 }
+/** 端を縮める量（体の円・パドルの太線と重ならないように） */
+const inset = { body: PLAYER_R + 0.3, paddle: 0.6, point: 0 } as const;
 
 const shots = diagram.shots.map((s) => {
-	const a = resolve(s.from, s.type === 'move' ? 'to' : 'from');
-	const b = resolve(s.to, 'to');
+	const target = s.type === 'move' ? 'body' : 'paddle';
+	const a = resolve(s.from, target);
+	const b = resolve(s.to, target);
 	let [x1, y1] = a.pt;
 	let [x2, y2] = b.pt;
 	const len = Math.hypot(x2 - x1, y2 - y1) || 1;
 	const ux = (x2 - x1) / len;
 	const uy = (y2 - y1) / len;
-	// 人の円と重ならないよう、端を円の外まで縮める
-	if (a.isPlayer) [x1, y1] = [x1 + ux * PLAYER_R, y1 + uy * PLAYER_R];
-	if (b.isPlayer) [x2, y2] = [x2 - ux * (PLAYER_R + 0.3), y2 - uy * (PLAYER_R + 0.3)];
+	const startInset = a.anchor === 'body' ? PLAYER_R : 0;
+	[x1, y1] = [x1 + ux * startInset, y1 + uy * startInset];
+	[x2, y2] = [x2 - ux * inset[b.anchor], y2 - uy * inset[b.anchor]];
 	const curve = s.curve ?? (s.type === 'lob' ? 0.25 : 0);
 	// 曲げる量は距離に比例。正で進行方向の左側へふくらむ
 	const cx = (x1 + x2) / 2 - uy * len * curve;
@@ -325,7 +329,7 @@ const k2 = COURT.net + COURT.kitchen;
 	}
 	.player .paddle {
 		stroke: var(--paddle);
-		stroke-width: 1;
+		stroke-width: 0.7;
 		stroke-linecap: round;
 	}
 	.player text {

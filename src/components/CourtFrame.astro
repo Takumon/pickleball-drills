@@ -39,7 +39,7 @@ interface Props {
 const { figures, lines, viewBox, zones, uid, playerR, title, animated = false, step } = Astro.props;
 const k1 = COURT.net - COURT.kitchen;
 const k2 = COURT.net + COURT.kitchen;
-const isSub = (t: string) => t === 'feed' || t === 'move';
+const isSub = (t: string) => t === 'move';
 ---
 
 <svg viewBox={viewBox} role="img" aria-label={title} class:list={['court-svg', { frame: animated }]} data-step={step}>

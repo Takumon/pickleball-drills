@@ -91,7 +91,8 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 		Math.abs(p[1] - COURT.net) >= 1.6 && bodies.every(([bx, by]) => Math.hypot(p[0] - bx, p[1] - by) >= PLAYER_R + 1.6);
 	const candidates = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8].map(pointAt);
 	const mid = candidates.find(clear) ?? candidates.find((p) => Math.abs(p[1] - COURT.net) >= 1.6) ?? candidates[0];
-	const label = s.label ?? (s.type === 'move' ? '移動' : shotLabels[s.type]);
+	const label =
+		s.label ?? (s.type === 'move' ? '移動' : s.feed ? `球出し（${shotLabels[s.type]}）` : shotLabels[s.type]);
 	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1] };
 }
 

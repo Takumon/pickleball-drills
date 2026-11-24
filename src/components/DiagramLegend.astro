@@ -5,7 +5,7 @@
 import { roleLabels, shotLabels, shotDurationMs, shotCurve, type Role, type ShotType } from '../config/court';
 import '../styles/court.css';
 
-const order: ShotType[] = ['speedup', 'smash', 'volley', 'drive', 'serve', 'return', 'reset', 'dink', 'drop', 'lob', 'feed', 'move'];
+const order: ShotType[] = ['speedup', 'smash', 'volley', 'drive', 'serve', 'return', 'reset', 'dink', 'drop', 'lob', 'move'];
 /** 線の形と太さ（styles/court.css の .t-* と合わせる） */
 const style: Record<ShotType, string> = {
 	speedup: '実線',
@@ -18,7 +18,6 @@ const style: Record<ShotType, string> = {
 	dink: '点線',
 	drop: '点線',
 	lob: '破線',
-	feed: '灰色の点線',
 	move: '灰色の点線',
 };
 const width: Record<ShotType, string> = {
@@ -32,10 +31,9 @@ const width: Record<ShotType, string> = {
 	reset: '細い',
 	dink: '細い',
 	drop: '細い',
-	feed: '細い',
 	move: '細い',
 };
-const isSub = (t: ShotType) => t === 'feed' || t === 'move';
+const isSub = (t: ShotType) => t === 'move';
 const roles = Object.keys(roleLabels) as Role[];
 /** 見本の線。弧の大きさは実際の図と同じ shotCurve を使う */
 const samplePath = (t: ShotType) => `M1.2 2.9 Q6.8 ${(2.9 - 11.2 * shotCurve[t]).toFixed(2)} 12.4 2.9`;
@@ -46,7 +44,8 @@ const sec = (ms: number) => `${(ms / 1000).toFixed(2).replace(/0$/, '')}秒`;
 
 <div class="court legend-page">
 	<h2>打球の線</h2>
-	<p>強く速い球は太い実線、柔らかく落とす球は細い点線、ロブは破線で描きます。球出しと人の移動は灰色の点線です。弧が大きいほど、山なりの球です。</p>
+	<p>強く速い球は太い実線、柔らかく落とす球は細い点線、ロブは破線で描きます。人の移動は灰色の点線です。弧が大きいほど、山なりの球です。</p>
+	<p>球出しの線は出す球の種類で描き、「球出し（ディンク）」のように名前を付けます。</p>
 	<table class="legend-table">
 		<thead>
 			<tr><th>見本</th><th>名前</th><th>線</th><th>太さ</th><th>弧</th><th>速さ</th></tr>

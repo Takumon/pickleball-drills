@@ -37,7 +37,9 @@ const diagram = z.object({
 				curve: z.number().optional(),
 				/** 順番を示す番号。番号ごとに1コマの図にする */
 				n: z.number().int().optional(),
-				/** 線の上に書く名前。省略時は打球の種類名（人の動きは名前なし） */
+				/** 球出しの球なら true。線は球の種類で描き、名前は「球出し（ディンク）」のようにする */
+				feed: z.boolean().default(false),
+				/** 線の上に書く名前。省略時は打球の種類名（人の動きは「移動」） */
 				label: z.string().optional(),
 			}),
 		)

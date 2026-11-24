@@ -18,7 +18,6 @@ export type Role = keyof typeof roleLabels;
 
 /** 打球・動きの種類（線の色・形と凡例に使う） */
 export const shotLabels = {
-	feed: '球出し',
 	dink: 'ディンク',
 	drop: 'ドロップ',
 	reset: 'リセット',
@@ -44,7 +43,6 @@ export const shotCurve: Record<ShotType, number> = {
 	reset: 0.1,
 	serve: 0.05,
 	return: 0.05,
-	feed: 0.05,
 	speedup: 0,
 	smash: 0,
 	drive: 0,
@@ -58,7 +56,6 @@ export const shotDurationMs: Record<ShotType, number> = {
 	smash: 450,
 	volley: 550,
 	drive: 650,
-	feed: 1100,
 	serve: 1100,
 	return: 1100,
 	reset: 1200,

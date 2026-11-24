@@ -177,17 +177,6 @@ const k2 = COURT.net + COURT.kitchen;
 	<figcaption>
 		<ul class="legend">
 			{
-				figures.length > 0 && (
-					<li>
-						<svg class="swatch-paddle player role-practice" viewBox="0 0 30 12" aria-hidden="true">
-							<line class="arm" x1="2" y1="6" x2="13" y2="6" />
-							<line class="paddle" x1="13" y1="6" x2="27" y2="6" />
-						</svg>
-						{figures.some((p) => p.lefty) ? '細線=腕・太線=パドル' : '細線=腕・太線=パドル（右利き）'}
-					</li>
-				)
-			}
-			{
 				usedRoles.map((r) => (
 					<li>
 						<span class={`swatch player role-${r}`} />
@@ -378,16 +367,6 @@ const k2 = COURT.net + COURT.kitchen;
 	.swatch-line {
 		width: 1.6em;
 		height: 0.5em;
-	}
-	.swatch-paddle {
-		width: 1.8em;
-		height: 0.75em;
-	}
-	.swatch-paddle .arm {
-		stroke-width: 1.6;
-	}
-	.swatch-paddle .paddle {
-		stroke-width: 5;
 	}
 	.swatch-line path {
 		stroke-width: 2;

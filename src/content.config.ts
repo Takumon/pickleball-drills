@@ -18,6 +18,12 @@ const diagram = z.object({
 				y: z.number(),
 				role: z.enum(keysOf<Role>(roleLabels)).default('practice'),
 				label: z.string().optional(),
+				/** パドルの構え: ready=体の前 / fh=フォア側 / bh=バック側 */
+				paddle: z.enum(['ready', 'fh', 'bh']).default('ready'),
+				/** 向き。省略時はネット側（y<22 なら down、それ以外は up） */
+				facing: z.enum(['up', 'down']).optional(),
+				/** 左利きで描く（既定は右利き） */
+				lefty: z.boolean().default(false),
 			}),
 		)
 		.default([]),
@@ -35,6 +41,8 @@ const diagram = z.object({
 		)
 		.default([]),
 	zones: z.array(z.enum(keysOf<ZoneName>(zoneRects))).default([]),
+	/** auto=使っている範囲だけ縦に切り出す / full=コート全体 */
+	crop: z.enum(['auto', 'full']).default('auto'),
 	caption: z.string().optional(),
 });
 export type Diagram = z.infer<typeof diagram>;

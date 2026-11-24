@@ -4,6 +4,9 @@
  */
 export const COURT = { width: 20, length: 44, net: 22, kitchen: 7 } as const;
 
+/** トランの位置 = キッチンラインとベースラインの中間（上側 y=7.5、下側 y=36.5） */
+export const TRAN = { top: 7.5, bottom: 36.5 } as const;
+
 /** 人の役割（色分けと凡例に使う） */
 export const roleLabels = {
 	feed: '球出し役',
@@ -36,8 +39,9 @@ export const zoneRects = {
 	right: [10, 0, 10, 44],
 	'kitchen-top': [0, 15, 20, 7],
 	'kitchen-bottom': [0, 22, 20, 7],
-	'tran-top': [0, 7, 20, 8],
-	'tran-bottom': [0, 29, 20, 8],
+	// トランの位置を中心に、前後3.5ft（キッチンラインとベースラインの間の真ん中あたり）
+	'tran-top': [0, 4, 20, 7],
+	'tran-bottom': [0, 33, 20, 7],
 	'left-top': [0, 0, 10, 22],
 	'right-top': [10, 0, 10, 22],
 	'left-bottom': [0, 22, 10, 22],

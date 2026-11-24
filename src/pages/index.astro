@@ -1,0 +1,30 @@
+---
+// トップ兼メニュー表示ページ（?m=... があればメニュー表示）。現在は準備中のプレースホルダー。
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<html lang="ja">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>ピックルボール ドリル集</title>
+		<style>
+			:root { color-scheme: light dark; --bg: #ffffff; --fg: #1a1a1a; --muted: #666; --accent: #2f7d32; }
+			@media (prefers-color-scheme: dark) { :root { --bg: #17181c; --fg: #ececec; --muted: #a0a0a0; --accent: #7bc67e; } }
+			body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif; line-height: 1.7; }
+			main { max-width: 640px; margin: 0 auto; padding: 32px 16px; }
+			a { color: var(--accent); }
+			.muted { color: var(--muted); font-size: 0.85rem; }
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>ピックルボール ドリル集</h1>
+			<p>練習会で使うドリル（練習メニュー）の説明をまとめたサイトです。現在準備中です。</p>
+			<ul>
+				<li><a href={`${base}/drills/`}>ドリル一覧</a></li>
+				<li><a href={`${base}/glossary/`}>用語集</a></li>
+			</ul>
+		</main>
+	</body>
+</html>

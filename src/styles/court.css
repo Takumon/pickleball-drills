@@ -50,11 +50,21 @@
 	margin-top: 0.5rem;
 	flex-wrap: wrap;
 }
+/* Starlight の本文スタイルが2つ目以降の要素に付ける上余白を打ち消し、高さをそろえる */
+.court .anim-controls > *,
+.court .anim-steps > * {
+	margin: 0;
+}
 .court .anim-controls button {
 	font: inherit;
 	font-size: 0.9rem;
-	min-width: 2.5rem;
-	min-height: 2.25rem;
+	line-height: 1;
+	width: 2.75rem;
+	height: 2.25rem;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	border-radius: 0.5rem;
 	border: 1px solid var(--sl-color-gray-5, #ccc);
 	background: var(--sl-color-gray-6, #f3f4f6);

@@ -16,6 +16,9 @@ export default defineConfig({
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/Takumon/pickleball-drills' },
 			],
+			// ドリルページの見出しは目次に出ない作りで、目次が役に立たないため表示しない（スマホの「目次」バーも消える）
+			tableOfContents: false,
+			customCss: ['./src/styles/custom.css'],
 			components: {
 				MarkdownContent: './src/components/MarkdownContent.astro',
 			},

@@ -266,12 +266,19 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			const lens = balls.map((b) => b.getTotalLength());
 			// 線はマスク側の線（.reveal）を伸ばして見せる。本体の線は点線・破線のまま描ける
 			const reveals = balls.map((b) => frame.querySelector<SVGPathElement>(`path.reveal[data-i="${b.dataset.i}"]`));
+			// 伸びている途中は、線の先端をボールの位置にぴったり合わせる（端は丸めない）。
+			// 伸び切ったら全体を見せ、矢印の先も表示する（端を丸めて矢印の先まで覆う）
 			const setReveal = (k: number, ratio: number) => {
 				const r = reveals[k];
 				if (!r) return;
-				const len = lens[k] + 4; // 矢印の先まで覆う
-				r.style.strokeDasharray = `${len}`;
-				r.style.strokeDashoffset = `${len * (1 - ratio)}`;
+				if (ratio >= 1) {
+					r.style.strokeDasharray = 'none';
+					r.style.strokeLinecap = 'round';
+				} else {
+					r.style.strokeDasharray = `${lens[k] * ratio} ${lens[k] + 10}`;
+					r.style.strokeLinecap = 'butt';
+				}
+				r.style.strokeDashoffset = '0';
 			};
 			const reset = () => {
 				balls.forEach((_, k) => setReveal(k, animate ? 0 : 1));

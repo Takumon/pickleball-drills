@@ -21,6 +21,7 @@ export default defineConfig({
 			},
 			sidebar: [
 				{ label: 'ドリル一覧', slug: 'drills' },
+				{ label: '図の見方', slug: 'legend' },
 				...categories.map((c) => ({
 					label: c.label,
 					collapsed: true,

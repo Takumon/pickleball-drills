@@ -32,6 +32,8 @@ export type ShotType = keyof typeof shotLabels;
 
 /** 強調できるエリア（名前 → 矩形 [x, y, 幅, 高さ]） */
 export const zoneRects = {
+	left: [0, 0, 10, 44],
+	right: [10, 0, 10, 44],
 	'kitchen-top': [0, 15, 20, 7],
 	'kitchen-bottom': [0, 22, 20, 7],
 	'tran-top': [0, 7, 20, 8],

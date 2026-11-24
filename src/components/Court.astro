@@ -1,6 +1,7 @@
 ---
 import type { Diagram } from '../content.config';
-import { COURT, roleLabels, shotLabels, zoneRects } from '../config/court';
+import { COURT, roleLabels, shotLabels } from '../config/court';
+import CourtFrame from './CourtFrame.astro';
 
 interface Props {
 	diagram: Diagram;
@@ -140,83 +141,53 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 ---
 
 <figure class:list={['court', { multi }]} style={`--cols: ${Math.min(panels.length, 4)}`}>
+	{
+		multi && (
+			<div class="anim" data-court-anim>
+				<div class="anim-stage">
+					{panels.map((pn, i) => (
+						<CourtFrame
+							figures={pn.figures}
+							lines={pn.lines}
+							viewBox={viewBox}
+							zones={diagram.zones}
+							uid={`${uid}a${i}`}
+							playerR={PLAYER_R}
+							title={`${title}（アニメーション ${i + 1}）`}
+							animated
+							step={i}
+						/>
+					))}
+				</div>
+				<div class="anim-controls">
+					<button type="button" data-act="prev" aria-label="前の手">◀</button>
+					<button type="button" data-act="toggle" aria-label="一時停止">❚❚</button>
+					<button type="button" data-act="next" aria-label="次の手">▶</button>
+					<span class="anim-steps">
+						{panels.map((pn, i) => (
+							<span class="anim-step" data-step-dot={i}>
+								{pn.n !== undefined ? circled(pn.n) : i + 1}
+							</span>
+						))}
+					</span>
+				</div>
+			</div>
+		)
+	}
 	<div class="panels">
 		{
 			panels.map((pn, i) => (
 				<div class="panel">
 					{multi && pn.n !== undefined && <div class="panel-no">{circled(pn.n)}</div>}
-					<svg viewBox={viewBox} role="img" aria-label={multi ? `${title} ${i + 1}` : title}>
-						<defs>
-							<marker
-								id={`${uid}-arrow`}
-								viewBox="0 0 10 10"
-								refX="8"
-								refY="5"
-								markerWidth="5"
-								markerHeight="5"
-								orient="auto-start-reverse"
-							>
-								<path d="M0 0 L10 5 L0 10 z" class="arrowhead" />
-							</marker>
-							<marker
-								id={`${uid}-arrow-sub`}
-								viewBox="0 0 10 10"
-								refX="8"
-								refY="5"
-								markerWidth="5"
-								markerHeight="5"
-								orient="auto-start-reverse"
-							>
-								<path d="M0 0 L10 5 L0 10 z" class="arrowhead sub" />
-							</marker>
-						</defs>
-
-						<rect class="surface" x="0" y="0" width={COURT.width} height={COURT.length} />
-						<rect class="kitchen" x="0" y={k1} width={COURT.width} height={COURT.kitchen * 2} />
-						{diagram.zones.map((z) => {
-							const [x, y, w, h] = zoneRects[z];
-							return <rect class="zone" x={x} y={y} width={w} height={h} />;
-						})}
-						<g class="lines">
-							<rect x="0" y="0" width={COURT.width} height={COURT.length} />
-							<line x1="0" y1={k1} x2={COURT.width} y2={k1} />
-							<line x1="0" y1={k2} x2={COURT.width} y2={k2} />
-							<line x1={COURT.width / 2} y1="0" x2={COURT.width / 2} y2={k1} />
-							<line x1={COURT.width / 2} y1={k2} x2={COURT.width / 2} y2={COURT.length} />
-						</g>
-						<line class="net" x1="-1" y1={COURT.net} x2={COURT.width + 1} y2={COURT.net} />
-
-						{pn.lines.map((l) => {
-							const sub = l.type === 'feed' || l.type === 'move';
-							return (
-								<path
-									class:list={['shot', { sub }]}
-									d={l.d}
-									marker-end={`url(#${uid}-${sub ? 'arrow-sub' : 'arrow'})`}
-								/>
-							);
-						})}
-
-						{pn.figures.map((p) => (
-							<g class={`player role-${p.role}`}>
-								<line class="arm" x1={p.shoulder[0]} y1={p.shoulder[1]} x2={p.hand[0]} y2={p.hand[1]} />
-								<line class="paddle" x1={p.hand[0]} y1={p.hand[1]} x2={p.tip[0]} y2={p.tip[1]} />
-								<circle class="body" cx={p.x} cy={p.y} r={PLAYER_R} />
-								<text x={p.x} y={p.y}>
-									{p.label ?? p.id}
-								</text>
-							</g>
-						))}
-
-						{pn.lines.map(
-							(l) =>
-								l.label && (
-									<text class="shot-label" x={l.mid[0]} y={l.mid[1]}>
-										{l.label}
-									</text>
-								),
-						)}
-					</svg>
+					<CourtFrame
+						figures={pn.figures}
+						lines={pn.lines}
+						viewBox={viewBox}
+						zones={diagram.zones}
+						uid={`${uid}p${i}`}
+						playerR={PLAYER_R}
+						title={multi ? `${title} ${i + 1}` : title}
+					/>
 				</div>
 			))
 		}
@@ -236,14 +207,157 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 	</figcaption>
 </figure>
 
-<style>
+<script>
+	/**
+	 * コート図のアニメーション。場面（.frame）を1つずつ表示し、
+	 * 打球はボールを線に沿って動かし（線も伸ばして描く）、人の動きは人を移動先まで動かす。
+	 */
+	const SHOT_MS = 900;
+	const PAUSE_MS = 700;
+	const LOOP_PAUSE_MS = 1600;
+
+	function setup(root: HTMLElement) {
+		const frames = [...root.querySelectorAll<SVGSVGElement>('svg.frame')];
+		const dots = [...root.querySelectorAll<HTMLElement>('[data-step-dot]')];
+		const toggleBtn = root.querySelector<HTMLButtonElement>('[data-act="toggle"]')!;
+		let current = 0;
+		let playing = true;
+		let raf = 0;
+		let timer = 0;
+
+		const stop = () => {
+			cancelAnimationFrame(raf);
+			clearTimeout(timer);
+		};
+
+		/** 場面 i を表示し、その手を動かす。終わったら done を呼ぶ */
+		function show(i: number, animate: boolean, done?: () => void) {
+			stop();
+			current = i;
+			frames.forEach((f, k) => (f.style.display = k === i ? '' : 'none'));
+			dots.forEach((d, k) => d.classList.toggle('active', k === i));
+			const frame = frames[i];
+			const ball = frame.querySelector<SVGCircleElement>('.ball')!;
+			const balls = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="ball"]')];
+			const moves = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="move"]')];
+			const movers = moves.map((m) => {
+				const g = frame.querySelector<SVGGElement>(`[data-player-id="${m.dataset.player}"]`);
+				const len = m.getTotalLength();
+				const start = m.getPointAtLength(0);
+				const end = m.getPointAtLength(len);
+				return { g, dx: end.x - start.x, dy: end.y - start.y };
+			});
+			const lens = balls.map((b) => b.getTotalLength());
+			// 矢印の先は、線が伸び切ってから出す
+			const markers = balls.map((b) => b.getAttribute('marker-end') ?? b.dataset.marker ?? '');
+			const showMarkers = (on: boolean) =>
+				balls.forEach((b, k) => {
+					b.dataset.marker = markers[k];
+					if (on) b.setAttribute('marker-end', markers[k]);
+					else b.removeAttribute('marker-end');
+				});
+			const reset = () => {
+				balls.forEach((b, k) => {
+					b.style.strokeDasharray = `${lens[k]}`;
+					b.style.strokeDashoffset = animate ? `${lens[k]}` : '0';
+				});
+				showMarkers(!animate);
+				movers.forEach(({ g }) => g?.setAttribute('transform', ''));
+				ball.setAttribute('cx', '-10');
+			};
+			reset();
+			if (!animate) {
+				balls.forEach((b) => (b.style.strokeDashoffset = '0'));
+				movers.forEach(({ g, dx, dy }) => g?.setAttribute('transform', `translate(${dx} ${dy})`));
+				return;
+			}
+			const t0 = performance.now();
+			const tick = (now: number) => {
+				const t = Math.min(1, (now - t0) / SHOT_MS);
+				const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // ease-in-out
+				balls.forEach((b, k) => {
+					b.style.strokeDashoffset = `${lens[k] * (1 - e)}`;
+					if (k === 0) {
+						const p = b.getPointAtLength(lens[k] * e);
+						ball.setAttribute('cx', `${p.x}`);
+						ball.setAttribute('cy', `${p.y}`);
+					}
+				});
+				movers.forEach(({ g, dx, dy }) => g?.setAttribute('transform', `translate(${dx * e} ${dy * e})`));
+				if (t < 1) raf = requestAnimationFrame(tick);
+				else {
+					showMarkers(true);
+					ball.setAttribute('cx', '-10');
+					done?.();
+				}
+			};
+			raf = requestAnimationFrame(tick);
+		}
+
+		function playFrom(i: number) {
+			show(i, true, () => {
+				if (!playing) return;
+				const last = i === frames.length - 1;
+				timer = window.setTimeout(() => playFrom(last ? 0 : i + 1), last ? LOOP_PAUSE_MS : PAUSE_MS);
+			});
+		}
+
+		function setPlaying(p: boolean) {
+			playing = p;
+			toggleBtn.textContent = p ? '❚❚' : '▶︎';
+			toggleBtn.setAttribute('aria-label', p ? '一時停止' : '再生');
+			toggleBtn.classList.toggle('paused', !p);
+		}
+
+		root.querySelector('[data-act="prev"]')!.addEventListener('click', () => {
+			setPlaying(false);
+			show((current - 1 + frames.length) % frames.length, true);
+		});
+		root.querySelector('[data-act="next"]')!.addEventListener('click', () => {
+			setPlaying(false);
+			show((current + 1) % frames.length, true);
+		});
+		toggleBtn.addEventListener('click', () => {
+			if (playing) {
+				setPlaying(false);
+				stop();
+			} else {
+				setPlaying(true);
+				playFrom(current);
+			}
+		});
+		dots.forEach((d, k) =>
+			d.addEventListener('click', () => {
+				setPlaying(false);
+				show(k, true);
+			}),
+		);
+
+		// 画面に見えている間だけ動かす
+		const io = new IntersectionObserver((entries) => {
+			for (const e of entries) {
+				if (e.isIntersecting && playing) playFrom(current);
+				else if (!e.isIntersecting) stop();
+			}
+		});
+		io.observe(root);
+		show(0, false);
+	}
+
+	if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		document.querySelectorAll<HTMLElement>('[data-court-anim]').forEach(setup);
+	}
+</script>
+
+<style is:global>
 	.court {
 		--court-surface: #dfeedd;
 		--court-kitchen: #c9e2c5;
 		--court-zone: rgb(255 214 10 / 0.22);
 		--court-line: #ffffff;
 		--court-net: #3a3a3a;
-		--ball: #c2410c;
+		--shot: #c2410c;
+		--ball: #facc15;
 		--sub: #6b7280;
 		--label: #111827;
 		--r-feed: #f59e0b;
@@ -257,18 +371,67 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 	.court.multi {
 		max-width: none;
 	}
-	:global([data-theme='dark']) .court {
+	[data-theme='dark'] .court {
 		--court-surface: #23382a;
 		--court-kitchen: #2d4a35;
 		--court-zone: rgb(250 204 21 / 0.12);
 		--court-line: #e5e7eb;
 		--court-net: #f3f4f6;
-		--ball: #facc15;
+		--shot: #fb923c;
 		--sub: #9ca3af;
 		--label: #f9fafb;
 		--paddle: #e5e7eb;
 	}
-	.panels {
+	.court .anim {
+		max-width: 340px;
+		margin: 0 auto 1.25rem;
+	}
+	/* 縦長の図でも、コートと操作ボタンがスマホの1画面に収まるようにする */
+	.court .anim svg.court-svg {
+		max-height: 60vh;
+		width: auto;
+		max-width: 100%;
+		margin: 0 auto;
+	}
+	.court .anim-controls {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.court .anim-controls button {
+		font: inherit;
+		font-size: 0.9rem;
+		min-width: 2.5rem;
+		min-height: 2.25rem;
+		border-radius: 0.5rem;
+		border: 1px solid var(--sl-color-gray-5, #ccc);
+		background: var(--sl-color-gray-6, #f3f4f6);
+		color: var(--sl-color-white, #111);
+		cursor: pointer;
+	}
+	.court .anim-steps {
+		display: inline-flex;
+		gap: 0.35rem;
+		margin-left: 0.25rem;
+	}
+	.court .anim-step {
+		font-size: 1.15rem;
+		font-weight: 700;
+		opacity: 0.35;
+		cursor: pointer;
+	}
+	.court .anim-step.active {
+		opacity: 1;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.court .anim {
+			display: none;
+		}
+	}
+	.court .panels {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 0.75rem 0.5rem;
@@ -281,59 +444,61 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
 		}
 	}
-	.panel {
-		margin: 0;
-	}
-	.panel-no {
+	.court .panel-no {
 		font-weight: 800;
 		font-size: 1.5rem;
 		line-height: 1.1;
 		margin-bottom: 0.2rem;
 		color: var(--sl-color-white, #111);
 	}
-	svg {
+	.court svg.court-svg {
 		width: 100%;
 		height: auto;
 		display: block;
 	}
-	.surface {
+	.court .surface {
 		fill: var(--court-surface);
 	}
-	.kitchen {
+	.court .kitchen {
 		fill: var(--court-kitchen);
 	}
-	.zone {
+	.court .zone {
 		fill: var(--court-zone);
 	}
-	.lines {
+	.court .lines {
 		fill: none;
 		stroke: var(--court-line);
 		stroke-width: 0.25;
 	}
-	.net {
+	.court .net {
 		stroke: var(--court-net);
 		stroke-width: 0.35;
 		stroke-dasharray: 0.6 0.3;
 	}
 	/* 打球は1色。球出しと人の動きは灰色の点線 */
-	.shot {
+	.court .shot {
 		fill: none;
-		stroke: var(--ball);
+		stroke: var(--shot);
 		stroke-width: 0.4;
 		stroke-linecap: round;
 	}
-	.shot.sub {
+	.court .shot.sub {
 		stroke: var(--sub);
 		stroke-width: 0.3;
 		stroke-dasharray: 0.7 0.5;
 	}
-	.arrowhead {
-		fill: var(--ball);
+	.court .arrowhead {
+		fill: var(--shot);
 	}
-	.arrowhead.sub {
+	.court .arrowhead.sub {
 		fill: var(--sub);
 	}
-	.shot-label {
+	.court .ball {
+		fill: var(--ball);
+		stroke: #1f2937;
+		stroke-width: 0.12;
+	}
+	.court .shot-label {
 		font-size: 1.7px;
 		font-weight: 700;
 		text-anchor: middle;
@@ -348,7 +513,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 	.court:not(.multi) .shot-label {
 		font-size: 1.3px;
 	}
-	.player text {
+	.court .player text {
 		font-size: 1.1px;
 		font-weight: 700;
 		text-anchor: middle;
@@ -356,31 +521,31 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 		font-family: system-ui, sans-serif;
 		fill: #fff;
 	}
-	.player .body {
+	.court .player .body {
 		fill: var(--role-color);
 		stroke: #fff;
 		stroke-width: 0.2;
 	}
 	/* 腕 = 細線、パドル = 太線 */
-	.player .arm {
+	.court .player .arm {
 		stroke: var(--role-color);
 		stroke-width: 0.3;
 		stroke-linecap: round;
 	}
-	.player .paddle {
+	.court .player .paddle {
 		stroke: var(--paddle);
 		stroke-width: 0.45;
 		stroke-linecap: round;
 	}
-	.role-feed { --role-color: var(--r-feed); }
-	.role-practice { --role-color: var(--r-practice); }
-	.role-partner { --role-color: var(--r-partner); }
-	.role-opponent { --role-color: var(--r-opponent); }
-	figcaption {
+	.court .role-feed { --role-color: var(--r-feed); }
+	.court .role-practice { --role-color: var(--r-practice); }
+	.court .role-partner { --role-color: var(--r-partner); }
+	.court .role-opponent { --role-color: var(--r-opponent); }
+	.court figcaption {
 		font-size: var(--sl-text-xs, 0.8rem);
 		margin-top: 0.5rem;
 	}
-	.legend {
+	.court .legend {
 		list-style: none;
 		padding: 0;
 		margin: 0;
@@ -389,20 +554,20 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 		gap: 0.25rem 0.9rem;
 		justify-content: center;
 	}
-	.legend li {
+	.court .legend li {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.3rem;
 		margin: 0;
 	}
-	.legend .swatch {
+	.court .legend .swatch {
 		display: inline-block;
 		width: 0.8em;
 		height: 0.8em;
 		border-radius: 50%;
 		background: var(--role-color);
 	}
-	.caption {
+	.court .caption {
 		text-align: center;
 		margin-top: 0.25rem;
 	}

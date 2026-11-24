@@ -1,0 +1,109 @@
+---
+/**
+ * コート図の1コマ分（コート・人・打球・名前）を描く。
+ * Court.astro から、コマ割りの各コマとアニメーションの各場面の両方で使う。
+ * スタイルは Court.astro の .court 配下（is:global）で当てる。
+ */
+import { COURT, zoneRects, type ZoneName } from '../config/court';
+
+type Point = [number, number];
+interface Figure {
+	id: string;
+	role: string;
+	label?: string;
+	x: number;
+	y: number;
+	shoulder: Point;
+	hand: Point;
+	tip: Point;
+}
+interface Line {
+	type: string;
+	from: string | Point;
+	d: string;
+	mid: Point;
+	label?: string;
+}
+interface Props {
+	figures: Figure[];
+	lines: Line[];
+	viewBox: string;
+	zones: ZoneName[];
+	uid: string;
+	playerR: number;
+	title: string;
+	/** アニメーション用の場面として描く（ボールと data 属性を付ける） */
+	animated?: boolean;
+	step?: number;
+}
+const { figures, lines, viewBox, zones, uid, playerR, title, animated = false, step } = Astro.props;
+const k1 = COURT.net - COURT.kitchen;
+const k2 = COURT.net + COURT.kitchen;
+const isSub = (t: string) => t === 'feed' || t === 'move';
+---
+
+<svg viewBox={viewBox} role="img" aria-label={title} class:list={['court-svg', { frame: animated }]} data-step={step}>
+	<defs>
+		<marker id={`${uid}-arrow`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+			<path d="M0 0 L10 5 L0 10 z" class="arrowhead" />
+		</marker>
+		<marker id={`${uid}-arrow-sub`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+			<path d="M0 0 L10 5 L0 10 z" class="arrowhead sub" />
+		</marker>
+	</defs>
+
+	<rect class="surface" x="0" y="0" width={COURT.width} height={COURT.length} />
+	<rect class="kitchen" x="0" y={k1} width={COURT.width} height={COURT.kitchen * 2} />
+	{
+		zones.map((z) => {
+			const [x, y, w, h] = zoneRects[z];
+			return <rect class="zone" x={x} y={y} width={w} height={h} />;
+		})
+	}
+	<g class="lines">
+		<rect x="0" y="0" width={COURT.width} height={COURT.length} />
+		<line x1="0" y1={k1} x2={COURT.width} y2={k1} />
+		<line x1="0" y1={k2} x2={COURT.width} y2={k2} />
+		<line x1={COURT.width / 2} y1="0" x2={COURT.width / 2} y2={k1} />
+		<line x1={COURT.width / 2} y1={k2} x2={COURT.width / 2} y2={COURT.length} />
+	</g>
+	<line class="net" x1="-1" y1={COURT.net} x2={COURT.width + 1} y2={COURT.net} />
+
+	{
+		lines.map((l) => (
+			<path
+				class:list={['shot', { sub: isSub(l.type) }]}
+				d={l.d}
+				marker-end={`url(#${uid}-${isSub(l.type) ? 'arrow-sub' : 'arrow'})`}
+				data-kind={animated ? (l.type === 'move' ? 'move' : 'ball') : undefined}
+				data-player={animated && l.type === 'move' && typeof l.from === 'string' ? l.from : undefined}
+			/>
+		))
+	}
+
+	{
+		figures.map((p) => (
+			<g class={`player role-${p.role}`} data-player-id={animated ? p.id : undefined}>
+				<line class="arm" x1={p.shoulder[0]} y1={p.shoulder[1]} x2={p.hand[0]} y2={p.hand[1]} />
+				<line class="paddle" x1={p.hand[0]} y1={p.hand[1]} x2={p.tip[0]} y2={p.tip[1]} />
+				<circle class="body" cx={p.x} cy={p.y} r={playerR} />
+				<text x={p.x} y={p.y}>
+					{p.label ?? p.id}
+				</text>
+			</g>
+		))
+	}
+
+	{
+		lines.map(
+			(l) =>
+				l.label && (
+					<text class="shot-label" x={l.mid[0]} y={l.mid[1]}>
+						{l.label}
+					</text>
+				),
+		)
+	}
+
+	{animated && <circle class="ball" r="0.55" cx="-10" cy="-10" />}
+</svg>

@@ -248,26 +248,22 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 				return { g, dx: end.x - start.x, dy: end.y - start.y };
 			});
 			const lens = balls.map((b) => b.getTotalLength());
-			// 矢印の先は、線が伸び切ってから出す
-			const markers = balls.map((b) => b.getAttribute('marker-end') ?? b.dataset.marker ?? '');
-			const showMarkers = (on: boolean) =>
-				balls.forEach((b, k) => {
-					b.dataset.marker = markers[k];
-					if (on) b.setAttribute('marker-end', markers[k]);
-					else b.removeAttribute('marker-end');
-				});
+			// 線はマスク側の線（.reveal）を伸ばして見せる。本体の線は点線・破線のまま描ける
+			const reveals = balls.map((b) => frame.querySelector<SVGPathElement>(`path.reveal[data-i="${b.dataset.i}"]`));
+			const setReveal = (k: number, ratio: number) => {
+				const r = reveals[k];
+				if (!r) return;
+				const len = lens[k] + 4; // 矢印の先まで覆う
+				r.style.strokeDasharray = `${len}`;
+				r.style.strokeDashoffset = `${len * (1 - ratio)}`;
+			};
 			const reset = () => {
-				balls.forEach((b, k) => {
-					b.style.strokeDasharray = `${lens[k]}`;
-					b.style.strokeDashoffset = animate ? `${lens[k]}` : '0';
-				});
-				showMarkers(!animate);
+				balls.forEach((_, k) => setReveal(k, animate ? 0 : 1));
 				movers.forEach(({ g }) => g?.setAttribute('transform', ''));
 				ball.setAttribute('cx', '-10');
 			};
 			reset();
 			if (!animate) {
-				balls.forEach((b) => (b.style.strokeDashoffset = '0'));
 				movers.forEach(({ g, dx, dy }) => g?.setAttribute('transform', `translate(${dx} ${dy})`));
 				return;
 			}
@@ -280,7 +276,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 				const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // 人の動き: ease-in-out
 				const eb = Math.sin((t * Math.PI) / 2); // ボール: 打った瞬間が速く、少しずつ減速する
 				balls.forEach((b, k) => {
-					b.style.strokeDashoffset = `${lens[k] * (1 - eb)}`;
+					setReveal(k, eb);
 					if (k === 0) {
 						const p = b.getPointAtLength(lens[k] * eb);
 						ball.setAttribute('cx', `${p.x}`);
@@ -290,7 +286,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 				movers.forEach(({ g, dx, dy }) => g?.setAttribute('transform', `translate(${dx * e} ${dy * e})`));
 				if (t < 1) raf = requestAnimationFrame(tick);
 				else {
-					showMarkers(true);
+					balls.forEach((_, k) => setReveal(k, 1));
 					ball.setAttribute('cx', '-10');
 					done?.();
 				}
@@ -485,6 +481,24 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 		stroke: var(--shot);
 		stroke-width: 0.4;
 		stroke-linecap: round;
+	}
+	/* 線の質: 速い球は太い実線、柔らかく落とす球は細い点線、ロブは破線（山なりの曲線） */
+	.court .shot.t-speedup,
+	.court .shot.t-smash,
+	.court .shot.t-drive,
+	.court .shot.t-volley {
+		stroke-width: 0.65;
+	}
+	.court .shot.t-dink,
+	.court .shot.t-drop,
+	.court .shot.t-reset {
+		stroke-width: 0.35;
+		stroke-dasharray: 0.05 0.55;
+	}
+	.court .shot.t-lob {
+		stroke-width: 0.4;
+		stroke-dasharray: 1.1 0.6;
+		stroke-linecap: butt;
 	}
 	.court .shot.sub {
 		stroke: var(--sub);

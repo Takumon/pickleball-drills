@@ -33,6 +33,25 @@ export const shotLabels = {
 } as const;
 export type ShotType = keyof typeof shotLabels;
 
+/**
+ * 打球の弧の大きさ（距離に対する割合）。上から見た図なので、球の高さ・山なり具合の目安として描く。
+ * 0 はまっすぐ。大きいほど大きくふくらむ。
+ */
+export const shotCurve: Record<ShotType, number> = {
+	lob: 0.25,
+	drop: 0.15,
+	dink: 0.1,
+	reset: 0.1,
+	serve: 0.05,
+	return: 0.05,
+	feed: 0.05,
+	speedup: 0,
+	smash: 0,
+	drive: 0,
+	volley: 0,
+	move: 0,
+};
+
 /** アニメーションで、打球（ボール）が飛ぶ時間・人が動く時間（ミリ秒）。小さいほど速い */
 export const shotDurationMs: Record<ShotType, number> = {
 	speedup: 450,

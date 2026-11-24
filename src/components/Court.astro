@@ -1,0 +1,315 @@
+---
+import type { Diagram } from '../content.config';
+import { COURT, roleLabels, shotLabels, zoneRects, type ShotType } from '../config/court';
+
+interface Props {
+	diagram: Diagram;
+	title?: string;
+}
+const { diagram, title = 'コート図' } = Astro.props;
+
+const PLAYER_R = 1.1;
+const uid = `c${Math.random().toString(36).slice(2, 8)}`;
+const pad = 3.5;
+const viewBox = `${-pad} ${-pad} ${COURT.width + pad * 2} ${COURT.length + pad * 2}`;
+
+type Point = [number, number];
+const playerById = new Map(diagram.players.map((p) => [p.id, p]));
+function resolve(ref: string | Point): { pt: Point; isPlayer: boolean } {
+	if (typeof ref === 'string') {
+		const p = playerById.get(ref);
+		if (!p) throw new Error(`コート図: 人 "${ref}" が players にありません`);
+		return { pt: [p.x, p.y], isPlayer: true };
+	}
+	return { pt: ref, isPlayer: false };
+}
+
+const shots = diagram.shots.map((s) => {
+	const a = resolve(s.from);
+	const b = resolve(s.to);
+	let [x1, y1] = a.pt;
+	let [x2, y2] = b.pt;
+	const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+	const ux = (x2 - x1) / len;
+	const uy = (y2 - y1) / len;
+	// 人の円と重ならないよう、端を円の外まで縮める
+	if (a.isPlayer) [x1, y1] = [x1 + ux * PLAYER_R, y1 + uy * PLAYER_R];
+	if (b.isPlayer) [x2, y2] = [x2 - ux * (PLAYER_R + 0.3), y2 - uy * (PLAYER_R + 0.3)];
+	const curve = s.curve ?? (s.type === 'lob' ? 0.25 : 0);
+	// 曲げる量は距離に比例。正で進行方向の左側へふくらむ
+	const cx = (x1 + x2) / 2 - uy * len * curve;
+	const cy = (y1 + y2) / 2 + ux * len * curve;
+	const d = curve ? `M${x1} ${y1} Q${cx} ${cy} ${x2} ${y2}` : `M${x1} ${y1} L${x2} ${y2}`;
+	// 番号は始点寄り（t=0.3）に置き、往復の線で番号が重ならないようにする
+	const t = 0.3;
+	const mid: Point = curve
+		? [(1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t ** 2 * x2, (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t ** 2 * y2]
+		: [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t];
+	return { ...s, d, mid };
+});
+
+const usedTypes = [...new Set(diagram.shots.map((s) => s.type))] as ShotType[];
+const usedRoles = [...new Set(diagram.players.map((p) => p.role))];
+const k1 = COURT.net - COURT.kitchen;
+const k2 = COURT.net + COURT.kitchen;
+---
+
+<figure class="court">
+	<svg viewBox={viewBox} role="img" aria-label={title}>
+		<defs>
+			{
+				usedTypes.map((t) => (
+					<marker
+						id={`${uid}-${t}`}
+						class={`shot-${t}`}
+						viewBox="0 0 10 10"
+						refX="8"
+						refY="5"
+						markerWidth="5"
+						markerHeight="5"
+						orient="auto-start-reverse"
+					>
+						<path d="M0 0 L10 5 L0 10 z" class="arrowhead" />
+					</marker>
+				))
+			}
+		</defs>
+
+		<rect class="surface" x="0" y="0" width={COURT.width} height={COURT.length} />
+		<rect class="kitchen" x="0" y={k1} width={COURT.width} height={COURT.kitchen * 2} />
+		{
+			diagram.zones.map((z) => {
+				const [x, y, w, h] = zoneRects[z];
+				return <rect class="zone" x={x} y={y} width={w} height={h} />;
+			})
+		}
+		<g class="lines">
+			<rect x="0" y="0" width={COURT.width} height={COURT.length} />
+			<line x1="0" y1={k1} x2={COURT.width} y2={k1} />
+			<line x1="0" y1={k2} x2={COURT.width} y2={k2} />
+			<line x1={COURT.width / 2} y1="0" x2={COURT.width / 2} y2={k1} />
+			<line x1={COURT.width / 2} y1={k2} x2={COURT.width / 2} y2={COURT.length} />
+		</g>
+		<line class="net" x1="-1" y1={COURT.net} x2={COURT.width + 1} y2={COURT.net} />
+
+		{
+			shots.map((s) => (
+				<g class={`shot shot-${s.type}`}>
+					<path d={s.d} marker-end={`url(#${uid}-${s.type})`} />
+					{s.n !== undefined && (
+						<g class="step">
+							<circle cx={s.mid[0]} cy={s.mid[1]} r="0.9" />
+							<text x={s.mid[0]} y={s.mid[1]}>
+								{s.n}
+							</text>
+						</g>
+					)}
+				</g>
+			))
+		}
+
+		{
+			diagram.players.map((p) => (
+				<g class={`player role-${p.role}`}>
+					<circle cx={p.x} cy={p.y} r={PLAYER_R} />
+					<text x={p.x} y={p.y}>
+						{p.label ?? p.id}
+					</text>
+				</g>
+			))
+		}
+	</svg>
+	<figcaption>
+		<ul class="legend">
+			{
+				usedRoles.map((r) => (
+					<li>
+						<span class={`swatch player role-${r}`} />
+						{roleLabels[r]}
+					</li>
+				))
+			}
+			{
+				usedTypes.map((t) => (
+					<li>
+						<svg class={`swatch-line shot shot-${t}`} viewBox="0 0 24 6" aria-hidden="true">
+							<path d="M1 3 L23 3" />
+						</svg>
+						{shotLabels[t]}
+					</li>
+				))
+			}
+		</ul>
+		{diagram.caption && <p class="caption">{diagram.caption}</p>}
+	</figcaption>
+</figure>
+
+<style>
+	.court {
+		--court-surface: #dfeedd;
+		--court-kitchen: #c9e2c5;
+		--court-zone: rgb(255 214 10 / 0.35);
+		--court-line: #ffffff;
+		--court-net: #3a3a3a;
+		--c-feed: #6b7280;
+		--c-dink: #15803d;
+		--c-drop: #1d4ed8;
+		--c-reset: #0f766e;
+		--c-drive: #c2410c;
+		--c-volley: #7e22ce;
+		--c-speedup: #dc2626;
+		--c-lob: #b45309;
+		--c-smash: #be123c;
+		--c-serve: #4b5563;
+		--c-return: #4b5563;
+		--c-move: #9ca3af;
+		--r-feed: #f59e0b;
+		--r-practice: #2563eb;
+		--r-partner: #60a5fa;
+		--r-opponent: #9ca3af;
+		margin: 1rem auto;
+		max-width: 300px;
+	}
+	:global([data-theme='dark']) .court {
+		--court-surface: #23382a;
+		--court-kitchen: #2d4a35;
+		--court-zone: rgb(250 204 21 / 0.25);
+		--court-line: #e5e7eb;
+		--court-net: #f3f4f6;
+		--c-feed: #9ca3af;
+		--c-dink: #4ade80;
+		--c-drop: #60a5fa;
+		--c-reset: #2dd4bf;
+		--c-drive: #fb923c;
+		--c-volley: #c084fc;
+		--c-speedup: #f87171;
+		--c-lob: #fbbf24;
+		--c-smash: #fb7185;
+		--c-serve: #d1d5db;
+		--c-return: #d1d5db;
+		--c-move: #6b7280;
+	}
+	svg {
+		width: 100%;
+		height: auto;
+		display: block;
+	}
+	.surface {
+		fill: var(--court-surface);
+	}
+	.kitchen {
+		fill: var(--court-kitchen);
+	}
+	.zone {
+		fill: var(--court-zone);
+	}
+	.lines {
+		fill: none;
+		stroke: var(--court-line);
+		stroke-width: 0.25;
+	}
+	.net {
+		stroke: var(--court-net);
+		stroke-width: 0.35;
+		stroke-dasharray: 0.6 0.3;
+	}
+	.shot path {
+		fill: none;
+		stroke: var(--shot-color);
+		stroke-width: 0.3;
+		stroke-linecap: round;
+	}
+	.arrowhead {
+		fill: var(--shot-color);
+	}
+	.shot-feed { --shot-color: var(--c-feed); }
+	.shot-dink { --shot-color: var(--c-dink); }
+	.shot-drop { --shot-color: var(--c-drop); }
+	.shot-reset { --shot-color: var(--c-reset); }
+	.shot-drive { --shot-color: var(--c-drive); }
+	.shot-volley { --shot-color: var(--c-volley); }
+	.shot-speedup { --shot-color: var(--c-speedup); }
+	.shot-lob { --shot-color: var(--c-lob); }
+	.shot-smash { --shot-color: var(--c-smash); }
+	.shot-serve { --shot-color: var(--c-serve); }
+	.shot-return { --shot-color: var(--c-return); }
+	.shot-move { --shot-color: var(--c-move); }
+	.shot-feed path,
+	.shot-move path {
+		stroke-dasharray: 0.7 0.5;
+	}
+	.shot-smash path {
+		stroke-width: 0.45;
+	}
+	.step circle {
+		fill: var(--sl-color-bg, #fff);
+		stroke: var(--shot-color);
+		stroke-width: 0.15;
+	}
+	.step text,
+	.player text {
+		font-size: 1.1px;
+		font-weight: 700;
+		text-anchor: middle;
+		dominant-baseline: central;
+		font-family: system-ui, sans-serif;
+	}
+	.step text {
+		fill: var(--shot-color);
+		font-size: 1px;
+	}
+	.player circle {
+		fill: var(--role-color);
+		stroke: #fff;
+		stroke-width: 0.2;
+	}
+	.player text {
+		fill: #fff;
+	}
+	.role-feed { --role-color: var(--r-feed); }
+	.role-practice { --role-color: var(--r-practice); }
+	.role-partner { --role-color: var(--r-partner); }
+	.role-opponent { --role-color: var(--r-opponent); }
+	figcaption {
+		font-size: var(--sl-text-xs, 0.8rem);
+		margin-top: 0.5rem;
+	}
+	.legend {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.9rem;
+		justify-content: center;
+	}
+	.legend li {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		margin: 0;
+	}
+	.swatch {
+		display: inline-block;
+		width: 0.8em;
+		height: 0.8em;
+		border-radius: 50%;
+		background: var(--role-color);
+	}
+	.swatch-line {
+		width: 1.6em;
+		height: 0.5em;
+	}
+	.swatch-line path {
+		stroke-width: 2;
+		stroke-dasharray: none;
+	}
+	.shot-feed.swatch-line path,
+	.shot-move.swatch-line path {
+		stroke-dasharray: 3 2;
+	}
+	.caption {
+		text-align: center;
+		margin-top: 0.25rem;
+	}
+</style>

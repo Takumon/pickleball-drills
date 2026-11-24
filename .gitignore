@@ -22,3 +22,10 @@ pnpm-debug.log*
 
 # local-only source material (not published)
 menus-raw/
+
+# third-party agent skills installed locally (not part of the site)
+.agents/
+.claude/skills/yomiyasu
+skills-lock.json
+# personal Claude Code settings
+.claude/settings.local.json

@@ -19,7 +19,7 @@ export const fieldLabels = {
 export type DrillField = keyof typeof fieldLabels;
 
 /** 最初から見せる項目（練習中に必ず見てほしいもの） */
-export const visibleFields: DrillField[] = ['setup', 'feed', 'steps', 'points', 'diagram'];
+export const visibleFields: DrillField[] = ['diagram', 'setup', 'feed', 'steps', 'points'];
 
 /** 「詳細」トグルの中に隠す項目 */
 export const detailFields: DrillField[] = ['purpose', 'variants', 'time', 'related', 'notes'];

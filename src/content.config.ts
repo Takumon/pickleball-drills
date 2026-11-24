@@ -3,6 +3,41 @@ import { z } from 'astro/zod';
 import { docsLoader } from '@astrojs/starlight/loaders';
 import { docsSchema } from '@astrojs/starlight/schema';
 import { categoryCodes } from './config/categories';
+import { roleLabels, shotLabels, zoneRects, type Role, type ShotType, type ZoneName } from './config/court';
+
+const keysOf = <T extends string>(o: Record<T, unknown>) => Object.keys(o) as [T, ...T[]];
+const point = z.tuple([z.number(), z.number()]);
+
+/** コート図（座標はフィート。src/config/court.ts 参照） */
+const diagram = z.object({
+	players: z
+		.array(
+			z.object({
+				id: z.string(),
+				x: z.number(),
+				y: z.number(),
+				role: z.enum(keysOf<Role>(roleLabels)).default('practice'),
+				label: z.string().optional(),
+			}),
+		)
+		.default([]),
+	shots: z
+		.array(
+			z.object({
+				from: z.union([z.string(), point]),
+				to: z.union([z.string(), point]),
+				type: z.enum(keysOf<ShotType>(shotLabels)),
+				/** 曲げる量（距離に対する割合）。ロブは指定しなければ 0.25 */
+				curve: z.number().optional(),
+				/** 順番を示す番号 */
+				n: z.number().int().optional(),
+			}),
+		)
+		.default([]),
+	zones: z.array(z.enum(keysOf<ZoneName>(zoneRects))).default([]),
+	caption: z.string().optional(),
+});
+export type Diagram = z.infer<typeof diagram>;
 
 const variant = z.object({
 	/** URLで使う派生形キー（例: rst003.ankle の ankle） */
@@ -13,6 +48,7 @@ const variant = z.object({
 	feed: z.string().optional(),
 	steps: z.array(z.string()).optional(),
 	points: z.array(z.string()).max(3).optional(),
+	diagram: diagram.optional(),
 	note: z.string().optional(),
 });
 
@@ -27,7 +63,7 @@ const drill = z.object({
 	feed: z.string(),
 	steps: z.array(z.string()).min(1),
 	points: z.array(z.string()).max(3).default([]),
-	diagram: z.string().optional(),
+	diagram: diagram.optional(),
 	variants: z.array(variant).default([]),
 	/** 標準時間（ビルダーの初期値） */
 	time: z.object({ min: z.number(), sets: z.number().int() }).optional(),

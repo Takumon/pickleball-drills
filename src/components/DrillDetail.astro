@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import type { Drill } from '../content.config';
 import { categories } from '../config/categories';
 import { fieldLabels, visibleFields, detailFields, type DrillField } from '../config/drill-display';
+import Court from './Court.astro';
 
 interface Props {
 	drill: Drill;
@@ -48,7 +49,7 @@ const hidden = detailFields.filter(hasContent);
 					{field === 'feed' && <p>{drill.feed}</p>}
 					{field === 'purpose' && <p>{drill.purpose}</p>}
 					{field === 'notes' && <p>{drill.notes}</p>}
-					{field === 'diagram' && <img src={`${base}/${drill.diagram}`} alt={`${drill.id} の図`} />}
+					{field === 'diagram' && drill.diagram && <Court diagram={drill.diagram} title={`${drill.id} の図`} />}
 					{field === 'steps' && (
 						<ol>
 							{drill.steps.map((s) => (
@@ -102,6 +103,7 @@ const hidden = detailFields.filter(hasContent);
 											</ul>
 										)}
 										{v.note && <p>{v.note}</p>}
+										{v.diagram && <Court diagram={v.diagram} title={`${drill.id}.${v.key} の図`} />}
 									</dd>
 								</>
 							))}

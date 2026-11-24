@@ -190,6 +190,8 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			</div>
 		)
 	}
+	{/* 複数の手がある図はアニメーションだけを出す。コマ割りは1手だけの図のときに使う */}
+	{!multi && (
 	<div class="panels">
 		{
 			panels.map((pn, i) => (
@@ -208,6 +210,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			))
 		}
 	</div>
+	)}
 	<figcaption>
 		<ul class="legend">
 			{
@@ -237,7 +240,9 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 		const dots = [...root.querySelectorAll<HTMLElement>('[data-step-dot]')];
 		const toggleBtn = root.querySelector<HTMLButtonElement>('[data-act="toggle"]')!;
 		let current = 0;
-		let playing = true;
+		// 「視差効果を減らす」設定のときは自動再生せず、ボタンで1手ずつ切り替えて静止した図を見せる
+		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		let playing = !reduce;
 		let raf = 0;
 		let timer = 0;
 
@@ -334,11 +339,11 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 
 		root.querySelector('[data-act="prev"]')!.addEventListener('click', () => {
 			setPlaying(false);
-			show((current - 1 + frames.length) % frames.length, true);
+			show((current - 1 + frames.length) % frames.length, !reduce);
 		});
 		root.querySelector('[data-act="next"]')!.addEventListener('click', () => {
 			setPlaying(false);
-			show((current + 1) % frames.length, true);
+			show((current + 1) % frames.length, !reduce);
 		});
 		toggleBtn.addEventListener('click', () => {
 			if (playing) {
@@ -352,7 +357,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 		dots.forEach((d, k) =>
 			d.addEventListener('click', () => {
 				setPlaying(false);
-				show(k, true);
+				show(k, !reduce);
 			}),
 		);
 
@@ -364,11 +369,13 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			}
 		});
 		io.observe(root);
+		if (reduce) {
+			toggleBtn.hidden = true;
+			setPlaying(false);
+		}
 		show(0, false);
 	}
 
-	if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-		document.querySelectorAll<HTMLElement>('[data-court-anim]').forEach(setup);
-	}
+	document.querySelectorAll<HTMLElement>('[data-court-anim]').forEach(setup);
 </script>
 

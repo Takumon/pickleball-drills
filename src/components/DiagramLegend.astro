@@ -7,31 +7,34 @@ import '../styles/court.css';
 
 const order: ShotType[] = ['speedup', 'smash', 'volley', 'drive', 'serve', 'return', 'reset', 'dink', 'drop', 'lob', 'feed', 'move'];
 const style: Record<ShotType, string> = {
-	speedup: '太い実線（強く速い球）',
-	smash: '太い実線（強く速い球）',
-	volley: '太い実線（強く速い球）',
-	drive: '太い実線（強く速い球）',
+	speedup: '太い実線',
+	smash: '太い実線',
+	volley: '太い実線',
+	drive: '太い実線',
 	serve: '実線',
 	return: '実線',
-	reset: '細い点線（柔らかく落とす球）',
-	dink: '細い点線（柔らかく落とす球）',
-	drop: '細い点線（柔らかく落とす球）',
-	lob: '破線の曲線（高く上がる球）',
-	feed: '灰色の点線（練習の始まりの球）',
-	move: '灰色の点線（人が動く）',
+	reset: '細い点線',
+	dink: '細い点線',
+	drop: '細い点線',
+	lob: '破線',
+	feed: '灰色の点線',
+	move: '灰色の点線',
 };
 const isSub = (t: ShotType) => t === 'feed' || t === 'move';
 const roles = Object.keys(roleLabels) as Role[];
 /** 見本の線。弧の大きさは実際の図と同じ shotCurve を使う */
 const samplePath = (t: ShotType) => `M1.2 2.9 Q6.8 ${(2.9 - 11.2 * shotCurve[t]).toFixed(2)} 12.4 2.9`;
+/** 弧の大きさを言葉にする（shotCurve の値から） */
+const arcLabel = (c: number) => (c <= 0 ? 'なし' : c < 0.08 ? 'ごくわずか' : c < 0.13 ? '小さい' : c < 0.2 ? 'やや大きい' : '大きい');
 const sec = (ms: number) => `${(ms / 1000).toFixed(2).replace(/0$/, '')}秒`;
 ---
 
 <div class="court legend-page">
 	<h2>打球の線</h2>
+	<p>強く速い球は太い実線、柔らかく落とす球は細い点線、ロブは破線で描きます。球出しと人の移動は灰色の点線です。弧が大きいほど、山なりの球です。</p>
 	<table class="legend-table">
 		<thead>
-			<tr><th>見本</th><th>名前</th><th>線</th><th>アニメーションの速さ</th></tr>
+			<tr><th>見本</th><th>名前</th><th>線</th><th>弧</th><th>速さ</th></tr>
 		</thead>
 		<tbody>
 			{
@@ -54,6 +57,7 @@ const sec = (ms: number) => `${(ms / 1000).toFixed(2).replace(/0$/, '')}秒`;
 						</td>
 						<td>{t === 'move' ? '移動' : shotLabels[t]}</td>
 						<td>{style[t]}</td>
+						<td>{arcLabel(shotCurve[t])}</td>
 						<td>{sec(shotDurationMs[t])}</td>
 					</tr>
 				))
@@ -97,9 +101,14 @@ const sec = (ms: number) => `${(ms / 1000).toFixed(2).replace(/0$/, '')}秒`;
 	.legend-table td {
 		vertical-align: middle;
 	}
+	/* 弧・速さは短い値なので折り返さない */
+	.legend-table td:nth-child(4),
+	.legend-table td:nth-child(5) {
+		white-space: nowrap;
+	}
 	.legend-page svg.sample {
-		width: 6rem;
-		min-width: 6rem;
+		width: 4.5rem;
+		min-width: 4.5rem;
 		height: auto;
 		display: block;
 	}

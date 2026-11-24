@@ -1,6 +1,6 @@
 ---
 import type { Diagram } from '../content.config';
-import { COURT, roleLabels, shotLabels, zoneRects, type ShotType } from '../config/court';
+import { COURT, roleLabels, shotLabels, zoneRects } from '../config/court';
 
 interface Props {
 	diagram: Diagram;
@@ -8,21 +8,25 @@ interface Props {
 }
 const { diagram, title = 'コート図' } = Astro.props;
 
-/** 人・手・パドルは見やすさ優先で、コートの縮尺より大きく描く（単位はフィート相当） */
+/** 人・腕・パドルは見やすさ優先で、コートの縮尺より大きく描く（単位はフィート相当） */
 const PLAYER_R = 1.3;
 const uid = `c${Math.random().toString(36).slice(2, 8)}`;
-const pad = 3.5;
+const k1 = COURT.net - COURT.kitchen;
+const k2 = COURT.net + COURT.kitchen;
 
 type Point = [number, number];
+type Player = Diagram['players'][number];
+type Shot = Diagram['shots'][number];
 
-/** 人の体・手・パドルの位置を計算する（上から見た図。右利きなら本人から見て右手にパドル） */
-const figures = diagram.players.map((p) => {
-	const facing = p.facing ?? (p.y < COURT.net ? 'down' : 'up');
+/** 人の体・腕・パドルの位置を計算する（上から見た図。右利きなら本人から見て右手にパドル） */
+function figureOf(p: Player, pos: Point) {
+	const [x, y] = pos;
+	const facing = p.facing ?? (y < COURT.net ? 'down' : 'up');
 	const f: Point = facing === 'up' ? [0, -1] : [0, 1]; // 前
 	const side = p.lefty ? -1 : 1;
 	// 本人から見た右（上向きなら +x、下向きなら -x）。左利きなら逆側
 	const r: Point = [-f[1] * side, f[0] * side];
-	const at = (dr: number, df: number): Point => [p.x + r[0] * dr + f[0] * df, p.y + r[1] * dr + f[1] * df];
+	const at = (dr: number, df: number): Point => [x + r[0] * dr + f[0] * df, y + r[1] * dr + f[1] * df];
 	// 構えごとの、肩・手・パドルの先の位置（体の中心からの「右」「前」の距離）
 	// 腕 = 肩→手の細線、パドル = 手→先の太線。斜めにはせず、前か横へまっすぐ伸ばす
 	const pose = {
@@ -35,27 +39,31 @@ const figures = diagram.players.map((p) => {
 	const tip = at(pose.tip[0], pose.tip[1]);
 	// 打球の線はパドルの真ん中から出す
 	const face: Point = [(hand[0] + tip[0]) / 2, (hand[1] + tip[1]) / 2];
-	return { ...p, shoulder, hand, tip, face };
-});
-const figureById = new Map(figures.map((p) => [p.id, p]));
-
-type Anchor = 'paddle' | 'body' | 'point';
-/** 人を指す参照は、打球ならパドルの真ん中、人の動きなら体の中心に解決する */
-function resolve(ref: string | Point, target: 'paddle' | 'body'): { pt: Point; anchor: Anchor } {
-	if (typeof ref === 'string') {
-		const p = figureById.get(ref);
-		if (!p) throw new Error(`コート図: 人 "${ref}" が players にありません`);
-		return target === 'paddle' ? { pt: p.face, anchor: 'paddle' } : { pt: [p.x, p.y], anchor: 'body' };
-	}
-	return { pt: ref, anchor: 'point' };
+	return { ...p, x, y, shoulder, hand, tip, face };
 }
+type Figure = ReturnType<typeof figureOf>;
+
 /** 端を縮める量（体の円・パドルの太線と重ならないように） */
 const inset = { body: PLAYER_R + 0.3, paddle: 0.45, point: 0 } as const;
 
-const shots = diagram.shots.map((s) => {
+/**
+ * 打球・動きの線を計算する。人を指す参照は、打球ならパドルの真ん中、人の動きなら体の中心へ。
+ * straight=true（コマ割り）のときは、重なりよけの曲げは不要なのでロブ以外はまっすぐ描く。
+ */
+function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 	const target = s.type === 'move' ? 'body' : 'paddle';
-	const a = resolve(s.from, target);
-	const b = resolve(s.to, target);
+	const resolve = (ref: string | Point) => {
+		if (typeof ref === 'string') {
+			const p = byId.get(ref);
+			if (!p) throw new Error(`コート図: 人 "${ref}" が players にありません`);
+			return target === 'paddle'
+				? { pt: p.face, anchor: 'paddle' as const }
+				: { pt: [p.x, p.y] as Point, anchor: 'body' as const };
+		}
+		return { pt: ref, anchor: 'point' as const };
+	};
+	const a = resolve(s.from);
+	const b = resolve(s.to);
 	let [x1, y1] = a.pt;
 	let [x2, y2] = b.pt;
 	const len = Math.hypot(x2 - x1, y2 - y1) || 1;
@@ -64,32 +72,59 @@ const shots = diagram.shots.map((s) => {
 	const startInset = a.anchor === 'body' ? PLAYER_R : 0;
 	[x1, y1] = [x1 + ux * startInset, y1 + uy * startInset];
 	[x2, y2] = [x2 - ux * inset[b.anchor], y2 - uy * inset[b.anchor]];
-	const curve = s.curve ?? (s.type === 'lob' ? 0.25 : 0);
+	const lobCurve = s.type === 'lob' ? (s.curve ?? 0.25) : 0;
+	const curve = straight ? lobCurve : (s.curve ?? lobCurve);
 	// 曲げる量は距離に比例。正で進行方向の左側へふくらむ
 	const cx = (x1 + x2) / 2 - uy * len * curve;
 	const cy = (y1 + y2) / 2 + ux * len * curve;
 	const d = curve ? `M${x1} ${y1} Q${cx} ${cy} ${x2} ${y2}` : `M${x1} ${y1} L${x2} ${y2}`;
-	// 番号は始点寄り（t=0.3）に置き、往復の線で番号が重ならないようにする
-	const t = 0.3;
-	const mid: Point = curve
-		? [(1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t ** 2 * x2, (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t ** 2 * y2]
-		: [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t];
-	return { ...s, d, mid, ys: [y1, y2, curve ? cy : y1] };
+	const pointAt = (t: number): Point =>
+		curve
+			? [(1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t ** 2 * x2, (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t ** 2 * y2]
+			: [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t];
+	// 名前は線の真ん中に置く。ネットの線や人に重なるときは、線の上の別の位置にずらす
+	const bodies = [...byId.values()].map((p) => [p.x, p.y] as Point);
+	const clear = (p: Point) =>
+		Math.abs(p[1] - COURT.net) >= 1.6 && bodies.every(([bx, by]) => Math.hypot(p[0] - bx, p[1] - by) >= PLAYER_R + 1.6);
+	const candidates = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8].map(pointAt);
+	const mid = candidates.find(clear) ?? candidates.find((p) => Math.abs(p[1] - COURT.net) >= 1.6) ?? candidates[0];
+	const label = s.label ?? (s.type === 'move' ? '移動' : shotLabels[s.type]);
+	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1] };
+}
+
+/**
+ * コマ割り: 番号（n）ごとに1コマにする。番号のない線は、番号のある線がなければ1コマにまとめる。
+ * 人の動き（move）で人が移動したら、次のコマからは移動先に描く。
+ */
+const numbered = [...new Set(diagram.shots.flatMap((s) => (s.n === undefined ? [] : [s.n])))].sort((a, b) => a - b);
+const groups: { n?: number; shots: Shot[] }[] =
+	numbered.length > 0
+		? numbered.map((n) => ({ n, shots: diagram.shots.filter((s) => s.n === n) }))
+		: [{ shots: diagram.shots }];
+const positions = new Map<string, Point>(diagram.players.map((p) => [p.id, [p.x, p.y]]));
+const panels = groups.map((g) => {
+	const figures = diagram.players.map((p) => figureOf(p, positions.get(p.id)!));
+	const byId = new Map(figures.map((f) => [f.id, f]));
+	const lines = g.shots.map((s) => lineOf(s, byId, groups.length > 1));
+	for (const s of g.shots) {
+		if (s.type === 'move' && typeof s.from === 'string' && typeof s.to !== 'string') positions.set(s.from, s.to);
+	}
+	return { n: g.n, figures, lines };
 });
+const multi = panels.length > 1;
 
 // 表示範囲: crop=auto なら、人と打球が入る縦の範囲だけを切り出す（横はコート全幅、ネットは必ず入れる）。
 // ただし、トランが関わる側（人や打球がキッチンラインより3ft以上後ろにある）は
-// 位置関係が分かるように必ずベースラインまで入れる。
+// 位置関係が分かるように必ずベースラインまで入れる。全コマで同じ範囲にそろえる。
+const padX = multi ? 1.5 : 3.5;
+const pad = 3.5;
 let top = -pad;
 let bottom = COURT.length + pad;
 if (diagram.crop === 'auto') {
 	const ys = [
 		COURT.net,
-		...figures.flatMap((p) => [p.y, p.face[1]]),
-		...shots.flatMap((s) => s.ys),
+		...panels.flatMap((pn) => [...pn.figures.flatMap((p) => [p.y, p.face[1]]), ...pn.lines.flatMap((l) => l.ys)]),
 	];
-	const k1 = COURT.net - COURT.kitchen;
-	const k2 = COURT.net + COURT.kitchen;
 	const backTop = Math.min(...ys) <= k1 - 3;
 	const backBottom = Math.max(...ys) >= k2 + 3;
 	const baselineMargin = 1.5;
@@ -99,98 +134,100 @@ if (diagram.crop === 'auto') {
 	top = Math.min(top, Math.max(-pad, Math.min(...ys) - 1.5));
 	bottom = Math.max(bottom, Math.min(COURT.length + pad, Math.max(...ys) + 1.5));
 }
-const viewBox = `${-pad} ${top} ${COURT.width + pad * 2} ${bottom - top}`;
-
-const usedTypes = [...new Set(diagram.shots.map((s) => s.type))] as ShotType[];
+const viewBox = `${-padX} ${top} ${COURT.width + padX * 2} ${bottom - top}`;
 const usedRoles = [...new Set(diagram.players.map((p) => p.role))];
-const k1 = COURT.net - COURT.kitchen;
-const k2 = COURT.net + COURT.kitchen;
+const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 + n - 1) : `${n}.`);
 ---
 
-<figure class="court">
-	<svg viewBox={viewBox} role="img" aria-label={title}>
-		<defs>
-			{
-				usedTypes.map((t) => (
-					<marker
-						id={`${uid}-${t}`}
-						class={`shot-${t}`}
-						viewBox="0 0 10 10"
-						refX="8"
-						refY="5"
-						markerWidth="5"
-						markerHeight="5"
-						orient="auto-start-reverse"
-					>
-						<path d="M0 0 L10 5 L0 10 z" class="arrowhead" />
-					</marker>
-				))
-			}
-		</defs>
-
-		<rect class="surface" x="0" y="0" width={COURT.width} height={COURT.length} />
-		<rect class="kitchen" x="0" y={k1} width={COURT.width} height={COURT.kitchen * 2} />
+<figure class:list={['court', { multi }]} style={`--cols: ${Math.min(panels.length, 4)}`}>
+	<div class="panels">
 		{
-			diagram.zones.map((z) => {
-				const [x, y, w, h] = zoneRects[z];
-				return <rect class="zone" x={x} y={y} width={w} height={h} />;
-			})
-		}
-		<g class="lines">
-			<rect x="0" y="0" width={COURT.width} height={COURT.length} />
-			<line x1="0" y1={k1} x2={COURT.width} y2={k1} />
-			<line x1="0" y1={k2} x2={COURT.width} y2={k2} />
-			<line x1={COURT.width / 2} y1="0" x2={COURT.width / 2} y2={k1} />
-			<line x1={COURT.width / 2} y1={k2} x2={COURT.width / 2} y2={COURT.length} />
-		</g>
-		<line class="net" x1="-1" y1={COURT.net} x2={COURT.width + 1} y2={COURT.net} />
+			panels.map((pn, i) => (
+				<div class="panel">
+					{multi && pn.n !== undefined && <div class="panel-no">{circled(pn.n)}</div>}
+					<svg viewBox={viewBox} role="img" aria-label={multi ? `${title} ${i + 1}` : title}>
+						<defs>
+							<marker
+								id={`${uid}-arrow`}
+								viewBox="0 0 10 10"
+								refX="8"
+								refY="5"
+								markerWidth="5"
+								markerHeight="5"
+								orient="auto-start-reverse"
+							>
+								<path d="M0 0 L10 5 L0 10 z" class="arrowhead" />
+							</marker>
+							<marker
+								id={`${uid}-arrow-sub`}
+								viewBox="0 0 10 10"
+								refX="8"
+								refY="5"
+								markerWidth="5"
+								markerHeight="5"
+								orient="auto-start-reverse"
+							>
+								<path d="M0 0 L10 5 L0 10 z" class="arrowhead sub" />
+							</marker>
+						</defs>
 
-		{
-			shots.map((s) => (
-				<g class={`shot shot-${s.type}`}>
-					<path d={s.d} marker-end={`url(#${uid}-${s.type})`} />
-					{s.n !== undefined && (
-						<g class="step">
-							<circle cx={s.mid[0]} cy={s.mid[1]} r="0.9" />
-							<text x={s.mid[0]} y={s.mid[1]}>
-								{s.n}
-							</text>
+						<rect class="surface" x="0" y="0" width={COURT.width} height={COURT.length} />
+						<rect class="kitchen" x="0" y={k1} width={COURT.width} height={COURT.kitchen * 2} />
+						{diagram.zones.map((z) => {
+							const [x, y, w, h] = zoneRects[z];
+							return <rect class="zone" x={x} y={y} width={w} height={h} />;
+						})}
+						<g class="lines">
+							<rect x="0" y="0" width={COURT.width} height={COURT.length} />
+							<line x1="0" y1={k1} x2={COURT.width} y2={k1} />
+							<line x1="0" y1={k2} x2={COURT.width} y2={k2} />
+							<line x1={COURT.width / 2} y1="0" x2={COURT.width / 2} y2={k1} />
+							<line x1={COURT.width / 2} y1={k2} x2={COURT.width / 2} y2={COURT.length} />
 						</g>
-					)}
-				</g>
-			))
-		}
+						<line class="net" x1="-1" y1={COURT.net} x2={COURT.width + 1} y2={COURT.net} />
 
-		{
-			figures.map((p) => (
-				<g class={`player role-${p.role}`}>
-					<line class="arm" x1={p.shoulder[0]} y1={p.shoulder[1]} x2={p.hand[0]} y2={p.hand[1]} />
-					<line class="paddle" x1={p.hand[0]} y1={p.hand[1]} x2={p.tip[0]} y2={p.tip[1]} />
-					<circle class="body" cx={p.x} cy={p.y} r={PLAYER_R} />
-					<text x={p.x} y={p.y}>
-						{p.label ?? p.id}
-					</text>
-				</g>
+						{pn.lines.map((l) => {
+							const sub = l.type === 'feed' || l.type === 'move';
+							return (
+								<path
+									class:list={['shot', { sub }]}
+									d={l.d}
+									marker-end={`url(#${uid}-${sub ? 'arrow-sub' : 'arrow'})`}
+								/>
+							);
+						})}
+
+						{pn.figures.map((p) => (
+							<g class={`player role-${p.role}`}>
+								<line class="arm" x1={p.shoulder[0]} y1={p.shoulder[1]} x2={p.hand[0]} y2={p.hand[1]} />
+								<line class="paddle" x1={p.hand[0]} y1={p.hand[1]} x2={p.tip[0]} y2={p.tip[1]} />
+								<circle class="body" cx={p.x} cy={p.y} r={PLAYER_R} />
+								<text x={p.x} y={p.y}>
+									{p.label ?? p.id}
+								</text>
+							</g>
+						))}
+
+						{pn.lines.map(
+							(l) =>
+								l.label && (
+									<text class="shot-label" x={l.mid[0]} y={l.mid[1]}>
+										{l.label}
+									</text>
+								),
+						)}
+					</svg>
+				</div>
 			))
 		}
-	</svg>
+	</div>
 	<figcaption>
 		<ul class="legend">
 			{
 				usedRoles.map((r) => (
 					<li>
-						<span class={`swatch player role-${r}`} />
+						<span class={`swatch role-${r}`} />
 						{roleLabels[r]}
-					</li>
-				))
-			}
-			{
-				usedTypes.map((t) => (
-					<li>
-						<svg class={`swatch-line shot shot-${t}`} viewBox="0 0 24 6" aria-hidden="true">
-							<path d="M1 3 L23 3" />
-						</svg>
-						{shotLabels[t]}
 					</li>
 				))
 			}
@@ -206,18 +243,9 @@ const k2 = COURT.net + COURT.kitchen;
 		--court-zone: rgb(255 214 10 / 0.22);
 		--court-line: #ffffff;
 		--court-net: #3a3a3a;
-		--c-feed: #6b7280;
-		--c-dink: #15803d;
-		--c-drop: #1d4ed8;
-		--c-reset: #0f766e;
-		--c-drive: #c2410c;
-		--c-volley: #7e22ce;
-		--c-speedup: #dc2626;
-		--c-lob: #b45309;
-		--c-smash: #be123c;
-		--c-serve: #4b5563;
-		--c-return: #a16207;
-		--c-move: #9ca3af;
+		--ball: #c2410c;
+		--sub: #6b7280;
+		--label: #111827;
 		--r-feed: #f59e0b;
 		--r-practice: #2563eb;
 		--r-partner: #60a5fa;
@@ -226,25 +254,42 @@ const k2 = COURT.net + COURT.kitchen;
 		margin: 1rem auto;
 		max-width: 340px;
 	}
+	.court.multi {
+		max-width: none;
+	}
 	:global([data-theme='dark']) .court {
 		--court-surface: #23382a;
 		--court-kitchen: #2d4a35;
 		--court-zone: rgb(250 204 21 / 0.12);
 		--court-line: #e5e7eb;
 		--court-net: #f3f4f6;
-		--c-feed: #9ca3af;
-		--c-dink: #4ade80;
-		--c-drop: #60a5fa;
-		--c-reset: #2dd4bf;
-		--c-drive: #fb923c;
-		--c-volley: #c084fc;
-		--c-speedup: #f87171;
-		--c-lob: #fbbf24;
-		--c-smash: #fb7185;
-		--c-serve: #d1d5db;
-		--c-return: #e0b36a;
-		--c-move: #6b7280;
+		--ball: #facc15;
+		--sub: #9ca3af;
+		--label: #f9fafb;
 		--paddle: #e5e7eb;
+	}
+	.panels {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem 0.5rem;
+	}
+	.court:not(.multi) .panels {
+		grid-template-columns: 1fr;
+	}
+	@media (min-width: 50rem) {
+		.court.multi .panels {
+			grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+		}
+	}
+	.panel {
+		margin: 0;
+	}
+	.panel-no {
+		font-weight: 800;
+		font-size: 1.5rem;
+		line-height: 1.1;
+		margin-bottom: 0.2rem;
+		color: var(--sl-color-white, #111);
 	}
 	svg {
 		width: 100%;
@@ -270,50 +315,46 @@ const k2 = COURT.net + COURT.kitchen;
 		stroke-width: 0.35;
 		stroke-dasharray: 0.6 0.3;
 	}
-	.shot path {
+	/* 打球は1色。球出しと人の動きは灰色の点線 */
+	.shot {
 		fill: none;
-		stroke: var(--shot-color);
-		stroke-width: 0.3;
+		stroke: var(--ball);
+		stroke-width: 0.4;
 		stroke-linecap: round;
 	}
-	.arrowhead {
-		fill: var(--shot-color);
-	}
-	.shot-feed { --shot-color: var(--c-feed); }
-	.shot-dink { --shot-color: var(--c-dink); }
-	.shot-drop { --shot-color: var(--c-drop); }
-	.shot-reset { --shot-color: var(--c-reset); }
-	.shot-drive { --shot-color: var(--c-drive); }
-	.shot-volley { --shot-color: var(--c-volley); }
-	.shot-speedup { --shot-color: var(--c-speedup); }
-	.shot-lob { --shot-color: var(--c-lob); }
-	.shot-smash { --shot-color: var(--c-smash); }
-	.shot-serve { --shot-color: var(--c-serve); }
-	.shot-return { --shot-color: var(--c-return); }
-	.shot-move { --shot-color: var(--c-move); }
-	.shot-feed path,
-	.shot-move path {
+	.shot.sub {
+		stroke: var(--sub);
+		stroke-width: 0.3;
 		stroke-dasharray: 0.7 0.5;
 	}
-	.shot-smash path {
-		stroke-width: 0.45;
+	.arrowhead {
+		fill: var(--ball);
 	}
-	.step circle {
-		fill: var(--sl-color-bg, #fff);
-		stroke: var(--shot-color);
-		stroke-width: 0.15;
+	.arrowhead.sub {
+		fill: var(--sub);
 	}
-	.step text,
+	.shot-label {
+		font-size: 1.7px;
+		font-weight: 700;
+		text-anchor: middle;
+		dominant-baseline: central;
+		font-family: system-ui, sans-serif;
+		fill: var(--label);
+		stroke: var(--court-surface);
+		stroke-width: 0.5px;
+		paint-order: stroke;
+		stroke-linejoin: round;
+	}
+	.court:not(.multi) .shot-label {
+		font-size: 1.3px;
+	}
 	.player text {
 		font-size: 1.1px;
 		font-weight: 700;
 		text-anchor: middle;
 		dominant-baseline: central;
 		font-family: system-ui, sans-serif;
-	}
-	.step text {
-		fill: var(--shot-color);
-		font-size: 1px;
+		fill: #fff;
 	}
 	.player .body {
 		fill: var(--role-color);
@@ -330,9 +371,6 @@ const k2 = COURT.net + COURT.kitchen;
 		stroke: var(--paddle);
 		stroke-width: 0.45;
 		stroke-linecap: round;
-	}
-	.player text {
-		fill: #fff;
 	}
 	.role-feed { --role-color: var(--r-feed); }
 	.role-practice { --role-color: var(--r-practice); }
@@ -363,18 +401,6 @@ const k2 = COURT.net + COURT.kitchen;
 		height: 0.8em;
 		border-radius: 50%;
 		background: var(--role-color);
-	}
-	.swatch-line {
-		width: 1.6em;
-		height: 0.5em;
-	}
-	.swatch-line path {
-		stroke-width: 2;
-		stroke-dasharray: none;
-	}
-	.shot-feed.swatch-line path,
-	.shot-move.swatch-line path {
-		stroke-dasharray: 3 2;
 	}
 	.caption {
 		text-align: center;

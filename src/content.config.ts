@@ -35,8 +35,10 @@ const diagram = z.object({
 				type: z.enum(keysOf<ShotType>(shotLabels)),
 				/** 曲げる量（距離に対する割合）。ロブは指定しなければ 0.25 */
 				curve: z.number().optional(),
-				/** 順番を示す番号 */
+				/** 順番を示す番号。番号ごとに1コマの図にする */
 				n: z.number().int().optional(),
+				/** 線の上に書く名前。省略時は打球の種類名（人の動きは名前なし） */
+				label: z.string().optional(),
 			}),
 		)
 		.default([]),

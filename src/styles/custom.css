@@ -14,3 +14,20 @@
 	 * そのため、メニューはヘッダーの高さ分下から表示する Starlight の既定のままにしている。
 	 */
 }
+
+/*
+ * ページタイトルを小さくし、タイトルまわりの余白を詰める。
+ * スマホでタイトルとコート図（アニメーション）が1画面に収まるようにするため。
+ */
+.content-panel h1 {
+	font-size: 1.75rem;
+	line-height: 1.3;
+}
+@media (max-width: 50rem) {
+	.content-panel h1 {
+		font-size: 1.3rem;
+	}
+	.content-panel {
+		padding-block: 0.75rem;
+	}
+}

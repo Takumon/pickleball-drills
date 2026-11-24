@@ -34,12 +34,6 @@ const hidden = detailFields.filter(hasContent);
 ---
 
 <div class="drill">
-	<p class="meta">
-		<code>{drill.id}</code>
-		<span>{category?.label}</span>
-		{drill.aliases.length > 0 && <span class="aliases">別名: {drill.aliases.join('、')}</span>}
-	</p>
-
 	{
 		[{ fields: shown, inDetails: false }, { fields: hidden, inDetails: true }].map(({ fields, inDetails }) => {
 			const body = fields.map((field) => (
@@ -111,13 +105,20 @@ const hidden = detailFields.filter(hasContent);
 					)}
 				</section>
 			));
+			// ID・カテゴリ・別名はページ上部には出さず、「詳細」の最後に置く
 			return inDetails ? (
-				fields.length > 0 && (
-					<details class="more">
-						<summary>詳細</summary>
-						{body}
-					</details>
-				)
+				<details class="more">
+					<summary>詳細</summary>
+					{body}
+					<section class="field">
+						<h3>ID・カテゴリ</h3>
+						<p class="meta">
+							<code>{drill.id}</code>
+							<span>{category?.label}</span>
+							{drill.aliases.length > 0 && <span class="aliases">別名: {drill.aliases.join('、')}</span>}
+						</p>
+					</section>
+				</details>
 			) : (
 				body
 			);

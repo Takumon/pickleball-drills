@@ -10,9 +10,6 @@ const { diagram, title = 'コート図' } = Astro.props;
 
 /** 人・手・パドルは見やすさ優先で、コートの縮尺より大きく描く（単位はフィート相当） */
 const PLAYER_R = 1.3;
-const HAND_R = 0.45;
-const PADDLE_LEN = 2.1; // フェイスの長さ（握る方向）
-const PADDLE_W = 1.6; // フェイスの幅
 const uid = `c${Math.random().toString(36).slice(2, 8)}`;
 const pad = 3.5;
 
@@ -26,21 +23,18 @@ const figures = diagram.players.map((p) => {
 	// 本人から見た右（上向きなら +x、下向きなら -x）。左利きなら逆側
 	const r: Point = [-f[1] * side, f[0] * side];
 	const at = (dr: number, df: number): Point => [p.x + r[0] * dr + f[0] * df, p.y + r[1] * dr + f[1] * df];
-	// 構えごとの、パドルを持つ手の位置とフェイスの中心（体の中心からの「右」「前」の距離）
+	// 構えごとの、手の位置とパドルの先の位置（体の中心からの「右」「前」の距離）
+	// 腕 = 体→手の細線、パドル = 手→先の太線
 	const pose = {
-		ready: { hand: [1.6, 1.3], face: [2.0, 3.3], other: [-1.5, 0.9] },
-		fh: { hand: [2.1, 0.5], face: [3.9, 1.1], other: [-1.5, 0.9] },
-		bh: { hand: [-0.9, 1.7], face: [-2.6, 2.6], other: [-1.6, 1.2] },
+		ready: { hand: [1.9, 2.1], tip: [2.3, 3.9] },
+		fh: { hand: [2.8, 0.8], tip: [4.6, 1.4] },
+		bh: { hand: [-1.0, 2.5], tip: [-2.8, 3.2] },
 	}[p.paddle];
 	const hand = at(pose.hand[0], pose.hand[1]);
-	const face = at(pose.face[0], pose.face[1]);
-	const otherHand = at(pose.other[0], pose.other[1]);
-	const len = Math.hypot(face[0] - hand[0], face[1] - hand[1]);
-	const dir: Point = [(face[0] - hand[0]) / len, (face[1] - hand[1]) / len];
-	// グリップは手からフェイスの根元まで
-	const gripEnd: Point = [face[0] - (dir[0] * PADDLE_LEN) / 2, face[1] - (dir[1] * PADDLE_LEN) / 2];
-	const angle = (Math.atan2(dir[1], dir[0]) * 180) / Math.PI;
-	return { ...p, hand, face, otherHand, gripEnd, angle };
+	const tip = at(pose.tip[0], pose.tip[1]);
+	// 打球の線はパドルの真ん中から出す
+	const face: Point = [(hand[0] + tip[0]) / 2, (hand[1] + tip[1]) / 2];
+	return { ...p, hand, tip, face };
 });
 const figureById = new Map(figures.map((p) => [p.id, p]));
 
@@ -156,21 +150,9 @@ const k2 = COURT.net + COURT.kitchen;
 		{
 			figures.map((p) => (
 				<g class={`player role-${p.role}`}>
-					<line class="arm" x1={p.x} y1={p.y} x2={p.otherHand[0]} y2={p.otherHand[1]} />
 					<line class="arm" x1={p.x} y1={p.y} x2={p.hand[0]} y2={p.hand[1]} />
-					<line class="handle" x1={p.hand[0]} y1={p.hand[1]} x2={p.gripEnd[0]} y2={p.gripEnd[1]} />
-					<rect
-						class="paddle"
-						x={p.face[0] - PADDLE_LEN / 2}
-						y={p.face[1] - PADDLE_W / 2}
-						width={PADDLE_LEN}
-						height={PADDLE_W}
-						rx={PADDLE_W * 0.45}
-						transform={`rotate(${p.angle} ${p.face[0]} ${p.face[1]})`}
-					/>
+					<line class="paddle" x1={p.hand[0]} y1={p.hand[1]} x2={p.tip[0]} y2={p.tip[1]} />
 					<circle class="body" cx={p.x} cy={p.y} r={PLAYER_R} />
-					<circle class="hand" cx={p.otherHand[0]} cy={p.otherHand[1]} r={HAND_R} />
-					<circle class="hand" cx={p.hand[0]} cy={p.hand[1]} r={HAND_R} />
 					<text x={p.x} y={p.y}>
 						{p.label ?? p.id}
 					</text>
@@ -183,11 +165,11 @@ const k2 = COURT.net + COURT.kitchen;
 			{
 				figures.length > 0 && (
 					<li>
-						<svg class="swatch-paddle player role-practice" viewBox="0 0 30 16" aria-hidden="true">
-							<line class="handle" x1="2" y1="8" x2="12" y2="8" />
-							<rect class="paddle" x="11" y="2" width="17" height="12" rx="5" />
+						<svg class="swatch-paddle player role-practice" viewBox="0 0 30 12" aria-hidden="true">
+							<line class="arm" x1="2" y1="6" x2="13" y2="6" />
+							<line class="paddle" x1="13" y1="6" x2="27" y2="6" />
 						</svg>
-						{figures.some((p) => p.lefty) ? 'パドル' : 'パドル（右利き）'}
+						{figures.some((p) => p.lefty) ? '細線=腕・太線=パドル' : '細線=腕・太線=パドル（右利き）'}
 					</li>
 				)
 			}
@@ -237,9 +219,7 @@ const k2 = COURT.net + COURT.kitchen;
 		--r-practice: #2563eb;
 		--r-partner: #60a5fa;
 		--r-opponent: #9ca3af;
-		--skin: #f3c9a3;
 		--paddle: #1f2937;
-		--paddle-handle: #111827;
 		margin: 1rem auto;
 		max-width: 340px;
 	}
@@ -262,7 +242,6 @@ const k2 = COURT.net + COURT.kitchen;
 		--c-return: #d1d5db;
 		--c-move: #6b7280;
 		--paddle: #e5e7eb;
-		--paddle-handle: #d1d5db;
 	}
 	svg {
 		width: 100%;
@@ -338,28 +317,16 @@ const k2 = COURT.net + COURT.kitchen;
 		stroke: #fff;
 		stroke-width: 0.2;
 	}
-	.player .hand {
-		fill: var(--skin);
-		stroke: var(--role-color);
-		stroke-width: 0.12;
-	}
-	.player .paddle {
-		fill: var(--paddle);
-		stroke: var(--role-color);
-		stroke-width: 0.15;
-	}
-	.player .handle {
-		stroke: var(--paddle-handle);
-		stroke-width: 0.45;
-		stroke-linecap: round;
-	}
+	/* 腕 = 細線、パドル = 太線 */
 	.player .arm {
 		stroke: var(--role-color);
-		stroke-width: 0.55;
+		stroke-width: 0.3;
 		stroke-linecap: round;
 	}
 	.player .paddle {
-		stroke-width: 0.22;
+		stroke: var(--paddle);
+		stroke-width: 1;
+		stroke-linecap: round;
 	}
 	.player text {
 		fill: #fff;
@@ -399,14 +366,14 @@ const k2 = COURT.net + COURT.kitchen;
 		height: 0.5em;
 	}
 	.swatch-paddle {
-		width: 1.6em;
-		height: 0.85em;
+		width: 1.8em;
+		height: 0.75em;
 	}
-	.swatch-paddle .handle {
-		stroke-width: 3;
+	.swatch-paddle .arm {
+		stroke-width: 1.6;
 	}
 	.swatch-paddle .paddle {
-		stroke-width: 1.5;
+		stroke-width: 5;
 	}
 	.swatch-line path {
 		stroke-width: 2;

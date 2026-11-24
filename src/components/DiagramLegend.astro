@@ -6,19 +6,34 @@ import { roleLabels, shotLabels, shotDurationMs, shotCurve, type Role, type Shot
 import '../styles/court.css';
 
 const order: ShotType[] = ['speedup', 'smash', 'volley', 'drive', 'serve', 'return', 'reset', 'dink', 'drop', 'lob', 'feed', 'move'];
+/** 線の形と太さ（styles/court.css の .t-* と合わせる） */
 const style: Record<ShotType, string> = {
-	speedup: '太い実線',
-	smash: '太い実線',
-	volley: '太い実線',
-	drive: '太い実線',
+	speedup: '実線',
+	smash: '実線',
+	volley: '実線',
+	drive: '実線',
 	serve: '実線',
 	return: '実線',
-	reset: '細い点線',
-	dink: '細い点線',
-	drop: '細い点線',
+	reset: '点線',
+	dink: '点線',
+	drop: '点線',
 	lob: '破線',
 	feed: '灰色の点線',
 	move: '灰色の点線',
+};
+const width: Record<ShotType, string> = {
+	speedup: '太い',
+	smash: '太い',
+	volley: '太い',
+	drive: '太い',
+	serve: 'ふつう',
+	return: 'ふつう',
+	lob: 'ふつう',
+	reset: '細い',
+	dink: '細い',
+	drop: '細い',
+	feed: '細い',
+	move: '細い',
 };
 const isSub = (t: ShotType) => t === 'feed' || t === 'move';
 const roles = Object.keys(roleLabels) as Role[];
@@ -34,7 +49,7 @@ const sec = (ms: number) => `${(ms / 1000).toFixed(2).replace(/0$/, '')}秒`;
 	<p>強く速い球は太い実線、柔らかく落とす球は細い点線、ロブは破線で描きます。球出しと人の移動は灰色の点線です。弧が大きいほど、山なりの球です。</p>
 	<table class="legend-table">
 		<thead>
-			<tr><th>見本</th><th>名前</th><th>線</th><th>弧</th><th>速さ</th></tr>
+			<tr><th>見本</th><th>名前</th><th>線</th><th>太さ</th><th>弧</th><th>速さ</th></tr>
 		</thead>
 		<tbody>
 			{
@@ -57,6 +72,7 @@ const sec = (ms: number) => `${(ms / 1000).toFixed(2).replace(/0$/, '')}秒`;
 						</td>
 						<td>{t === 'move' ? '移動' : shotLabels[t]}</td>
 						<td>{style[t]}</td>
+						<td>{width[t]}</td>
 						<td>{arcLabel(shotCurve[t])}</td>
 						<td>{sec(shotDurationMs[t])}</td>
 					</tr>
@@ -98,17 +114,26 @@ const sec = (ms: number) => `${(ms / 1000).toFixed(2).replace(/0$/, '')}秒`;
 		max-width: none;
 		margin: 0;
 	}
+	/* 6列あるので、スマホでも収まるよう文字と余白を小さめにする */
+	.legend-page .legend-table {
+		font-size: 0.85rem;
+	}
+	.legend-page .legend-table th,
+	.legend-page .legend-table td {
+		padding: 0.45rem 0.35rem;
+	}
 	.legend-table td {
 		vertical-align: middle;
 	}
-	/* 弧・速さは短い値なので折り返さない */
+	/* 太さ・弧・速さは短い値なので折り返さない */
 	.legend-table td:nth-child(4),
-	.legend-table td:nth-child(5) {
+	.legend-table td:nth-child(5),
+	.legend-table td:nth-child(6) {
 		white-space: nowrap;
 	}
 	.legend-page svg.sample {
-		width: 4.5rem;
-		min-width: 4.5rem;
+		width: 3.6rem;
+		min-width: 3.6rem;
 		height: auto;
 		display: block;
 	}

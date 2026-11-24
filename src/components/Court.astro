@@ -138,6 +138,10 @@ if (diagram.crop === 'auto') {
 	top = Math.min(top, Math.max(-pad, Math.min(...ys) - 1.5));
 	bottom = Math.max(bottom, Math.min(COURT.length + pad, Math.max(...ys) + 1.5));
 }
+// ベースラインの後ろに立つ人（サーブ・リターンなど）は、丸が切れないように全体を入れる
+const figureYs = panels.flatMap((pn) => pn.figures.map((p) => p.y));
+top = Math.min(top, Math.min(...figureYs) - PLAYER_R - 0.4);
+bottom = Math.max(bottom, Math.max(...figureYs) + PLAYER_R + 0.4);
 const viewBox = `${-padX} ${top} ${COURT.width + padX * 2} ${bottom - top}`;
 
 // 線の名前が図の左右からはみ出さないよう、横位置を内側に寄せる。

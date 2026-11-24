@@ -1,0 +1,156 @@
+---
+import { getCollection } from 'astro:content';
+import type { Drill } from '../content.config';
+import { categories } from '../config/categories';
+import { fieldLabels, visibleFields, detailFields, type DrillField } from '../config/drill-display';
+
+interface Props {
+	drill: Drill;
+}
+const { drill } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const category = categories.find((c) => c.code === drill.category);
+
+const docs = await getCollection('docs', (e) => !!e.data.drill);
+const relatedDrills = drill.related
+	.map((rid) => docs.find((e) => e.data.drill?.id === rid))
+	.filter((e) => e !== undefined);
+
+/** 項目に表示できる中身があるか */
+function hasContent(field: DrillField): boolean {
+	switch (field) {
+		case 'steps':
+		case 'points':
+		case 'variants':
+		case 'related':
+			return (drill[field] as unknown[]).length > 0;
+		default:
+			return !!drill[field];
+	}
+}
+const shown = visibleFields.filter(hasContent);
+const hidden = detailFields.filter(hasContent);
+---
+
+<div class="drill">
+	<p class="meta">
+		<code>{drill.id}</code>
+		<span>{category?.label}</span>
+		{drill.aliases.length > 0 && <span class="aliases">別名: {drill.aliases.join('、')}</span>}
+	</p>
+
+	{
+		[{ fields: shown, inDetails: false }, { fields: hidden, inDetails: true }].map(({ fields, inDetails }) => {
+			const body = fields.map((field) => (
+				<section class="field">
+					<h3>{fieldLabels[field]}</h3>
+					{field === 'setup' && <p>{drill.setup}</p>}
+					{field === 'feed' && <p>{drill.feed}</p>}
+					{field === 'purpose' && <p>{drill.purpose}</p>}
+					{field === 'notes' && <p>{drill.notes}</p>}
+					{field === 'diagram' && <img src={`${base}/${drill.diagram}`} alt={`${drill.id} の図`} />}
+					{field === 'steps' && (
+						<ol>
+							{drill.steps.map((s) => (
+								<li>{s}</li>
+							))}
+						</ol>
+					)}
+					{field === 'points' && (
+						<ul>
+							{drill.points.map((s) => (
+								<li>{s}</li>
+							))}
+						</ul>
+					)}
+					{field === 'time' && drill.time && (
+						<p>
+							{drill.time.min}分 × {drill.time.sets}セット
+						</p>
+					)}
+					{field === 'related' && (
+						<ul>
+							{relatedDrills.map((e) => (
+								<li>
+									<a href={`${base}/${e.id}/`}>{e.data.title}</a> <code>{e.data.drill!.id}</code>
+								</li>
+							))}
+						</ul>
+					)}
+					{field === 'variants' && (
+						<dl class="variants">
+							{drill.variants.map((v) => (
+								<>
+									<dt>
+										{v.name} <code>{drill.id}.{v.key}</code>
+									</dt>
+									<dd>
+										{v.setup && <p>人数・配置: {v.setup}</p>}
+										{v.feed && <p>球出し: {v.feed}</p>}
+										{v.steps && (
+											<ol>
+												{v.steps.map((s) => (
+													<li>{s}</li>
+												))}
+											</ol>
+										)}
+										{v.points && (
+											<ul>
+												{v.points.map((s) => (
+													<li>{s}</li>
+												))}
+											</ul>
+										)}
+										{v.note && <p>{v.note}</p>}
+									</dd>
+								</>
+							))}
+						</dl>
+					)}
+				</section>
+			));
+			return inDetails ? (
+				fields.length > 0 && (
+					<details class="more">
+						<summary>詳細</summary>
+						{body}
+					</details>
+				)
+			) : (
+				body
+			);
+		})
+	}
+</div>
+
+<style>
+	.drill .meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 0.75rem;
+		align-items: center;
+		color: var(--sl-color-gray-3);
+		font-size: var(--sl-text-sm);
+	}
+	.field h3 {
+		font-size: var(--sl-text-lg);
+		margin-top: 1.25rem;
+	}
+	.more {
+		margin-top: 1.5rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.5rem;
+		padding: 0.5rem 1rem;
+	}
+	.more summary {
+		cursor: pointer;
+		font-weight: 600;
+	}
+	.variants dt {
+		font-weight: 600;
+		margin-top: 0.75rem;
+	}
+	.variants dd {
+		margin-inline-start: 1rem;
+	}
+</style>

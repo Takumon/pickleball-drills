@@ -1,0 +1,12 @@
+---
+// Starlight の MarkdownContent を差し替え、ドリルページでは frontmatter の drill から本文を組み立てる。
+import Default from '@astrojs/starlight/components/MarkdownContent.astro';
+import DrillDetail from './DrillDetail.astro';
+
+const drill = Astro.locals.starlightRoute.entry.data.drill;
+---
+
+<Default>
+	{drill && <DrillDetail drill={drill} />}
+	<slot />
+</Default>

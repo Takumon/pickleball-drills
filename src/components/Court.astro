@@ -139,6 +139,19 @@ if (diagram.crop === 'auto') {
 	bottom = Math.max(bottom, Math.min(COURT.length + pad, Math.max(...ys) + 1.5));
 }
 const viewBox = `${-padX} ${top} ${COURT.width + padX * 2} ${bottom - top}`;
+
+// 線の名前が図の左右からはみ出さないよう、横位置を内側に寄せる。
+// 文字幅は全角1文字 ≒ フォントサイズとして見積もる（styles/court.css の .shot-label と合わせる）
+const labelFont = multi ? 1.7 : 1.3;
+for (const pn of panels) {
+	for (const l of pn.lines) {
+		if (!l.label) continue;
+		const half = ([...l.label].length * labelFont) / 2 + 0.3;
+		const minX = -padX + half;
+		const maxX = COURT.width + padX - half;
+		l.mid = [minX > maxX ? COURT.width / 2 : Math.min(Math.max(l.mid[0], minX), maxX), l.mid[1]];
+	}
+}
 const usedRoles = [...new Set(diagram.players.map((p) => p.role))];
 const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 + n - 1) : `${n}.`);
 ---

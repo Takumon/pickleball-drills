@@ -93,7 +93,35 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 	const mid = candidates.find(clear) ?? candidates.find((p) => Math.abs(p[1] - COURT.net) >= 1.6) ?? candidates[0];
 	const label =
 		s.label ?? (s.type === 'move' ? '移動' : s.feed ? `球出し（${shotLabels[s.type]}）` : shotLabels[s.type]);
-	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1] };
+	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces: bouncesOf(s, b.anchor, pointAt) };
+}
+
+/** サーブ・リターンでバウンド位置を書かなかったときの位置（線の長さに対する割合） */
+const AUTO_BOUNCE = 0.82;
+
+/**
+ * バウンドの印の位置。at は線の長さに対する割合（アニメーションで、ボールがそこを通ったときに印を出す）。
+ */
+function bouncesOf(s: Shot, toAnchor: 'paddle' | 'body' | 'point', pointAt: (t: number) => Point) {
+	if (s.type === 'move' || s.bounce === false) return [];
+	// 線を細かく区切って、長さの割合と点の対応を作る
+	const N = 200;
+	const pts = Array.from({ length: N + 1 }, (_, i) => pointAt(i / N));
+	const cum = [0];
+	for (let i = 1; i <= N; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+	const total = cum[N] || 1;
+	const at = (i: number) => ({ pt: pts[i], at: cum[i] / total });
+	if (s.bounce) {
+		const [bx, by] = s.bounce;
+		let best = 0;
+		pts.forEach((p, i) => {
+			if (Math.hypot(p[0] - bx, p[1] - by) < Math.hypot(pts[best][0] - bx, pts[best][1] - by)) best = i;
+		});
+		return [at(best)];
+	}
+	if (toAnchor === 'point') return [at(N)];
+	if (s.type === 'serve' || s.type === 'return') return [at(cum.findIndex((c) => c / total >= AUTO_BOUNCE))];
+	return [];
 }
 
 /**
@@ -173,6 +201,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 							zones={diagram.zones}
 							uid={`${uid}a${i}`}
 							playerR={PLAYER_R}
+							bounceMark={diagram.bounceMark}
 							title={`${title}（アニメーション ${i + 1}）`}
 							animated
 							step={i}
@@ -208,6 +237,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 						zones={diagram.zones}
 						uid={`${uid}p${i}`}
 						playerR={PLAYER_R}
+						bounceMark={diagram.bounceMark}
 						title={multi ? `${title} ${i + 1}` : title}
 					/>
 				</div>
@@ -289,7 +319,16 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 				}
 				r.style.strokeDashoffset = '0';
 			};
+			// バウンドの印: ボールがその位置を通ったときに出す（data-at = 線の長さに対する割合）
+			const marks = [...frame.querySelectorAll<SVGGElement>('.bounce')];
+			const showMarks = (ratio: number) =>
+				marks.forEach((m) => {
+					const on = ratio >= Number(m.dataset.at) - 0.001;
+					if (on && !m.classList.contains('on')) m.classList.add('on', ...(animate ? ['pop'] : []));
+					if (!on) m.classList.remove('on', 'pop');
+				});
 			const reset = () => {
+				showMarks(animate ? -1 : 1);
 				balls.forEach((_, k) => setReveal(k, animate ? 0 : 1));
 				movers.forEach(({ g }) => g?.setAttribute('transform', ''));
 				ball.setAttribute('cx', '-10');
@@ -307,6 +346,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 				const t = Math.min(1, (now - t0) / duration);
 				const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // 人の動き: ease-in-out
 				const eb = Math.sin((t * Math.PI) / 2); // ボール: 打った瞬間が速く、少しずつ減速する
+				showMarks(eb);
 				balls.forEach((b, k) => {
 					setReveal(k, eb);
 					if (k === 0) {
@@ -319,6 +359,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 				if (t < 1) raf = requestAnimationFrame(tick);
 				else {
 					balls.forEach((_, k) => setReveal(k, 1));
+					showMarks(1);
 					ball.setAttribute('cx', '-10');
 					done?.();
 				}

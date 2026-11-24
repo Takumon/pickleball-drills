@@ -41,12 +41,20 @@ const diagram = z.object({
 				feed: z.boolean().default(false),
 				/** 線の上に書く名前。省略時は打球の種類名（人の動きは「移動」） */
 				label: z.string().optional(),
+				/**
+				 * バウンドする位置。線の上のいちばん近い点に印を付ける。
+				 * 省略時: コートに落とす球（to が座標）は終点に印を付け、サーブ・リターンは相手の手前に自動で付ける。
+				 * false なら印を付けない（ノーバウンド）。
+				 */
+				bounce: z.union([point, z.literal(false)]).optional(),
 			}),
 		)
 		.default([]),
 	zones: z.array(z.enum(keysOf<ZoneName>(zoneRects))).default([]),
 	/** auto=使っている範囲だけ縦に切り出す / full=コート全体 */
 	crop: z.enum(['auto', 'full']).default('auto'),
+	/** バウンドの印の形（試作中。ring=輪 / cross=× / none=印なし。試作中のページだけ指定する） */
+	bounceMark: z.enum(['ring', 'cross', 'none']).default('none'),
 	caption: z.string().optional(),
 });
 export type Diagram = z.infer<typeof diagram>;

@@ -23,6 +23,7 @@ interface Line {
 	d: string;
 	mid: Point;
 	label?: string;
+	bounces?: { pt: Point; at: number }[];
 }
 interface Props {
 	figures: Figure[];
@@ -31,12 +32,15 @@ interface Props {
 	zones: ZoneName[];
 	uid: string;
 	playerR: number;
+	/** バウンドの印の形 */
+	bounceMark?: 'ring' | 'cross' | 'none';
 	title: string;
 	/** アニメーション用の場面として描く（ボールと data 属性を付ける） */
 	animated?: boolean;
 	step?: number;
 }
-const { figures, lines, viewBox, zones, uid, playerR, title, animated = false, step } = Astro.props;
+const { figures, lines, viewBox, zones, uid, playerR, bounceMark = 'none', title, animated = false, step } = Astro.props;
+const MARK = 0.6;
 const k1 = COURT.net - COURT.kitchen;
 const k2 = COURT.net + COURT.kitchen;
 const isSub = (t: string) => t === 'move';
@@ -93,6 +97,20 @@ const isSub = (t: string) => t === 'move';
 				</>
 			);
 		})
+	}
+
+	{
+		lines.flatMap((l) =>
+			(bounceMark === 'none' ? [] : (l.bounces ?? [])).map((b) => (
+				<g class:list={['bounce', `mark-${bounceMark}`, { on: !animated }]} data-at={b.at}>
+					{bounceMark === 'ring' ? (
+						<circle cx={b.pt[0]} cy={b.pt[1]} r={MARK} />
+					) : (
+						<path d={`M${b.pt[0] - MARK} ${b.pt[1] - MARK} L${b.pt[0] + MARK} ${b.pt[1] + MARK} M${b.pt[0] + MARK} ${b.pt[1] - MARK} L${b.pt[0] - MARK} ${b.pt[1] + MARK}`} />
+					)}
+				</g>
+			)),
+		)
 	}
 
 	{

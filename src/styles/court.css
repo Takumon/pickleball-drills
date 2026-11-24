@@ -170,6 +170,31 @@
 	stroke: #1f2937;
 	stroke-width: 0.12;
 }
+.court .bounce {
+	fill: none;
+	stroke: var(--ball);
+	stroke-width: 0.22;
+	stroke-linecap: round;
+	opacity: 0;
+	transform-box: fill-box;
+	transform-origin: center;
+}
+.court .bounce.on {
+	opacity: 1;
+}
+.court .bounce.pop {
+	animation: bounce-pop 0.45s ease-out;
+}
+@keyframes bounce-pop {
+	from {
+		transform: scale(2.2);
+		opacity: 0.2;
+	}
+	to {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
 .court .shot-label {
 	font-size: 1.7px;
 	font-weight: 700;

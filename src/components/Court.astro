@@ -32,9 +32,9 @@ function figureOf(p: Player, pos: Point) {
 	// 構えごとの、肩・手・パドルの先の位置（体の中心からの「右」「前」の距離）
 	// 腕 = 肩→手の細線、パドル = 手→先の太線。体から斜め前へ開くように描く
 	const pose = {
-		ready: { shoulder: [0.9, 0.5], hand: [1.9, 1.5], tip: [2.6, 2.1] }, // 右肩から右斜め前へ開く
-		fh: { shoulder: [1.2, 0.3], hand: [2.4, 0.9], tip: [3.3, 1.2] }, // フォア側（右）へ大きく開く
-		bh: { shoulder: [-0.9, 0.5], hand: [-1.9, 1.5], tip: [-2.6, 2.1] }, // バック側（左）斜め前へ開く
+		ready: { shoulder: [0.9, 0.5], hand: [1.55, 1.15], tip: [2.05, 1.6] }, // 右肩から右斜め前へ開く
+		fh: { shoulder: [1.2, 0.3], hand: [2.0, 0.65], tip: [2.65, 0.9] }, // フォア側（右）へ大きく開く
+		bh: { shoulder: [-0.9, 0.5], hand: [-1.55, 1.15], tip: [-2.05, 1.6] }, // バック側（左）斜め前へ開く
 	}[p.paddle];
 	const shoulder = at(pose.shoulder[0], pose.shoulder[1]);
 	const hand = at(pose.hand[0], pose.hand[1]);

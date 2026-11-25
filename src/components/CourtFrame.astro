@@ -24,8 +24,8 @@ interface Line {
 	mid: Point;
 	label?: string;
 	bounces?: { pt: Point; at: number }[];
-	/** アニメーションのボールの半径の列（高さの表現） */
-	radii?: string;
+	/** アニメーションのボールの高さ（ft）の列 */
+	heights?: string;
 }
 interface Props {
 	figures: Figure[];
@@ -95,7 +95,7 @@ const isSub = (t: string) => t === 'move';
 						data-kind={animated ? (l.type === 'move' ? 'move' : 'ball') : undefined}
 						data-player={animated && l.type === 'move' && typeof l.from === 'string' ? l.from : undefined}
 						data-ms={animated ? shotDurationMs[l.type as ShotType] : undefined}
-						data-r={animated ? l.radii : undefined}
+						data-h={animated ? l.heights : undefined}
 					/>
 				</>
 			);
@@ -140,5 +140,7 @@ const isSub = (t: string) => t === 'move';
 		)
 	}
 
+	{animated && <ellipse class="ball-shadow" rx="0.7" ry="0.42" cx="-10" cy="-10" />}
+	{animated && <line class="ball-pole" x1="-10" y1="-10" x2="-10" y2="-10" />}
 	{animated && <circle class="ball" r="0.55" cx="-10" cy="-10" />}
 </svg>

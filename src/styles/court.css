@@ -106,6 +106,8 @@
 	color: var(--sl-color-white, #111);
 }
 .court svg.court-svg {
+	/* 浮かせたボールが図の上端からはみ出しても切らない */
+	overflow: visible;
 	width: 100%;
 	height: auto;
 	display: block;
@@ -164,6 +166,16 @@
 }
 .court .arrowhead.sub {
 	fill: var(--sub);
+}
+.court .ball-shadow {
+	fill: rgba(0, 0, 0, 0.75);
+	stroke: rgba(255, 255, 255, 0.5);
+	stroke-width: 0.08;
+}
+.court .ball-pole {
+	stroke: rgba(255, 255, 255, 0.7);
+	stroke-width: 0.1;
+	stroke-dasharray: 0.3 0.25;
 }
 .court .ball {
 	fill: var(--ball);

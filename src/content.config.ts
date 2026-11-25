@@ -146,6 +146,11 @@ const drill = z.object({
 	/** ビルダーでこのドリルを足したときの初期値（何分×何セット）。その日の実際の時間はメニューの URL が持つ。ドリルのページには出さない */
 	builderDefault: z.object({ min: z.number(), sets: z.number().int() }).optional(),
 	notes: z.string().optional(),
+	/**
+	 * 関連リンク: このドリルの元になった動画や投稿（YouTube・Instagram など）。
+	 * 練習する人が、サイトの説明だけでは分かりにくいときに見て理解を深めるためのもの。公開されているものだけを載せる
+	 */
+	links: z.array(z.object({ title: z.string(), url: z.string().url() })).default([]),
 });
 
 export type Drill = z.infer<typeof drill>;

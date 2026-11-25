@@ -14,6 +14,7 @@ function hasContent(field: DrillField): boolean {
 		case 'steps':
 		case 'points':
 		case 'variants':
+		case 'links':
 			return (drill[field] as unknown[]).length > 0;
 		default:
 			return !!drill[field];
@@ -21,8 +22,17 @@ function hasContent(field: DrillField): boolean {
 }
 const shown = visibleFields.filter(hasContent);
 const groups = detailGroups
-	.map((g) => ({ label: g.label, fields: g.fields.filter(hasContent) }))
-	.filter((g) => g.fields.length > 0);
+	.map((g) => ({ label: g.label, fields: g.fields.filter(hasContent), showWhenEmpty: g.showWhenEmpty }))
+	.filter((g) => g.fields.length > 0 || g.showWhenEmpty);
+/** リンク先のサービス名（URL のホストから決める） */
+const SERVICES: [RegExp, string][] = [
+	[/(^|\.)(youtube\.com|youtu\.be)$/, 'YouTube'],
+	[/(^|\.)instagram\.com$/, 'Instagram'],
+];
+const serviceOf = (url: string) => {
+	const host = new URL(url).hostname;
+	return SERVICES.find(([re]) => re.test(host))?.[1] ?? host.replace(/^www\./, '');
+};
 ---
 
 <div class="drill">
@@ -44,6 +54,18 @@ const groups = detailGroups
 								<li>{s}</li>
 							))}
 						</ol>
+					)}
+					{field === 'links' && (
+						<ul class="links">
+							{drill.links.map((l) => (
+								<li>
+									<a href={l.url} target="_blank" rel="noopener">
+										{l.title}
+									</a>
+									<span class="service">{serviceOf(l.url)}</span>
+								</li>
+							))}
+						</ul>
 					)}
 					{field === 'points' && (
 						<ul>
@@ -88,7 +110,7 @@ const groups = detailGroups
 			return label ? (
 				<details class="more">
 					<summary>{label}</summary>
-					{body}
+					{fields.length > 0 ? body : <p class="none">なし</p>}
 				</details>
 			) : (
 				body
@@ -111,6 +133,14 @@ const groups = detailGroups
 	.more summary {
 		cursor: pointer;
 		font-weight: 600;
+	}
+	.none {
+		color: var(--sl-color-gray-3);
+	}
+	.links .service {
+		margin-inline-start: 0.5rem;
+		color: var(--sl-color-gray-3);
+		font-size: var(--sl-text-xs);
 	}
 	.variants dt {
 		font-weight: 600;

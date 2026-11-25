@@ -13,6 +13,7 @@ export const fieldLabels = {
 	purpose: '目的',
 	variants: '派生形',
 	notes: '補足',
+	links: '関連リンク',
 } as const;
 
 export type DrillField = keyof typeof fieldLabels;
@@ -26,8 +27,9 @@ export const visibleFields: DrillField[] = ['diagram', 'purpose', 'points'];
  * 折りたたんで見せる項目のまとまり。趣旨の違うものは別のトグルにする（配列の順が表示順）。
  * まとまりの中が1項目で、見出しがトグルの名前と同じときは、中の見出しを省く。
  */
-export const detailGroups: { label: string; fields: DrillField[] }[] = [
+export const detailGroups: { label: string; fields: DrillField[]; /** 中身がなくてもトグルを出し、「なし」と書く */ showWhenEmpty?: boolean }[] = [
 	{ label: '練習方法の詳細', fields: ['setup', 'feed', 'steps', 'variants', 'notes'] },
+	{ label: '関連リンク', fields: ['links'], showWhenEmpty: true },
 ];
 
 // ID・カテゴリ・別名・メニューを組むときの初期値（builderDefault）は、データとしては持つが、ページには出さない。

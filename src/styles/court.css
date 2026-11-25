@@ -167,15 +167,32 @@
 .court .arrowhead.sub {
 	fill: var(--sub);
 }
-.court .ball-shadow {
-	fill: rgba(0, 0, 0, 0.75);
-	stroke: rgba(255, 255, 255, 0.5);
-	stroke-width: 0.08;
+.court .side-title {
+	font-size: 1.2px;
+	font-weight: 700;
+	text-anchor: middle;
+	fill: var(--sub);
+	font-family: system-ui, sans-serif;
 }
-.court .ball-pole {
-	stroke: rgba(255, 255, 255, 0.7);
-	stroke-width: 0.1;
-	stroke-dasharray: 0.3 0.25;
+.court .side-ground {
+	stroke: var(--court-line);
+	stroke-width: 0.25;
+}
+.court .side-net {
+	stroke: var(--court-net);
+	stroke-width: 0.35;
+}
+.court .side-trace {
+	fill: none;
+	stroke: var(--shot);
+	stroke-width: 0.2;
+	stroke-dasharray: 0.4 0.3;
+	opacity: 0.8;
+}
+.court .side-ball {
+	fill: var(--ball);
+	stroke: #1f2937;
+	stroke-width: 0.12;
 }
 .court .ball {
 	fill: var(--ball);

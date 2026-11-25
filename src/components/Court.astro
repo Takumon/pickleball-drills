@@ -215,7 +215,10 @@ if (diagram.crop === 'auto') {
 const figureYs = panels.flatMap((pn) => pn.figures.map((p) => p.y));
 top = Math.min(top, Math.min(...figureYs) - PLAYER_R - 0.4);
 bottom = Math.max(bottom, Math.max(...figureYs) + PLAYER_R + 0.4);
-const viewBox = `${-padX} ${top} ${COURT.width + padX * 2} ${bottom - top}`;
+// アニメーションの図は、コートの右に「横から見た高さ」の帯を付ける（縦の位置はコートと同じ、横の位置が高さ）
+const SIDE = { gap: 1.2, width: 8, unitPerFt: 0.8 };
+const side = multi ? { x0: COURT.width + padX + SIDE.gap, k: SIDE.unitPerFt, width: SIDE.width, top, bottom } : undefined;
+const viewBox = `${-padX} ${top} ${COURT.width + padX * 2 + (side ? SIDE.gap + SIDE.width : 0)} ${bottom - top}`;
 
 // 線の名前が図の左右からはみ出さないよう、横位置を内側に寄せる。
 // 文字幅は全角1文字 ≒ フォントサイズとして見積もる（styles/court.css の .shot-label と合わせる）
@@ -249,6 +252,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 							playerR={PLAYER_R}
 							title={`${title}（アニメーション ${i + 1}）`}
 							animated
+							side={side}
 							step={i}
 						/>
 					))}
@@ -326,11 +330,10 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 	 * 打球はボールを線に沿って動かし（線も伸ばして描く）、人の動きは人を移動先まで動かす。
 	 */
 	const SHOT_MS = 900;
-	/** 影のずらし方とボールの大きさ（高さ 1ft あたり）。影との距離と大きさで高さを見せる */
-	const LIFT_PER_FT = 0.3;
-	const BALL_R_GROUND = 0.4;
-	const BALL_R_PER_FT = 0.1;
-	const BALL_R_MAX = 1.3;
+	/** ボールの大きさ（高さ 1ft あたり）。高さそのものは右の帯（横から見た図）で見せる */
+	const BALL_R_GROUND = 0.45;
+	const BALL_R_PER_FT = 0.05;
+	const BALL_R_MAX = 0.9;
 	const PAUSE_MS = 700;
 	const LOOP_PAUSE_MS = 1600;
 
@@ -375,9 +378,21 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			dots.forEach((d, k) => d.classList.toggle('active', k === i));
 			const frame = frames[i];
 			const ball = frame.querySelector<SVGCircleElement>('.ball')!;
-			const shadow = frame.querySelector<SVGEllipseElement>('.ball-shadow')!;
-			const pole = frame.querySelector<SVGLineElement>('.ball-pole')!;
 			const balls = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="ball"]')];
+			const sideBall = frame.querySelector<SVGCircleElement>('.side-ball');
+			const sideTrace = frame.querySelector<SVGPathElement>('.side-trace');
+			const sideX0 = Number(frame.dataset.sideX0);
+			const sideK = Number(frame.dataset.sideK);
+			const sideMax = Number(frame.dataset.sideMax);
+			const sideX = (h: number) => sideX0 + Math.min(h, sideMax) * sideK;
+			// 横から見た高さの帯に描く、ボールの通り道（打つ手の線を細かく区切った点）
+			const tracePts = balls[0] ? Array.from({ length: 41 }, (_, j) => ballAt(balls[0], j / 40)) : [];
+			const drawTrace = (ratio: number) => {
+				if (!sideTrace) return;
+				const n = Math.round(ratio * 40);
+				const pts = tracePts.slice(0, n + 1);
+				sideTrace.setAttribute('d', pts.length > 1 ? 'M' + pts.map((p) => `${sideX(p.h)} ${p.y}`).join(' L') : '');
+			};
 			const moves = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="move"]')];
 			const movers = moves.map((m) => {
 				const g = frame.querySelector<SVGGElement>(`[data-player-id="${m.dataset.player}"]`);
@@ -411,30 +426,19 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 					if (on && !m.classList.contains('on')) m.classList.add('on', ...(animate ? ['pop'] : []));
 					if (!on) m.classList.remove('on', 'pop');
 				});
-			// ボールを描く: ボールは線の上（打つ人・受ける人のパドルの位置）に置き、高いほど大きく描く。
-			// 影はボールの真下の地面として、高さの分だけ画面の下へずらして描く。
-			// ボールが影に重なったところがバウンド。pos がなければ隠す
+			// ボールを描く: コートの図ではボールを線の上（打つ人・受ける人のパドルの位置）に置き、高いほど少し大きく描く。
+			// 高さは右の帯（横から見た図）で見せる。pos がなければ隠す
 			const drawBall = (pos?: BallPos) => {
 				if (!pos) {
 					ball.setAttribute('cx', '-10');
-					shadow.setAttribute('cx', '-10');
-					pole.setAttribute('x1', '-10');
-					pole.setAttribute('x2', '-10');
+					sideBall?.setAttribute('cx', '-10');
 					return;
 				}
-				const r = Math.min(BALL_R_MAX, BALL_R_GROUND + pos.h * BALL_R_PER_FT);
-				// 図の下端からはみ出さないよう、ずらす量を抑える
-				const vb = frame.viewBox.baseVal;
-				const drop = Math.min(pos.h * LIFT_PER_FT, Math.max(0, vb.y + vb.height - 0.5 - pos.y));
 				ball.setAttribute('cx', `${pos.x}`);
 				ball.setAttribute('cy', `${pos.y}`);
-				ball.setAttribute('r', `${r}`);
-				shadow.setAttribute('cx', `${pos.x}`);
-				shadow.setAttribute('cy', `${pos.y + drop}`);
-				pole.setAttribute('x1', `${pos.x}`);
-				pole.setAttribute('x2', `${pos.x}`);
-				pole.setAttribute('y1', `${pos.y + drop}`);
-				pole.setAttribute('y2', `${pos.y}`);
+				ball.setAttribute('r', `${Math.min(BALL_R_MAX, BALL_R_GROUND + pos.h * BALL_R_PER_FT)}`);
+				sideBall?.setAttribute('cx', `${sideX(pos.h)}`);
+				sideBall?.setAttribute('cy', `${pos.y}`);
 			};
 			const reset = () => {
 				showMarks(animate ? -1 : 1);
@@ -442,6 +446,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 				movers.forEach(({ g }) => g?.setAttribute('transform', ''));
 				// 打つ手なら打つ人のパドルから、人が動くだけの手なら前の手の終わりの位置にボールを置く
 				drawBall(balls[0] ? ballAt(balls[0], animate ? 0 : 1) : lastBall);
+				drawTrace(animate ? 0 : 1);
 				if (balls[0] && !animate) lastBall = ballAt(balls[0], 1);
 			};
 			reset();
@@ -460,13 +465,17 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 				showMarks(eb);
 				balls.forEach((b, k) => {
 					setReveal(k, eb);
-					if (k === 0) drawBall(ballAt(b, eb));
+					if (k === 0) {
+						drawBall(ballAt(b, eb));
+						drawTrace(eb);
+					}
 				});
 				movers.forEach(({ g, dx, dy }) => g?.setAttribute('transform', `translate(${dx * e} ${dy * e})`));
 				if (t < 1) raf = requestAnimationFrame(tick);
 				else {
 					balls.forEach((_, k) => setReveal(k, 1));
 					showMarks(1);
+					drawTrace(1);
 					// ボールは消さずに、届いた位置に残す（次の手はそこから始まる）
 					if (balls[0]) {
 						lastBall = ballAt(balls[0], 1);

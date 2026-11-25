@@ -8,11 +8,11 @@ export const fieldLabels = {
 	setup: '人数・配置',
 	feed: '球出し',
 	steps: 'やり方',
-	points: 'コツ',
+	points: '練習のコツ',
 	diagram: '図',
-	scene: '場面',
-	purpose: '目的',
-	focus: '重点',
+	scene: '想定する試合の場面',
+	purpose: 'その場面でやりたいこと',
+	focus: '練習の目的',
 	variants: '派生形',
 	notes: '補足',
 	links: '関連リンク',
@@ -21,16 +21,12 @@ export const fieldLabels = {
 export type DrillField = keyof typeof fieldLabels;
 
 /**
- * 最初から見せる項目（練習中に必ず見てほしいもの）。見出し（label）のあるまとまりは、
- * 見出しの下に、項目の名前を文の頭に小さく置いて並べる。
+ * 最初から見せる項目（練習中に必ず見てほしいもの）。
  * 練習中に長い文は読まない。動き（配置・球出し・やり方）はアニメーションで伝わるので、
- * 最初から見せるのは、図と、試合で何をしたいか（場面・目的）と、この練習で何をするか（重点・コツ）だけにする
+ * 最初から見せるのは、図と、試合のどの場面で何をしたいか（scene・purpose）と、
+ * この練習で何をするか（focus・points）だけにする。見出しの頭（「…試合の…」「練習の…」）で2つずつのまとまりを見せる
  */
-export const visibleSections: { label?: string; fields: DrillField[] }[] = [
-	{ fields: ['diagram'] },
-	{ label: '試合では', fields: ['scene', 'purpose'] },
-	{ label: 'この練習では', fields: ['focus', 'points'] },
-];
+export const visibleFields: DrillField[] = ['diagram', 'scene', 'purpose', 'focus', 'points'];
 
 /**
  * 折りたたんで見せる項目のまとまり。趣旨の違うものは別のトグルにする（配列の順が表示順）。

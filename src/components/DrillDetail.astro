@@ -1,6 +1,6 @@
 ---
 import type { Drill } from '../content.config';
-import { fieldLabels, visibleFields, detailGroups, type DrillField } from '../config/drill-display';
+import { fieldLabels, visibleSections, detailGroups, type DrillField } from '../config/drill-display';
 import Court from './Court.astro';
 
 interface Props {
@@ -20,7 +20,9 @@ function hasContent(field: DrillField): boolean {
 			return !!drill[field];
 	}
 }
-const shown = visibleFields.filter(hasContent);
+const sections = visibleSections
+	.map((g) => ({ label: g.label, fields: g.fields.filter(hasContent) }))
+	.filter((g) => g.fields.length > 0);
 const groups = detailGroups
 	.map((g) => ({ label: g.label, fields: g.fields.filter(hasContent), showWhenEmpty: g.showWhenEmpty }))
 	.filter((g) => g.fields.length > 0 || g.showWhenEmpty);
@@ -37,16 +39,20 @@ const serviceOf = (url: string) => {
 
 <div class="drill">
 	{
-		[{ fields: shown, label: undefined }, ...groups].map(({ fields, label }) => {
+		[...sections.map((g) => ({ ...g, open: true })), ...groups.map((g) => ({ ...g, open: false }))].map(({ fields, label, open }) => {
+			// 最初から見せるまとまりでは、項目の名前を文の頭に小さく置く（見出しの行を増やさない）
+			const inline = open && !!label;
 			// トグルの名前と同じ見出しは、中では繰り返さない
-			const showHeading = (field: DrillField) => field !== 'diagram' && !(fields.length === 1 && fieldLabels[field] === label);
+			const showHeading = (field: DrillField) => field !== 'diagram' && !inline && !(fields.length === 1 && fieldLabels[field] === label);
 			const body = fields.map((field) => (
-				<section class="field">
+				<section class:list={['field', { sub: inline }]}>
+					{inline && <span class="sub-label">{fieldLabels[field]}</span>}
 					{showHeading(field) && <h3>{fieldLabels[field]}</h3>}
 					{field === 'setup' && <p>{drill.setup}</p>}
 					{field === 'feed' && <p>{drill.feed}</p>}
 					{field === 'scene' && <p>{drill.scene}</p>}
 					{field === 'purpose' && <p>{drill.purpose}</p>}
+					{field === 'focus' && <p>{drill.focus}</p>}
 					{field === 'notes' && <p>{drill.notes}</p>}
 					{field === 'diagram' && drill.diagram && <Court diagram={drill.diagram} title={`${drill.id} の図`} />}
 					{field === 'steps' && (
@@ -108,6 +114,15 @@ const serviceOf = (url: string) => {
 					)}
 				</section>
 			));
+			if (open)
+				return label ? (
+					<div class="section">
+						<h3>{label}</h3>
+						{body}
+					</div>
+				) : (
+					body
+				);
 			return label ? (
 				<details class="more">
 					<summary>{label}</summary>
@@ -142,6 +157,29 @@ const serviceOf = (url: string) => {
 	}
 	.field li + li {
 		margin-top: 0.15rem;
+	}
+	.section > h3 {
+		font-size: var(--sl-text-lg);
+		margin-top: 1.25rem;
+	}
+	.section .field.sub {
+		margin-top: 0.4rem;
+	}
+	.section .field.sub > p {
+		display: inline;
+	}
+	.sub-label {
+		display: inline-block;
+		margin-inline-end: 0.5em;
+		padding: 0 0.4em;
+		border-radius: 0.3em;
+		background: var(--sl-color-gray-6);
+		color: var(--sl-color-gray-2);
+		font-size: var(--sl-text-xs);
+		font-weight: 700;
+	}
+	.section .field.sub > ul {
+		margin-top: 0.2rem;
 	}
 	.none {
 		color: var(--sl-color-gray-3);

@@ -32,6 +32,7 @@ interface Props {
 	lines: Line[];
 	viewBox: string;
 	zones: ZoneName[];
+	fences?: [Point, Point][];
 	uid: string;
 	playerR: number;
 	title: string;
@@ -39,7 +40,7 @@ interface Props {
 	animated?: boolean;
 	step?: number;
 }
-const { figures, lines, viewBox, zones, uid, playerR, title, animated = false, step } = Astro.props;
+const { figures, lines, viewBox, zones, fences = [], uid, playerR, title, animated = false, step } = Astro.props;
 const MARK = 0.6;
 const k1 = COURT.net - COURT.kitchen;
 const k2 = COURT.net + COURT.kitchen;
@@ -72,6 +73,7 @@ const isSub = (t: string) => t === 'move';
 		<line x1={COURT.width / 2} y1={k2} x2={COURT.width / 2} y2={COURT.length} />
 	</g>
 	<line class="net" x1="-1" y1={COURT.net} x2={COURT.width + 1} y2={COURT.net} />
+	{fences.map(([a, b]) => <line class="fence" x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} />)}
 
 	{
 		lines.map((l, i) => {

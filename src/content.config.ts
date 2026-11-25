@@ -54,6 +54,8 @@ const diagram = z.object({
 		)
 		.default([]),
 	zones: z.array(z.enum(keysOf<ZoneName>(zoneRects))).default([]),
+	/** 柵（コートに置く目印）。[[x1, y1], [x2, y2]] の線分の列。ドロップの的など */
+	fences: z.array(z.tuple([point, point])).default([]),
 	/** auto=使っている範囲だけ縦に切り出す / full=コート全体 */
 	crop: z.enum(['auto', 'full']).default('auto'),
 	caption: z.string().optional(),

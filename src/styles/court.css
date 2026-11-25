@@ -180,6 +180,11 @@
 	stroke: #1f2937;
 	stroke-width: 0.12;
 }
+.court .fence {
+	stroke: #ef6461;
+	stroke-width: 0.6;
+	stroke-linecap: round;
+}
 .court .bounce {
 	fill: none;
 	stroke: var(--ball);

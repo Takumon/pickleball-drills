@@ -244,6 +244,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 							lines={pn.lines}
 							viewBox={viewBox}
 							zones={diagram.zones}
+							fences={diagram.fences}
 							uid={`${uid}a${i}`}
 							playerR={PLAYER_R}
 							title={`${title}（アニメーション ${i + 1}）`}
@@ -279,6 +280,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 						lines={pn.lines}
 						viewBox={viewBox}
 						zones={diagram.zones}
+							fences={diagram.fences}
 						uid={`${uid}p${i}`}
 						playerR={PLAYER_R}
 						title={multi ? `${title} ${i + 1}` : title}

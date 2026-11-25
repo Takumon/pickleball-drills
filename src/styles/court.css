@@ -197,20 +197,6 @@
 	fill: var(--side-ink);
 	font-family: system-ui, sans-serif;
 }
-.court .side-court {
-	fill: var(--court-surface);
-	/* ダークでは下地と色が近いので、ふちを付けて帯の形を見せる */
-	stroke: var(--side-ink);
-	stroke-width: 0.06;
-}
-.court .side-kitchen {
-	fill: var(--court-kitchen);
-}
-.court .side-mark {
-	/* 帯の幅に収め、コートの図の線と同じ色・太さにする */
-	stroke: var(--court-line);
-	stroke-width: 0.25;
-}
 .court .side-fence line {
 	stroke: var(--fence);
 	stroke-width: 0.2;
@@ -218,7 +204,7 @@
 }
 .court .side-ground {
 	stroke: var(--side-ink);
-	stroke-width: 0.15;
+	stroke-width: 0.2;
 }
 .court .side-net {
 	stroke: var(--side-ink);

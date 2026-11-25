@@ -315,6 +315,11 @@
 .court .player.role-practice .body {
 	fill: var(--me);
 }
+.court .player .halo {
+	fill: none;
+	stroke: var(--me);
+	stroke-width: 0.22;
+}
 .court .player.role-practice text {
 	fill: var(--me-ink);
 }
@@ -332,33 +337,6 @@
 .court figcaption {
 	font-size: var(--sl-text-xs, 0.8rem);
 	margin-top: 0.5rem;
-}
-.court .legend {
-	list-style: none;
-	padding: 0;
-	margin: 0;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.25rem 0.9rem;
-	justify-content: center;
-}
-.court .legend li {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.3rem;
-	margin: 0;
-}
-.court .legend .who {
-	font-weight: 700;
-}
-.court .legend .fence-swatch {
-	display: block;
-	width: 2.1em;
-	height: 0.7em;
-	margin: 0;
-}
-.court .legend .fence-swatch line {
-	stroke-width: 0.14;
 }
 .court .caption {
 	text-align: center;

@@ -59,6 +59,8 @@ const maskBox = { x: vbX - 10, y: vbY - 10, width: vbW + 20, height: vbH + 20 };
 const BODY_FT = 5.5;
 const SIDE_PADDLE = 1.1;
 const MARK = 0.6;
+/** 練習役の外側の輪と、体の丸とのすき間（ft） */
+const HALO_GAP = 0.6;
 /** 柵の支柱の大きさと間隔（ft） */
 const FENCE_POST = 0.5;
 const FENCE_POST_GAP = 1.6;
@@ -170,6 +172,8 @@ const isSub = (t: string) => t === 'move';
 	{
 		figures.map((p) => (
 			<g class={`player role-${p.role}`} data-player-id={animated ? p.id : undefined}>
+				{/* 練習する人（練習役）は、丸の外側に輪を付けて目立たせる。2人とも練習するときは2人とも */}
+				{p.role === 'practice' && <circle class="halo" cx={p.x} cy={p.y} r={playerR + HALO_GAP} />}
 				<line class="arm" x1={p.shoulder[0]} y1={p.shoulder[1]} x2={p.hand[0]} y2={p.hand[1]} />
 				<line class="paddle" x1={p.hand[0]} y1={p.hand[1]} x2={p.tip[0]} y2={p.tip[1]} />
 				<circle class="body" cx={p.x} cy={p.y} r={playerR} />

@@ -464,7 +464,8 @@ function RowBody({
 					}}
 				>
 					{d.variants.map((v) => (
-						<option value={v.key}>{v.name}</option>
+						// デフォルト（図で描いている派生形）は末尾に丸を付けて見分ける
+						<option value={v.key}>{v.default ? `${v.name} ●` : v.name}</option>
 					))}
 				</select>
 			)}

@@ -167,32 +167,51 @@
 .court .arrowhead.sub {
 	fill: var(--sub);
 }
+.court .side-panel {
+	fill: var(--court-surface);
+	opacity: 0.35;
+}
+/* 横から見た高さは補助の情報なので、細く・淡く描く */
 .court .side-title {
-	font-size: 1.2px;
-	font-weight: 700;
+	font-size: 1px;
 	text-anchor: middle;
 	fill: var(--sub);
 	font-family: system-ui, sans-serif;
 }
 .court .side-ground {
-	stroke: var(--court-line);
-	stroke-width: 0.25;
+	stroke: var(--sub);
+	stroke-width: 0.15;
 }
 .court .side-net {
-	stroke: var(--court-net);
-	stroke-width: 0.35;
+	stroke: var(--sub);
+	stroke-width: 0.3;
+}
+.court .side-person {
+	opacity: 0.7;
+}
+.court .side-body {
+	stroke: var(--role-color);
+	stroke-width: 0.22;
+	stroke-linecap: round;
+}
+.court .side-head {
+	fill: var(--role-color);
+}
+.court .side-paddle {
+	stroke: var(--paddle-side, #e5e7eb);
+	stroke-width: 0.3;
+	stroke-linecap: round;
 }
 .court .side-trace {
 	fill: none;
-	stroke: var(--shot);
-	stroke-width: 0.2;
-	stroke-dasharray: 0.4 0.3;
-	opacity: 0.8;
+	stroke: var(--sub);
+	stroke-width: 0.15;
+	stroke-dasharray: 0.35 0.3;
 }
 .court .side-ball {
 	fill: var(--ball);
 	stroke: #1f2937;
-	stroke-width: 0.12;
+	stroke-width: 0.08;
 }
 .court .ball {
 	fill: var(--ball);

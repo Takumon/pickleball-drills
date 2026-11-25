@@ -183,6 +183,16 @@ const panels = groups.map((g) => {
 	const figures = diagram.players.map((p) => figureOf(p, positions.get(p.id)!));
 	const byId = new Map(figures.map((f) => [f.id, f]));
 	const lines = g.shots.map((s) => lineOf(s, byId, groups.length > 1));
+	// 横から見た図で描くパドルの高さ: この手で打つ人は打つ高さ、受ける人は受ける高さ、ほかは既定の高さ
+	const hitShot = g.shots.find((s) => s.type !== 'move');
+	const sideH = (id: string) => {
+		if (hitShot && hitShot.type !== 'move') {
+			if (hitShot.from === id) return ft(hitShot.hit ?? shotHeights[hitShot.type].hit);
+			if (hitShot.to === id) return receiveHeight(hitShot);
+		}
+		return ft(defaultReceiveHeight);
+	};
+	for (const f of figures) Object.assign(f, { sideH: sideH(f.id) });
 	for (const s of g.shots) {
 		if (s.type === 'move' && typeof s.from === 'string' && typeof s.to !== 'string') positions.set(s.from, s.to);
 	}
@@ -396,10 +406,12 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			const moves = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="move"]')];
 			const movers = moves.map((m) => {
 				const g = frame.querySelector<SVGGElement>(`[data-player-id="${m.dataset.player}"]`);
+				// 横から見た図の人も、奥行き（縦）だけ一緒に動かす
+				const sg = frame.querySelector<SVGGElement>(`[data-side-player="${m.dataset.player}"]`);
 				const len = m.getTotalLength();
 				const start = m.getPointAtLength(0);
 				const end = m.getPointAtLength(len);
-				return { g, dx: end.x - start.x, dy: end.y - start.y };
+				return { g, sg, dx: end.x - start.x, dy: end.y - start.y };
 			});
 			const lens = balls.map((b) => b.getTotalLength());
 			// 線はマスク側の線（.reveal）を伸ばして見せる。本体の線は点線・破線のまま描ける
@@ -443,7 +455,10 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			const reset = () => {
 				showMarks(animate ? -1 : 1);
 				balls.forEach((_, k) => setReveal(k, animate ? 0 : 1));
-				movers.forEach(({ g }) => g?.setAttribute('transform', ''));
+				movers.forEach(({ g, sg }) => {
+					g?.setAttribute('transform', '');
+					sg?.setAttribute('transform', '');
+				});
 				// 打つ手なら打つ人のパドルから、人が動くだけの手なら前の手の終わりの位置にボールを置く
 				drawBall(balls[0] ? ballAt(balls[0], animate ? 0 : 1) : lastBall);
 				drawTrace(animate ? 0 : 1);
@@ -451,7 +466,10 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			};
 			reset();
 			if (!animate) {
-				movers.forEach(({ g, dx, dy }) => g?.setAttribute('transform', `translate(${dx} ${dy})`));
+				movers.forEach(({ g, sg, dx, dy }) => {
+					g?.setAttribute('transform', `translate(${dx} ${dy})`);
+					sg?.setAttribute('transform', `translate(0 ${dy})`);
+				});
 				return;
 			}
 			// 打球の種類ごとの時間（data-ms）。1つの場面に複数あるときは一番長いものに合わせる
@@ -470,7 +488,10 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 						drawTrace(eb);
 					}
 				});
-				movers.forEach(({ g, dx, dy }) => g?.setAttribute('transform', `translate(${dx * e} ${dy * e})`));
+				movers.forEach(({ g, sg, dx, dy }) => {
+					g?.setAttribute('transform', `translate(${dx * e} ${dy * e})`);
+					sg?.setAttribute('transform', `translate(0 ${dy * e})`);
+				});
 				if (t < 1) raf = requestAnimationFrame(tick);
 				else {
 					balls.forEach((_, k) => setReveal(k, 1));

@@ -18,8 +18,9 @@ export const fieldLabels = {
 export type DrillField = keyof typeof fieldLabels;
 
 /** 最初から見せる項目（練習中に必ず見てほしいもの） */
-// 目的は練習中にいちばん意識してほしいことなので、図のすぐ下に出す
-export const visibleFields: DrillField[] = ['diagram', 'purpose', 'setup', 'feed', 'steps', 'points'];
+// 練習中に長い文は読まない。動き（配置・球出し・やり方）はアニメーションで伝わるので、
+// 最初から見せるのは、図と、なぜやるか（目的）と、意識すること（ポイント）だけにする
+export const visibleFields: DrillField[] = ['diagram', 'purpose', 'points'];
 
 /** 「詳細」トグルの中に隠す項目 */
-export const detailFields: DrillField[] = ['variants', 'related', 'notes'];
+export const detailFields: DrillField[] = ['setup', 'feed', 'steps', 'variants', 'related', 'notes'];

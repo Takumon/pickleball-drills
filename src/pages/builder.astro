@@ -193,8 +193,18 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		border-bottom: 1px solid var(--line);
 		background: var(--bg);
 	}
-	.builder .row.drag-over {
+	/* 動かしている行は指についてくる。入る位置には線を引く */
+	.builder .row.dragging {
+		position: relative;
+		z-index: 2;
+		opacity: 0.9;
+		box-shadow: 0 4px 14px rgb(0 0 0 / 0.3);
+	}
+	.builder .row.drop-before {
 		box-shadow: inset 0 3px 0 var(--accent);
+	}
+	.builder .row.drop-after {
+		box-shadow: inset 0 -3px 0 var(--accent);
 	}
 	.builder .row.kind-heading {
 		background: var(--panel);
@@ -203,11 +213,15 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 	.builder .row.kind-break .body {
 		color: var(--muted);
 	}
+	/* つまみ。指で押さえやすい大きさにし、押さえている間は画面をスクロールさせない */
 	.builder .handle {
 		cursor: grab;
 		color: var(--muted);
-		padding: 0 4px;
+		padding: 8px 8px;
+		margin: -6px 0;
+		font-size: 1.1rem;
 		user-select: none;
+		touch-action: none;
 	}
 	.builder .body {
 		flex: 1;

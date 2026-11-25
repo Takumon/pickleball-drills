@@ -61,8 +61,10 @@ export default function Builder({ base }: { base: string }) {
 	const [notice, setNotice] = useState('');
 	const [importText, setImportText] = useState('');
 	const [confirmClear, setConfirmClear] = useState(false);
-	const dragFrom = useRef<number | null>(null);
-	const [dragOver, setDragOver] = useState<number | null>(null);
+	// 並べ替え: 行の「≡」を指やマウスで押さえて上下に動かす（Pointer Events。スマホの指でも動く）
+	const listRef = useRef<HTMLOListElement>(null);
+	const [drag, setDrag] = useState<{ from: number; dy: number; to: number } | null>(null);
+	const dragInfo = useRef<{ from: number; startPageY: number; mids: number[]; clientY: number; raf: number } | null>(null);
 
 	useEffect(() => {
 		fetch(`${base}/drills.json`)
@@ -153,6 +155,65 @@ export default function Builder({ base }: { base: string }) {
 
 	const remain = state.total ? state.total - sum : undefined;
 
+	/** 動かしている行の位置と、離したときに入る位置を計算する */
+	const updateDrag = () => {
+		const info = dragInfo.current;
+		if (!info) return;
+		const pageY = info.clientY + window.scrollY;
+		// 動かしている行を除いた行のうち、真ん中が指より上にある行の数 = 入る位置
+		const to = info.mids.filter((m, k) => k !== info.from && m < pageY).length;
+		setDrag({ from: info.from, dy: pageY - info.startPageY, to });
+	};
+	const startDrag = (i: number, e: PointerEvent) => {
+		e.preventDefault();
+		// 指がつまみの外に出ても動きを受け取り続ける（取れない環境でも並べ替えは続ける）
+		try {
+			(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		} catch {
+			/* 続ける */
+		}
+		const rows = [...(listRef.current?.querySelectorAll<HTMLElement>(':scope > li.row') ?? [])];
+		const mids = rows.map((el) => {
+			const r = el.getBoundingClientRect();
+			return r.top + window.scrollY + r.height / 2;
+		});
+		const info = { from: i, startPageY: e.clientY + window.scrollY, mids, clientY: e.clientY, raf: 0 };
+		dragInfo.current = info;
+		// 画面の上端・下端の近くでは、自動でスクロールする（長いメニューでも遠くまで運べる）
+		const EDGE = 70;
+		const tick = () => {
+			const cur = dragInfo.current;
+			if (!cur) return;
+			if (cur.clientY < EDGE) window.scrollBy(0, -8);
+			else if (cur.clientY > window.innerHeight - EDGE) window.scrollBy(0, 8);
+			updateDrag();
+			cur.raf = requestAnimationFrame(tick);
+		};
+		info.raf = requestAnimationFrame(tick);
+		updateDrag();
+	};
+	const moveDrag = (e: PointerEvent) => {
+		if (!dragInfo.current) return;
+		dragInfo.current.clientY = e.clientY;
+	};
+	const endDrag = () => {
+		const info = dragInfo.current;
+		if (!info) return;
+		cancelAnimationFrame(info.raf);
+		dragInfo.current = null;
+		setDrag((d) => {
+			if (d && d.to !== d.from) move(d.from, d.to);
+			return null;
+		});
+	};
+	/** 離したときに入る位置の目印（その行の上に線を引く。最後なら最後の行の下） */
+	const dropMark = (i: number): string => {
+		if (!drag || drag.to === drag.from) return '';
+		const others = state.rows.map((_, k) => k).filter((k) => k !== drag.from);
+		if (drag.to < others.length) return others[drag.to] === i ? ' drop-before' : '';
+		return others[others.length - 1] === i ? ' drop-after' : '';
+	};
+
 	return (
 		<div class="builder">
 			<section class="catalog">
@@ -236,41 +297,26 @@ export default function Builder({ base }: { base: string }) {
 					</p>
 				</div>
 
-				<ol class="rows">
+				<ol class="rows" ref={listRef}>
 					{state.rows.length === 0 && <li class="empty">左のドリルの「＋」で、メニューに足します。</li>}
 					{state.rows.map((r, i) => (
 						<li
 							key={r.uid}
-							class={`row kind-${r.kind}${dragOver === i ? ' drag-over' : ''}`}
-							draggable
-							onDragStart={(e) => {
-								dragFrom.current = i;
-								e.dataTransfer?.setData('text/plain', String(i));
-							}}
-							onDragOver={(e) => {
-								e.preventDefault();
-								setDragOver(i);
-							}}
-							onDragLeave={() => setDragOver((x) => (x === i ? null : x))}
-							onDrop={(e) => {
-								e.preventDefault();
-								if (dragFrom.current !== null) move(dragFrom.current, i);
-								dragFrom.current = null;
-								setDragOver(null);
-							}}
-							onDragEnd={() => setDragOver(null)}
+							class={`row kind-${r.kind}${drag?.from === i ? ' dragging' : ''}${dropMark(i)}`}
+							style={drag?.from === i ? { transform: `translateY(${drag.dy}px)` } : undefined}
 						>
-							<span class="handle" title="ドラッグで並べ替え">
+							<span
+								class="handle"
+								title="押さえたまま上下に動かして並べ替え"
+								onPointerDown={(e) => startDrag(i, e as unknown as PointerEvent)}
+								onPointerMove={(e) => moveDrag(e as unknown as PointerEvent)}
+								onPointerUp={endDrag}
+								onPointerCancel={endDrag}
+							>
 								≡
 							</span>
 							<RowBody row={r} byId={byId} patch={patch} headingMin={headingMinutes.get(r.uid)} />
 							<span class="row-actions">
-								<button type="button" onClick={() => move(i, i - 1)} disabled={i === 0} title="上へ">
-									↑
-								</button>
-								<button type="button" onClick={() => move(i, i + 1)} disabled={i === state.rows.length - 1} title="下へ">
-									↓
-								</button>
 								<button type="button" onClick={() => remove(r.uid)} title="消す">
 									×
 								</button>

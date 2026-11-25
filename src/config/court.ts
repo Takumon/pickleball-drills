@@ -14,18 +14,19 @@ export const TRAN = { top: 7.5, bottom: 36.5 } as const;
  *   leftCenter / rightCenter はセンターライン寄り（半面の練習で斜めに打ち合うときなど）。
  * - 深さ: kitchen = キッチンライン付近、tran = トラン（キッチンラインとベースラインの中間）、
  *   baseline = ベースラインの後ろ（サーブ・リターン・3rdショットを打つ位置）。
+ *   inKitchen = キッチンの中（キッチンラインから 2.5ft 手前に落ちる。ボレーディンクやディンクの落とし先）、
  *   kitchenBack = キッチンラインから少し下がった位置（サイドステップで後ろに下がって取るときなど）。
  * - leftInner / rightInner は、レーンの真ん中から少しセンターライン寄り（ボレーを待つ基本の位置など）。
  */
 export const LANES = { leftSide: 1.5, leftOuter: 3, left: 5, leftInner: 7, leftCenter: 8.5, rightCenter: 11.5, rightInner: 13, right: 15, rightOuter: 17, rightSide: 18.5 } as const;
 export const DEPTHS = {
-	far: { kitchen: 14, kitchenBack: 12.5, tran: TRAN.top, baseline: -2.5 },
-	near: { kitchen: 30, kitchenBack: 31.5, tran: TRAN.bottom, baseline: 46.5 },
+	far: { kitchen: 14, inKitchen: 16.5, kitchenBack: 12.5, tran: TRAN.top, baseline: -2.5 },
+	near: { kitchen: 30, inKitchen: 27.5, kitchenBack: 31.5, tran: TRAN.bottom, baseline: 46.5 },
 } as const;
 export type Side = keyof typeof DEPTHS;
 export type Lane = keyof typeof LANES;
 export type Depth = keyof (typeof DEPTHS)['far'];
-const SPOT = /^(near|far)-(leftSide|leftOuter|left|leftInner|leftCenter|rightCenter|rightInner|right|rightOuter|rightSide)-(kitchenBack|kitchen|tran|baseline)$/;
+const SPOT = /^(near|far)-(leftSide|leftOuter|left|leftInner|leftCenter|rightCenter|rightInner|right|rightOuter|rightSide)-(kitchenBack|inKitchen|kitchen|tran|baseline)$/;
 
 /** 名前の付いた立ち位置（例: near-right-baseline）の座標。名前でなければ undefined */
 export function spotPoint(name: string): [number, number] | undefined {

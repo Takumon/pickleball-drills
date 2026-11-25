@@ -12,12 +12,13 @@
 	--ball: #facc15;
 	--sub: #d1d5db;
 	--label: #ffffff;
-	--r-feed: #f59e0b;
-	--r-practice: #2563eb;
-	--r-partner: #c4b5fd;
-	--r-opponent: #9ca3af;
+	/* 人には色を付けない。練習役（自分）だけ白い丸、ほかの人は濃い丸にして、明るさの差で見分ける */
+	--person: #1f2937;
+	--person-ink: #ffffff;
+	--me: #ffffff;
+	--me-ink: #111827;
 	--paddle: #f3f4f6;
-	--fence: #d8c3a0;
+	--fence: #b8bec7;
 	/* コートの外（横から見た高さの帯）に描く線と文字。ページの背景の上で見えるように、ライトとダークで変える */
 	--side-ink: #6b7280;
 	--side-panel: #eef1f4;
@@ -35,7 +36,7 @@
 	--sub: #9ca3af;
 	--label: #f9fafb;
 	--paddle: #e5e7eb;
-	--fence: #cbb48c;
+	--fence: #9aa1ab;
 	--side-ink: #9ca3af;
 	--side-panel: #1f2a24;
 }
@@ -203,12 +204,12 @@
 	opacity: 0.7;
 }
 .court .side-body {
-	stroke: var(--role-color);
+	stroke: var(--side-ink);
 	stroke-width: 0.22;
 	stroke-linecap: round;
 }
 .court .side-head {
-	fill: var(--role-color);
+	fill: var(--side-ink);
 }
 .court .side-paddle {
 	stroke: var(--side-ink);
@@ -284,16 +285,22 @@
 	text-anchor: middle;
 	dominant-baseline: central;
 	font-family: system-ui, sans-serif;
-	fill: #fff;
+	fill: var(--person-ink);
 }
 .court .player .body {
-	fill: var(--role-color);
+	fill: var(--person);
 	stroke: #fff;
-	stroke-width: 0.2;
+	stroke-width: 0.22;
+}
+.court .player.role-practice .body {
+	fill: var(--me);
+}
+.court .player.role-practice text {
+	fill: var(--me-ink);
 }
 /* 腕 = 細線、パドル = 太線 */
 .court .player .arm {
-	stroke: var(--role-color);
+	stroke: var(--paddle);
 	stroke-width: 0.3;
 	stroke-linecap: round;
 }
@@ -302,10 +309,6 @@
 	stroke-width: 0.45;
 	stroke-linecap: round;
 }
-.court .role-feed { --role-color: var(--r-feed); }
-.court .role-practice { --role-color: var(--r-practice); }
-.court .role-partner { --role-color: var(--r-partner); }
-.court .role-opponent { --role-color: var(--r-opponent); }
 .court figcaption {
 	font-size: var(--sl-text-xs, 0.8rem);
 	margin-top: 0.5rem;
@@ -325,12 +328,8 @@
 	gap: 0.3rem;
 	margin: 0;
 }
-.court .legend .swatch {
-	display: inline-block;
-	width: 0.8em;
-	height: 0.8em;
-	border-radius: 50%;
-	background: var(--role-color);
+.court .legend .who {
+	font-weight: 700;
 }
 .court .legend .fence-swatch {
 	display: block;

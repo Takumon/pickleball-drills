@@ -246,7 +246,6 @@ for (const pn of panels) {
 		l.mid = [minX > maxX ? COURT.width / 2 : Math.min(Math.max(l.mid[0], minX), maxX), l.mid[1]];
 	}
 }
-const usedRoles = [...new Set(diagram.players.map((p) => p.role))];
 const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 + n - 1) : `${n}.`);
 ---
 
@@ -310,9 +309,16 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 	<figcaption>
 		<ul class="legend">
 			{
-				usedRoles.map((r) => (
+				// 誰がどの役かは、色ではなく文字で書く（例: A 球出し役　B 練習役。同じ役は「A・B 練習役」とまとめる）
+				[...new Set(diagram.players.map((p) => p.role))].map((r) => (
 					<li>
-						<span class={`swatch role-${r}`} />
+						<span class="who">
+							{diagram.players
+								.filter((p) => p.role === r)
+								.map((p) => p.label ?? p.id)
+								.sort()
+								.join('・')}
+						</span>
 						{roleLabels[r]}
 					</li>
 				))

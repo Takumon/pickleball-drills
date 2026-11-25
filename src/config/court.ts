@@ -176,6 +176,7 @@ export type ZoneName = keyof typeof zoneRects;
  */
 export const heightLevels = {
 	ground: { label: '地面', note: 'バウンドする位置', ft: 0 },
+	knee: { label: '膝の高さ', note: 'ディンクの打点（弾んで低くなった球を打つ）', ft: 1.3 },
 	belowWaist: { label: '腰の下', note: 'サーブ・ストローク（ドライブ）の打点', ft: 2.0 },
 	underTape: { label: '白帯のちょい下', note: 'ロールの打点', ft: 2.5 },
 	tape: { label: 'ネットの白帯', note: 'ネットの高さ', ft: 2.9 },
@@ -197,7 +198,7 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
 	serve: { hit: 'belowWaist', peak: 'aboveTape' },
 	return: { hit: 'belowWaist', peak: 'aboveTape' },
 	drop: { hit: 'belowWaist', peak: 'aboveTape' },
-	dink: { hit: 'underTape', peak: 'overTape' },
+	dink: { hit: 'knee', peak: 'overTape' },
 	reset: { hit: 'underTape', peak: 'overTape' },
 	drive: { hit: 'belowWaist', peak: 'tape' },
 	// ボレーディンク: ネットより下で面を作って当て、弧を描いてゆっくり落とす（ディンクやドロップをノーバウンドで受け流す）

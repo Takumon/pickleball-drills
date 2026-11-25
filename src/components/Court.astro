@@ -122,7 +122,9 @@ function receiveHeight(s: Shot) {
 	if (typeof s.to !== 'string') return ft(defaultReceiveHeight);
 	const rest = diagram.shots.slice(diagram.shots.indexOf(s) + 1);
 	const next = rest.find((n) => n.type !== 'move' && n.from === s.to);
-	return next && next.type !== 'move' ? ft(next.hit ?? shotHeights[next.type].hit) : ft(defaultReceiveHeight);
+	if (next && next.type !== 'move') return ft(next.hit ?? shotHeights[next.type].hit);
+	// 次に打つ球が図にないとき: 弾んでから受ける球は低い位置（膝の高さ）、ノーバウンドで受ける球は既定の高さ
+	return ft(s.bounce === 'front' ? 'knee' : defaultReceiveHeight);
 }
 function heightsOf(s: Shot, bounces: { at: number }[], netAt?: number) {
 	const height = heightFn(s, bounces, netAt);

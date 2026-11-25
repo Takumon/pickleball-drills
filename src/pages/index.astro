@@ -101,18 +101,32 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 			const open = panel.hidden;
 			panel.hidden = !open;
 			btn.setAttribute('aria-expanded', String(open));
+			li.classList.toggle('open', open);
 			if (open && !panel.dataset.loaded) {
 				panel.dataset.loaded = '1';
 				panel.textContent = '読み込み中…';
 				try {
 					const html = await (await fetch(d.fragment)).text();
 					panel.innerHTML = html;
-					const link = document.createElement('p');
-					link.className = 'menu-open-page';
-					link.innerHTML = `<a></a>`;
-					link.querySelector('a')!.href = d.url;
-					link.querySelector('a')!.textContent = 'ドリルのページを開く';
-					panel.append(link);
+					// 中のリンクで別のページへ移るとメニューに戻りにくいので、別のタブで開く
+					panel.querySelectorAll('a').forEach((a) => {
+						a.target = '_blank';
+						a.rel = 'noopener';
+					});
+					const foot = document.createElement('div');
+					foot.className = 'menu-panel-foot';
+					foot.innerHTML = `<button type="button" class="menu-close">▲ 閉じる</button><a class="menu-open-page" target="_blank" rel="noopener"></a>`;
+					const a = foot.querySelector('a')!;
+					a.href = d.url;
+					a.textContent = 'ページで見る ↗';
+					foot.querySelector('button')!.addEventListener('click', () => {
+						panel.hidden = true;
+						btn.setAttribute('aria-expanded', 'false');
+						li.classList.remove('open');
+						// 閉じたら、その行が見える位置に戻す
+						btn.scrollIntoView({ block: 'nearest' });
+					});
+					panel.append(foot);
 					setupCourtAnimations(panel);
 				} catch {
 					panel.textContent = '読み込めませんでした。';
@@ -192,11 +206,40 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		cursor: default;
 		opacity: 0.6;
 	}
+	/* 開いた行は、見出しの行から中身の終わりまでを1枚の枠で囲み、どこまでが中身か分かるようにする */
+	#menu-view .menu-item.open {
+		margin: 0.5rem -0.5rem;
+		border: 1px solid var(--sl-color-gray-4);
+		border-left: 4px solid var(--sl-color-accent);
+		border-radius: 0.5rem;
+		background: var(--sl-color-gray-6);
+	}
+	#menu-view .menu-item.open > .menu-drill {
+		padding-inline: 0.75rem;
+		border-bottom: 1px solid var(--sl-color-gray-5);
+	}
 	#menu-view .menu-panel {
-		padding: 0 0.25rem 1rem;
+		padding: 0 0.75rem 0.5rem;
+	}
+	#menu-view .menu-panel-foot {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-top: 1rem;
+		padding-top: 0.5rem;
+		border-top: 1px solid var(--sl-color-gray-5);
+	}
+	#menu-view .menu-close {
+		background: none;
+		border: 0;
+		padding: 0.4rem 0;
+		color: var(--sl-color-gray-2);
+		font: inherit;
+		font-size: var(--sl-text-sm);
+		cursor: pointer;
 	}
 	#menu-view .menu-open-page {
-		font-size: var(--sl-text-sm);
-		margin-top: 0.75rem;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
 	}
 </style>

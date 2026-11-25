@@ -154,7 +154,7 @@ const isSub = (t: string) => t === 'move';
 			// 打つ前に弾む位置（その手の始まりに出す）
 			...(l.pre
 				? [
-						<g class:list={['bounce', { on: !animated }]} data-at={-1}>
+						<g class:list={['bounce', { on: !animated }]} data-pre-ring>
 							<circle cx={l.pre[0]} cy={l.pre[1]} r={MARK} />
 						</g>,
 					]
@@ -221,7 +221,7 @@ const isSub = (t: string) => t === 'move';
 				{/* 横から見た図でも、ボールが地面に触れた位置に、コートの図と同じ黄色い輪を同じタイミングで出す */}
 				{lines.flatMap((l) =>
 					[...(l.pre ? [{ pt: l.pre, at: -1 }] : []), ...(l.bounces ?? [])].map((b) => (
-						<g class:list={['bounce', 'side-bounce', { on: !animated }]} data-at={b.at}>
+						<g class:list={['bounce', 'side-bounce', { on: !animated }]} data-at={b.at < 0 ? undefined : b.at} data-pre-ring={b.at < 0 ? '' : undefined}>
 							<circle cx={side.x0} cy={b.pt[1]} r={MARK} />
 						</g>
 					)),

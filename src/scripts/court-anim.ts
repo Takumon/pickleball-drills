@@ -4,7 +4,10 @@
  */
 const SHOT_MS = 900;
 /** 打つ前に一度弾ませる球（data-pre）で、弾んでから打点まで上がる時間（ミリ秒） */
-const PRE_MS = 450;
+const PRE_MS = 800;
+/** そのうち、手から落としたボールが地面に着くまでの時間と、落とす手の高さ（ft） */
+const PRE_DROP_MS = 420;
+const HAND_FT = 3;
 /** ボールの大きさ（高さ 1ft あたり）。高さそのものは右の帯（横から見た図）で見せる */
 const BALL_R_GROUND = 0.6;
 const BALL_R_PER_FT = 0.05;
@@ -113,7 +116,14 @@ function setup(root: HTMLElement) {
 			r.style.strokeDashoffset = '0';
 		};
 		// バウンドの印: ボールがその位置を通ったときに出す（data-at = 線の長さに対する割合）
-		const marks = [...frame.querySelectorAll<SVGGElement>('.bounce')];
+		const marks = [...frame.querySelectorAll<SVGGElement>('.bounce:not([data-pre-ring])')];
+		// 手から弾ませる球の輪（弾んだ瞬間に出す）
+		const preRings = [...frame.querySelectorAll<SVGGElement>('[data-pre-ring]')];
+		const setPreRings = (on: boolean) =>
+			preRings.forEach((m) => {
+				if (on && !m.classList.contains('on')) m.classList.add('on', ...(animate ? ['pop'] : []));
+				if (!on) m.classList.remove('on', 'pop');
+			});
 		const showMarks = (ratio: number) =>
 			marks.forEach((m) => {
 				const on = ratio >= Number(m.dataset.at) - 0.001;
@@ -142,10 +152,11 @@ function setup(root: HTMLElement) {
 			});
 			// 打つ手なら打つ人のパドルから、人が動くだけの手なら前の手の終わりの位置にボールを置く
 			const pre = balls[0]?.dataset.pre?.split(',').map(Number);
+			setPreRings(!animate && !!pre);
 			drawBall(
 				balls[0]
 					? animate && pre
-						? { x: pre[0], y: pre[1], h: 0 }
+						? { x: pre[0], y: pre[1], h: HAND_FT }
 						: ballAt(balls[0], animate ? 0 : 1)
 					: startBall[i],
 			);
@@ -169,13 +180,23 @@ function setup(root: HTMLElement) {
 		const tick = (now: number) => {
 			const elapsed = now - t0;
 			if (preAttr && elapsed < preMs) {
-				const u = elapsed / preMs;
 				const start = ballAt(balls[0], 0);
-				const up = Math.sin((u * Math.PI) / 2); // 弾んで上がり、打点の手前でゆるむ
-				drawBall({ x: preAttr[0] + (start.x - preAttr[0]) * u, y: preAttr[1] + (start.y - preAttr[1]) * u, h: start.h * up });
+				if (elapsed < PRE_DROP_MS) {
+					// 手から落とす: 手の高さから、だんだん速く地面へ
+					const u = elapsed / PRE_DROP_MS;
+					setPreRings(false);
+					drawBall({ x: preAttr[0], y: preAttr[1], h: HAND_FT * (1 - u * u) });
+				} else {
+					// 弾んで打点まで上がる（上がるにつれてゆるむ）
+					const u = (elapsed - PRE_DROP_MS) / (preMs - PRE_DROP_MS);
+					setPreRings(true);
+					const up = Math.sin((u * Math.PI) / 2);
+					drawBall({ x: preAttr[0] + (start.x - preAttr[0]) * u, y: preAttr[1] + (start.y - preAttr[1]) * u, h: start.h * up });
+				}
 				raf = requestAnimationFrame(tick);
 				return;
 			}
+			setPreRings(!!preAttr);
 			const t = Math.min(1, (elapsed - preMs) / duration);
 			const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // 人の動き: ease-in-out
 			const eb = Math.sin((t * Math.PI) / 2); // ボール: 打った瞬間が速く、少しずつ減速する

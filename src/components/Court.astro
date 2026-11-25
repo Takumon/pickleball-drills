@@ -351,6 +351,23 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 		};
 
 		/** 場面 i を表示し、その手を動かす。終わったら done を呼ぶ */
+		/** 線 path の長さの割合 ratio の位置にあるボール（地面の位置と高さ ft） */
+		type BallPos = { x: number; y: number; h: number };
+		const ballAt = (path: SVGPathElement, ratio: number): BallPos => {
+			const p = path.getPointAtLength(path.getTotalLength() * ratio);
+			// 高さ（data-h: 線に沿った高さ ft の列）を補間する
+			const hs = path.dataset.h?.split(',').map(Number);
+			let h = 0;
+			if (hs) {
+				const x = ratio * (hs.length - 1);
+				const i = Math.min(Math.floor(x), hs.length - 2);
+				h = hs[i] + (hs[i + 1] - hs[i]) * (x - i);
+			}
+			return { x: p.x, y: p.y, h };
+		};
+		/** 1手の終わりにボールがあった位置。次の手でも同じ位置から見せて、手と手のつながりを見せる */
+		let lastBall: BallPos | undefined;
+
 		function show(i: number, animate: boolean, done?: () => void) {
 			stop();
 			current = i;
@@ -394,14 +411,36 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 					if (on && !m.classList.contains('on')) m.classList.add('on', ...(animate ? ['pop'] : []));
 					if (!on) m.classList.remove('on', 'pop');
 				});
+			// ボールを描く: 影を地面の位置に置き、ボールは高さの分だけ画面の上へ浮かせて大きく描く。
+			// ボールが影に重なったところがバウンド。pos がなければ隠す
+			const drawBall = (pos?: BallPos) => {
+				if (!pos) {
+					ball.setAttribute('cx', '-10');
+					shadow.setAttribute('cx', '-10');
+					pole.setAttribute('x1', '-10');
+					pole.setAttribute('x2', '-10');
+					return;
+				}
+				const r = Math.min(BALL_R_MAX, BALL_R_GROUND + pos.h * BALL_R_PER_FT);
+				// 図の上端からはみ出さないよう、浮かせる量を抑える
+				const lift = Math.min(pos.h * LIFT_PER_FT, Math.max(0, pos.y - (frame.viewBox.baseVal.y + r)));
+				ball.setAttribute('cx', `${pos.x}`);
+				ball.setAttribute('cy', `${pos.y - lift}`);
+				ball.setAttribute('r', `${r}`);
+				shadow.setAttribute('cx', `${pos.x}`);
+				shadow.setAttribute('cy', `${pos.y}`);
+				pole.setAttribute('x1', `${pos.x}`);
+				pole.setAttribute('x2', `${pos.x}`);
+				pole.setAttribute('y1', `${pos.y}`);
+				pole.setAttribute('y2', `${pos.y - lift}`);
+			};
 			const reset = () => {
 				showMarks(animate ? -1 : 1);
 				balls.forEach((_, k) => setReveal(k, animate ? 0 : 1));
 				movers.forEach(({ g }) => g?.setAttribute('transform', ''));
-				ball.setAttribute('cx', '-10');
-				shadow.setAttribute('cx', '-10');
-				pole.setAttribute('x1', '-10');
-				pole.setAttribute('x2', '-10');
+				// 打つ手なら打つ人のパドルから、人が動くだけの手なら前の手の終わりの位置にボールを置く
+				drawBall(balls[0] ? ballAt(balls[0], animate ? 0 : 1) : lastBall);
+				if (balls[0] && !animate) lastBall = ballAt(balls[0], 1);
 			};
 			reset();
 			if (!animate) {
@@ -419,40 +458,18 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 				showMarks(eb);
 				balls.forEach((b, k) => {
 					setReveal(k, eb);
-					if (k === 0) {
-						const p = b.getPointAtLength(lens[k] * eb);
-						// 高さ（data-h: 線に沿った高さ ft の列）があれば、影を線の上に置き、
-						// ボールは高さの分だけ画面の上へ浮かせて大きく描く。ボールが影に重なったところがバウンド
-						const hs = b.dataset.h?.split(',').map(Number);
-						let h = 0;
-						if (hs) {
-							const x = eb * (hs.length - 1);
-							const i = Math.min(Math.floor(x), hs.length - 2);
-							h = hs[i] + (hs[i + 1] - hs[i]) * (x - i);
-						}
-						const r = hs ? Math.min(BALL_R_MAX, BALL_R_GROUND + h * BALL_R_PER_FT) : 0.55;
-						// 図の上端からはみ出さないよう、浮かせる量を抑える
-						const lift = hs ? Math.min(h * LIFT_PER_FT, Math.max(0, p.y - (frame.viewBox.baseVal.y + r))) : 0;
-						ball.setAttribute('cx', `${p.x}`);
-						ball.setAttribute('cy', `${p.y - lift}`);
-						ball.setAttribute('r', `${r}`);
-						shadow.setAttribute('cx', `${hs ? p.x : -10}`);
-						shadow.setAttribute('cy', `${p.y}`);
-						pole.setAttribute('x1', `${hs ? p.x : -10}`);
-						pole.setAttribute('x2', `${hs ? p.x : -10}`);
-						pole.setAttribute('y1', `${p.y}`);
-						pole.setAttribute('y2', `${p.y - lift}`);
-					}
+					if (k === 0) drawBall(ballAt(b, eb));
 				});
 				movers.forEach(({ g, dx, dy }) => g?.setAttribute('transform', `translate(${dx * e} ${dy * e})`));
 				if (t < 1) raf = requestAnimationFrame(tick);
 				else {
 					balls.forEach((_, k) => setReveal(k, 1));
 					showMarks(1);
-					ball.setAttribute('cx', '-10');
-					shadow.setAttribute('cx', '-10');
-					pole.setAttribute('x1', '-10');
-					pole.setAttribute('x2', '-10');
+					// ボールは消さずに、届いた位置に残す（次の手はそこから始まる）
+					if (balls[0]) {
+						lastBall = ballAt(balls[0], 1);
+						drawBall(lastBall);
+					}
 					done?.();
 				}
 			};

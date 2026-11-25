@@ -50,6 +50,17 @@ const serviceOf = (url: string) => {
 					{field === 'focus' && <p>{drill.focus}</p>}
 					{field === 'notes' && <p>{drill.notes}</p>}
 					{field === 'diagram' && drill.diagram && <Court diagram={drill.diagram} title={`${drill.id} の図`} />}
+					{/* 今回の派生形（練習メニューで選んだもの）。中身はスクリプトで入れる（src/scripts/variant-now.ts） */}
+					{field === 'diagram' && drill.variants.length > 0 && (
+						<p
+							class="variant-now"
+							hidden
+							data-variants={JSON.stringify(Object.fromEntries(drill.variants.map((v) => [v.key, { name: v.name, note: v.note }])))}
+						>
+							<strong class="variant-now-name" />
+							<span class="variant-now-note" />
+						</p>
+					)}
 					{field === 'steps' && (
 						<ol>
 							{drill.steps.map((s) => (
@@ -159,4 +170,20 @@ const serviceOf = (url: string) => {
 	.variants dd {
 		margin-inline-start: 1rem;
 	}
+	.variant-now {
+		margin: 0.75rem 0 0;
+		padding: 0.5rem 0.75rem;
+		border-left: 4px solid var(--sl-color-accent);
+		border-radius: 0.3rem;
+		background: var(--sl-color-gray-6);
+	}
+	.variant-now-name {
+		margin-inline-end: 0.5em;
+	}
 </style>
+
+<script>
+	import { showVariant } from '../scripts/variant-now';
+	// ドリルのページでは URL の ?variant= を読む（練習メニューの画面の中では、メニュー側から呼ぶ）
+	showVariant(document, new URLSearchParams(location.search).get('variant'));
+</script>

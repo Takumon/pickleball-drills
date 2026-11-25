@@ -1,0 +1,408 @@
+---
+/**
+ * 3D 表示の試作（サイトのメニューからはリンクしない）。
+ * ドリルページのアニメーション（SVG の各コマ）を読み込み、同じ打球・高さ・人の位置を 3D で描く。
+ * 使い方: /lab/3d/?d=drp/drp006
+ */
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<!doctype html>
+<html lang="ja">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<title>3D 表示の試作 | ピックルボール ドリル集</title>
+		<style>
+			:root {
+				color-scheme: dark;
+				--bg: #17181c;
+				--text: #e5e7eb;
+				--sub: #9ca3af;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				background: var(--bg);
+				color: var(--text);
+				font-family: system-ui, -apple-system, 'Hiragino Sans', sans-serif;
+			}
+			header {
+				padding: 12px 16px 4px;
+			}
+			h1 {
+				font-size: 1.1rem;
+				margin: 0 0 4px;
+			}
+			.note {
+				font-size: 0.8rem;
+				color: var(--sub);
+				margin: 0;
+			}
+			canvas {
+				display: block;
+				width: 100%;
+				height: 62vh;
+				touch-action: none;
+				cursor: grab;
+			}
+			.bar {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+				align-items: center;
+				justify-content: center;
+				padding: 8px 16px 16px;
+			}
+			button {
+				background: #2a2d34;
+				color: var(--text);
+				border: 1px solid #3a3e47;
+				border-radius: 8px;
+				padding: 8px 12px;
+				font-size: 0.9rem;
+			}
+			button.on {
+				border-color: #facc15;
+			}
+			.step {
+				font-size: 0.85rem;
+				color: var(--sub);
+				min-width: 4em;
+				text-align: center;
+			}
+			a {
+				color: #93c5fd;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1 id="title">3D 表示の試作</h1>
+			<p class="note">ドラッグで向きを変えられます。元のページ: <a id="src" href="#">ドリル</a></p>
+		</header>
+		<canvas id="c"></canvas>
+		<div class="bar">
+			<button data-view="back" class="on">後ろから</button>
+			<button data-view="side">横から</button>
+			<button data-view="top">上から</button>
+			<button id="play">❚❚</button>
+			<span class="step" id="step"></span>
+		</div>
+		<script is:inline define:vars={{ base }}>
+			const COURT = { w: 20, l: 44, net: 22, k: 7, netH: 2.9 };
+			const roleColor = { feed: '#f59e0b', practice: '#2563eb', partner: '#60a5fa', opponent: '#9ca3af' };
+			const id = new URLSearchParams(location.search).get('d') || 'drp/drp006';
+			const canvas = document.getElementById('c');
+			const ctx = canvas.getContext('2d');
+			document.getElementById('src').href = `${base}/drills/${id}/`;
+			document.getElementById('src').textContent = id.split('/')[1];
+
+			// ---- ドリルページの SVG（各コマ）から、人・打球・高さを読み込む ----
+			async function load() {
+				const html = await (await fetch(`${base}/drills/${id}/`)).text();
+				const doc = new DOMParser().parseFromString(html, 'text/html');
+				document.getElementById('title').textContent = `${doc.querySelector('h1')?.textContent ?? ''}（3D 試作）`;
+				const frames = [...doc.querySelectorAll('svg.frame')];
+				// 長さの計算のため、見えない SVG に path を入れて測る
+				const probe = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+				probe.style.cssText = 'position:absolute;width:0;height:0;visibility:hidden';
+				document.body.append(probe);
+				const sample = (d, hs, n = 60) => {
+					const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+					p.setAttribute('d', d);
+					probe.append(p);
+					const len = p.getTotalLength();
+					const pts = [];
+					for (let i = 0; i <= n; i++) {
+						const r = i / n;
+						const q = p.getPointAtLength(len * r);
+						let h = 0;
+						if (hs) {
+							const x = r * (hs.length - 1);
+							const j = Math.min(Math.floor(x), hs.length - 2);
+							h = hs[j] + (hs[j + 1] - hs[j]) * (x - j);
+						}
+						pts.push({ x: q.x, z: q.y, h });
+					}
+					p.remove();
+					return pts;
+				};
+				const fences = [...(frames[0]?.querySelectorAll('.fence line') ?? [])].map((l) => [
+					[+l.getAttribute('x1'), +l.getAttribute('y1')],
+					[+l.getAttribute('x2'), +l.getAttribute('y2')],
+				]);
+				const steps = frames.map((f) => {
+					const players = [...f.querySelectorAll('g.player')].map((g) => {
+						const c = g.querySelector('.body');
+						const pad = g.querySelector('.paddle');
+						const role = [...g.classList].find((x) => x.startsWith('role-'))?.slice(5) ?? 'practice';
+						return {
+							id: g.dataset.playerId,
+							role,
+							x: +c.getAttribute('cx'),
+							z: +c.getAttribute('cy'),
+							px: (+pad.getAttribute('x1') + +pad.getAttribute('x2')) / 2,
+							pz: (+pad.getAttribute('y1') + +pad.getAttribute('y2')) / 2,
+						};
+					});
+					const ball = f.querySelector('path[data-kind="ball"]');
+					const shot = ball
+						? { pts: sample(ball.getAttribute('d'), ball.dataset.h?.split(',').map(Number)), ms: +ball.dataset.ms || 900 }
+						: null;
+					const marks = [...f.querySelectorAll('.bounce circle')].map((c) => ({
+						x: +c.getAttribute('cx'),
+						z: +c.getAttribute('cy'),
+						at: +c.parentElement.dataset.at,
+					}));
+					const moves = [...f.querySelectorAll('path[data-kind="move"]')].map((m) => {
+						const pts = sample(m.getAttribute('d'), null, 2);
+						return { id: m.dataset.player, dx: pts[2].x - pts[0].x, dz: pts[2].z - pts[0].z, ms: +m.dataset.ms || 1000 };
+					});
+					return { players, shot, marks, moves };
+				});
+				return { steps, fences };
+			}
+
+			// ---- カメラ（コートの中心を見る。yaw: 水平の向き、pitch: 見下ろす角度） ----
+			const views = {
+				back: { yaw: 0, pitch: 0.6, dist: 66 },
+				side: { yaw: Math.PI / 2, pitch: 0.35, dist: 62 },
+				top: { yaw: 0, pitch: 1.5, dist: 80 },
+			};
+			const cam = { ...views.back };
+			let target = { ...views.back };
+			const center = { x: COURT.w / 2, y: 2, z: 25 };
+
+			function project(x, y, z) {
+				// 世界座標: x 横、y 高さ、z 奥行き（コートの y）。カメラは手前（z 大）側から見る
+				const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+				const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+				let dx = x - center.x, dy = y - center.y, dz = z - center.z;
+				// 水平回転
+				const rx = dx * cy - dz * sy;
+				const rz = dx * sy + dz * cy;
+				// 見下ろし
+				const ry = dy * cp - rz * sp;
+				const rz2 = dy * sp + rz * cp;
+				const depth = cam.dist - rz2;
+				const f = Math.min(canvas.width, canvas.height * 0.8) * 2.4;
+				const s = f / Math.max(depth, 1);
+				return { x: canvas.width / 2 + rx * s, y: canvas.height * 0.45 - ry * s, s, depth };
+			}
+
+			function line(a, b, color, w) {
+				ctx.strokeStyle = color;
+				ctx.lineWidth = w;
+				ctx.beginPath();
+				ctx.moveTo(a.x, a.y);
+				ctx.lineTo(b.x, b.y);
+				ctx.stroke();
+			}
+			function poly(pts, fill) {
+				ctx.fillStyle = fill;
+				ctx.beginPath();
+				pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+				ctx.closePath();
+				ctx.fill();
+			}
+			const g = (x, z, y = 0) => project(x, y, z);
+
+			function drawCourt(fences) {
+				const k1 = COURT.net - COURT.k, k2 = COURT.net + COURT.k;
+				poly([g(-3, -4), g(23, -4), g(23, 48), g(-3, 48)], '#1d2b22');
+				poly([g(0, 0), g(20, 0), g(20, 44), g(0, 44)], '#23382a');
+				poly([g(0, k1), g(20, k1), g(20, k2), g(0, k2)], '#2d4a35');
+				const L = '#e5e7eb';
+				[[0, 0, 20, 0], [0, 44, 20, 44], [0, 0, 0, 44], [20, 0, 20, 44], [0, k1, 20, k1], [0, k2, 20, k2], [10, 0, 10, k1], [10, k2, 10, 44]].forEach(
+					([a, b, c, d]) => line(g(a, b), g(c, d), L, 1.5),
+				);
+				fences.forEach(([a, b]) => line(g(a[0], a[1], 0.3), g(b[0], b[1], 0.3), '#d6a565', 2));
+			}
+			function drawNet() {
+				const top = [g(-1, COURT.net, 3), g(21, COURT.net, 3), g(21, COURT.net, 0), g(-1, COURT.net, 0)];
+				poly(top, 'rgba(240,240,240,0.18)');
+				line(g(-1, COURT.net, COURT.netH), g(21, COURT.net, COURT.netH), '#f3f4f6', 2.5);
+				line(g(-1, COURT.net, 0), g(-1, COURT.net, 3), '#9ca3af', 2);
+				line(g(21, COURT.net, 0), g(21, COURT.net, 3), '#9ca3af', 2);
+			}
+			function drawPlayer(p, padH) {
+				const foot = g(p.x, p.z, 0);
+				const head = g(p.x, p.z, 5.3);
+				const col = roleColor[p.role] ?? '#2563eb';
+				// 体（足元から頭まで）と頭
+				line(foot, head, col, Math.max(2.5, foot.s * 0.4));
+				ctx.fillStyle = col;
+				ctx.beginPath();
+				ctx.arc(head.x, head.y, Math.max(5, head.s * 0.5), 0, Math.PI * 2);
+				ctx.fill();
+				ctx.fillStyle = '#fff';
+				ctx.font = `bold ${Math.max(9, head.s * 0.6)}px system-ui`;
+				ctx.textAlign = 'center';
+				ctx.textBaseline = 'middle';
+				ctx.fillText(p.id, head.x, head.y);
+				// パドル: 肩からパドルまでの腕と、パドルの面
+				const sh = g(p.x + (p.px - p.x) * 0.3, p.z + (p.pz - p.z) * 0.3, 4.3);
+				const pd = g(p.px, p.pz, padH);
+				line(sh, pd, col, Math.max(1.5, pd.s * 0.25));
+				ctx.fillStyle = '#e5e7eb';
+				ctx.beginPath();
+				ctx.ellipse(pd.x, pd.y, Math.max(3, pd.s * 0.45), Math.max(4, pd.s * 0.6), 0, 0, Math.PI * 2);
+				ctx.fill();
+			}
+
+			// ---- アニメーション ----
+			let data, stepIdx = 0, t0 = 0, playing = true, pauseUntil = 0, frozenAt = 0;
+			let lastBall = null;
+			const ease = (t) => Math.sin((t * Math.PI) / 2);
+			const easeIO = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+			const at = (pts, r) => {
+				const x = r * (pts.length - 1);
+				const j = Math.min(Math.floor(x), pts.length - 2);
+				const u = x - j;
+				return { x: pts[j].x + (pts[j + 1].x - pts[j].x) * u, z: pts[j].z + (pts[j + 1].z - pts[j].z) * u, h: pts[j].h + (pts[j + 1].h - pts[j].h) * u };
+			};
+
+			function frame(now) {
+				// カメラを目標の向きへなめらかに寄せる
+				for (const k of ['yaw', 'pitch', 'dist']) cam[k] += (target[k] - cam[k]) * 0.12;
+				const dpr = window.devicePixelRatio || 1;
+				const w = canvas.clientWidth * dpr, h = canvas.clientHeight * dpr;
+				if (canvas.width !== w || canvas.height !== h) {
+					canvas.width = w;
+					canvas.height = h;
+				}
+				ctx.clearRect(0, 0, w, h);
+				if (!data) return requestAnimationFrame(frame);
+				const st = data.steps[stepIdx];
+				const dur = Math.max(st.shot?.ms ?? 0, ...st.moves.map((m) => m.ms), 600);
+				const t = Math.max(0, Math.min(1, ((playing ? now : frozenAt) - t0) / dur));
+				const r = ease(t);
+
+				drawCourt(data.fences);
+				// 奥（ネットより向こう）→ネット→手前の順に描くと重なりが自然になる。カメラの向きで前後を決める
+				const players = st.players.map((p) => {
+					const mv = st.moves.find((m) => m.id === p.id);
+					const e = mv ? easeIO(t) : 0;
+					return { ...p, x: p.x + (mv?.dx ?? 0) * e, z: p.z + (mv?.dz ?? 0) * e, px: p.px + (mv?.dx ?? 0) * e, pz: p.pz + (mv?.dz ?? 0) * e };
+				});
+				const hitter = st.shot ? st.shot.pts[0] : null;
+				const recv = st.shot ? st.shot.pts[st.shot.pts.length - 1] : null;
+				const padH = (p) => {
+					if (hitter && Math.hypot(p.px - hitter.x, p.pz - hitter.z) < 1.2) return hitter.h;
+					if (recv && Math.hypot(p.px - recv.x, p.pz - recv.z) < 1.5) return recv.h;
+					return 3.5;
+				};
+				const items = [];
+				players.forEach((p) => items.push({ d: g(p.x, p.z).depth, draw: () => drawPlayer(p, padH(p)) }));
+				items.push({ d: g(10, COURT.net).depth, draw: drawNet });
+				// ボール
+				let ball = lastBall;
+				if (st.shot) {
+					ball = at(st.shot.pts, r);
+					// 通った跡
+					const n = Math.round(r * (st.shot.pts.length - 1));
+					const trail = st.shot.pts.slice(0, n + 1).map((p) => g(p.x, p.z, p.h));
+					items.push({
+						d: -1e9,
+						draw: () => {
+							ctx.strokeStyle = 'rgba(244,114,182,0.9)';
+							ctx.lineWidth = 2;
+							ctx.beginPath();
+							trail.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+							ctx.stroke();
+						},
+					});
+				}
+				if (ball) {
+					const b = ball;
+					items.push({
+						d: g(b.x, b.z, b.h).depth - 0.5,
+						draw: () => {
+							const sh = g(b.x, b.z, 0);
+							ctx.fillStyle = 'rgba(0,0,0,0.55)';
+							ctx.beginPath();
+							ctx.ellipse(sh.x, sh.y, Math.max(3, sh.s * 0.45), Math.max(1.5, sh.s * 0.2), 0, 0, Math.PI * 2);
+							ctx.fill();
+							const q = g(b.x, b.z, b.h);
+							ctx.fillStyle = '#facc15';
+							ctx.strokeStyle = '#1f2937';
+							ctx.lineWidth = 1;
+							ctx.beginPath();
+							ctx.arc(q.x, q.y, Math.max(4, q.s * 0.35), 0, Math.PI * 2);
+							ctx.fill();
+							ctx.stroke();
+						},
+					});
+				}
+				// バウンドの輪
+				st.marks.filter((m) => r >= m.at - 0.001).forEach((m) => {
+					items.push({
+						d: 1e9,
+						draw: () => {
+							const pts = Array.from({ length: 24 }, (_, i) => g(m.x + Math.cos((i / 24) * Math.PI * 2) * 0.7, m.z + Math.sin((i / 24) * Math.PI * 2) * 0.7, 0.05));
+							ctx.strokeStyle = '#facc15';
+							ctx.lineWidth = 2;
+							ctx.beginPath();
+							pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+							ctx.closePath();
+							ctx.stroke();
+						},
+					});
+				});
+				items.sort((a, b) => b.d - a.d).forEach((it) => it.draw());
+				document.getElementById('step').textContent = `${stepIdx + 1} / ${data.steps.length}`;
+
+				if (playing && t >= 1) {
+					if (st.shot) lastBall = st.shot.pts[st.shot.pts.length - 1];
+					if (!pauseUntil) pauseUntil = now + (stepIdx === data.steps.length - 1 ? 1600 : 700);
+					if (now >= pauseUntil) {
+						stepIdx = (stepIdx + 1) % data.steps.length;
+						if (stepIdx === 0) lastBall = null;
+						t0 = now;
+						pauseUntil = 0;
+					}
+				}
+				requestAnimationFrame(frame);
+			}
+
+			// ---- 操作 ----
+			document.querySelectorAll('[data-view]').forEach((b) =>
+				b.addEventListener('click', () => {
+					target = { ...views[b.dataset.view] };
+					document.querySelectorAll('[data-view]').forEach((x) => x.classList.toggle('on', x === b));
+				}),
+			);
+			document.getElementById('play').addEventListener('click', (e) => {
+				playing = !playing;
+				e.target.textContent = playing ? '❚❚' : '▶';
+				if (playing) {
+					// 止めたところから続ける
+					t0 += performance.now() - frozenAt;
+					if (pauseUntil) pauseUntil += performance.now() - frozenAt;
+				} else frozenAt = performance.now();
+			});
+			let drag = null;
+			canvas.addEventListener('pointerdown', (e) => {
+				drag = { x: e.clientX, y: e.clientY, yaw: target.yaw, pitch: target.pitch };
+				canvas.setPointerCapture(e.pointerId);
+			});
+			canvas.addEventListener('pointermove', (e) => {
+				if (!drag) return;
+				target.yaw = drag.yaw - (e.clientX - drag.x) * 0.008;
+				target.pitch = Math.min(1.5, Math.max(0.1, drag.pitch + (e.clientY - drag.y) * 0.006));
+				document.querySelectorAll('[data-view]').forEach((x) => x.classList.remove('on'));
+			});
+			canvas.addEventListener('pointerup', () => (drag = null));
+
+			load().then((d) => {
+				data = d;
+				t0 = performance.now();
+			});
+			requestAnimationFrame(frame);
+		</script>
+	</body>
+</html>

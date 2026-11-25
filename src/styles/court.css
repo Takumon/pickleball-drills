@@ -170,7 +170,7 @@
 .court .shot.t-dink,
 .court .shot.t-drop,
 .court .shot.t-reset,
-.court .shot.t-absorb {
+.court .shot.t-volleyDink {
 	stroke-width: 0.35;
 	stroke-dasharray: 0.05 0.55;
 }

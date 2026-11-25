@@ -5,7 +5,7 @@
 import { heightLevels, roleLabels, shotLabels, shotSpeedKmh, type Role, type ShotType } from '../config/court';
 import '../styles/court.css';
 
-const order: ShotType[] = ['speedup', 'smash', 'punch', 'drive', 'roll', 'block', 'serve', 'return', 'reset', 'dink', 'drop', 'absorb', 'lob', 'move'];
+const order: ShotType[] = ['speedup', 'smash', 'punch', 'drive', 'roll', 'block', 'serve', 'return', 'reset', 'dink', 'drop', 'volleyDink', 'lob', 'move'];
 /** 線の形と太さ（styles/court.css の .t-* と合わせる） */
 const style: Record<ShotType, string> = {
 	speedup: '実線',
@@ -13,7 +13,7 @@ const style: Record<ShotType, string> = {
 	punch: '実線',
 	roll: '実線',
 	block: '実線',
-	absorb: '点線',
+	volleyDink: '点線',
 	drive: '実線',
 	serve: '実線',
 	return: '実線',
@@ -29,7 +29,7 @@ const width: Record<ShotType, string> = {
 	punch: '太い',
 	roll: 'ふつう',
 	block: 'ふつう',
-	absorb: '細い',
+	volleyDink: '細い',
 	drive: '太い',
 	serve: 'ふつう',
 	return: 'ふつう',

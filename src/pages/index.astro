@@ -30,7 +30,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 </StarlightPage>
 
 <script>
-	import { blocks, fmtMin, parseMenu, totalMinutes, type CatalogDrill, type MenuItem } from '../lib/menu';
+	import { blocks, chosenVariant, fmtMin, parseMenu, totalMinutes, type CatalogDrill, type MenuItem } from '../lib/menu';
 	import { setupCourtAnimations } from '../scripts/court-anim';
 	import { showVariant } from '../scripts/variant-now';
 
@@ -83,7 +83,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		}
 		if (it.kind !== 'drill') return li;
 		const d = byId.get(it.id);
-		const variant = d?.variants.find((v) => v.key === it.variant);
+		// 図と違う派生形を選んだときだけ、派生形を書く（図で描いている派生形なら書かない）
+		const variant = chosenVariant(it, d);
 		const name = d ? `${d.title}${variant ? `（${variant.name}）` : ''}` : `見つからないドリル（${it.id}）`;
 		const btn = document.createElement('button');
 		btn.type = 'button';
@@ -121,7 +122,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 					foot.className = 'menu-panel-foot';
 					foot.innerHTML = `<button type="button" class="menu-close">▲ 閉じる</button><a class="menu-open-page" target="_blank" rel="noopener"></a>`;
 					const a = foot.querySelector('a')!;
-					a.href = it.variant ? `${d.url}?variant=${encodeURIComponent(it.variant)}` : d.url;
+					a.href = variant ? `${d.url}?variant=${encodeURIComponent(variant.key)}` : d.url;
 					a.textContent = 'ページで見る ↗';
 					foot.querySelector('button')!.addEventListener('click', () => {
 						panel.hidden = true;
@@ -132,7 +133,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 					});
 					panel.append(foot);
 					setupCourtAnimations(panel);
-					showVariant(panel, it.variant);
+					showVariant(panel, variant?.key);
 				} catch {
 					panel.textContent = '読み込めませんでした。';
 					delete panel.dataset.loaded;

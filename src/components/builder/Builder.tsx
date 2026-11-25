@@ -391,10 +391,13 @@ function RowBody({
 			<span class="grow drill-name">{drillName(row, byId)}</span>
 			{d && d.variants.length > 0 && (
 				<select
-					value={row.variant ?? ''}
-					onChange={(e) => patch(row.uid, { variant: (e.target as HTMLSelectElement).value || undefined })}
+					// 指定がないときは、図で描いている派生形（default）を選んでいる扱いにする。default を選んだら URL には書かない
+					value={row.variant ?? d.variants.find((v) => v.default)?.key ?? ''}
+					onChange={(e) => {
+						const key = (e.target as HTMLSelectElement).value;
+						patch(row.uid, { variant: d.variants.find((v) => v.key === key)?.default ? undefined : key });
+					}}
 				>
-					<option value="">派生形なし</option>
 					{d.variants.map((v) => (
 						<option value={v.key}>{v.name}</option>
 					))}

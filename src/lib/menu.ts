@@ -116,7 +116,8 @@ export interface CatalogDrill {
 	order: number;
 	url: string;
 	fragment: string;
-	variants: { key: string; name: string }[];
+	/** default: 図で描いている派生形。メニューでは、これを選んだときは派生形を書かない */
+	variants: { key: string; name: string; default?: boolean }[];
 	/** ビルダーで足したときの初期値 */
 	builderDefault?: { min: number; sets: number };
 }
@@ -124,11 +125,20 @@ export interface CatalogDrill {
 /** 分数の表示（例: 2 → "2分"、1.5 → "1.5分"） */
 export const fmtMin = (n: number) => `${trim(n)}分`;
 
-/** ドリルの表示名（派生形があれば「名前（フォア）」） */
+/**
+ * メニューで選んだ派生形。図で描いている派生形（default）や、指定がないときは undefined。
+ * メニューには、図と違う派生形を選んだときだけ派生形を書く
+ */
+export function chosenVariant(it: Extract<MenuItem, { kind: 'drill' }>, d: CatalogDrill | undefined) {
+	const v = d?.variants.find((x) => x.key === it.variant);
+	return v && !v.default ? v : undefined;
+}
+
+/** ドリルの表示名（図と違う派生形を選んでいれば「名前（バック）」） */
 export function drillName(it: Extract<MenuItem, { kind: 'drill' }>, byId: Map<string, CatalogDrill>): string {
 	const d = byId.get(it.id);
 	if (!d) return `見つからないドリル（${it.id}）`;
-	const v = d.variants.find((x) => x.key === it.variant);
+	const v = chosenVariant(it, d);
 	return v ? `${d.title}（${v.name}）` : d.title;
 }
 

@@ -9,11 +9,12 @@ export function showVariant(root: ParentNode, key: string | undefined | null) {
 	if (!el || !key) return;
 	const variants: Record<string, { name: string; note?: string; default?: boolean }> = JSON.parse(el.dataset.variants ?? '{}');
 	const v = variants[key.toLowerCase()];
-	if (!v) return;
+	// 図で描いている派生形なら出さない（メニューにも派生形を書かない）
+	if (!v || v.default) return;
 	el.querySelector('.variant-now-name')!.textContent = `今回：${v.name}`;
-	// 選んだ派生形が図と違うときは、図がどの派生形で描いてあるかを添える
+	// 図がどの派生形で描いてあるかを添える
 	const shown = Object.values(variants).find((x) => x.default);
-	const diff = shown && !v.default ? `（図は${shown.name}で描いています）` : '';
+	const diff = shown ? `（図は${shown.name}で描いています）` : '';
 	el.querySelector('.variant-now-note')!.textContent = `${v.note ?? ''}${diff}`;
 	el.hidden = false;
 }

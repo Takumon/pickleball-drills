@@ -21,7 +21,7 @@ export async function GET() {
 				order: e.data.sidebar?.order ?? 999,
 				url: `${base}/${e.id}/`,
 				fragment: `${base}/fragments/${d.id}/`,
-				variants: d.variants.map((v) => ({ key: v.key, name: v.name })),
+				variants: d.variants.map((v) => ({ key: v.key, name: v.name, default: v.default })),
 				builderDefault: d.builderDefault,
 			};
 		})

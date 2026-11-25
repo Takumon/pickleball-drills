@@ -61,6 +61,8 @@ const diagram = z.object({
 				 * false なら印を付けない（ノーバウンド）。
 				 */
 				bounce: z.union([point, z.literal(false), z.literal('front')]).optional(),
+				/** 打つ前に、打つ人の手前で一度弾ませてから打つ（ワンバウンドさせてから出す球出しなど） */
+				afterBounce: z.boolean().default(false),
 				/** 打つ高さ・山の高さ（config/court.ts の heightLevels）。省略時は打球の種類で決まる。例: ロールのスピードアップは hit: underTape */
 				hit: z.enum(keysOf<HeightLevel>(heightLevels)).optional(),
 				peak: z.enum(keysOf<HeightLevel>(heightLevels)).optional(),

@@ -109,7 +109,9 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 	const netAt = (y1 - COURT.net) * (y2 - COURT.net) < 0 ? (COURT.net - y1) / (y2 - y1) : undefined;
 	// 飛ぶ時間は距離 ÷ 球の種類ごとの速さ（同じ種類の球は、距離によらず同じ速さに見える）
 	const ms = animMs(s.type, Math.hypot(x2 - x1, y2 - y1));
-	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces, netAt), ms };
+	// 打つ前に一度弾ませる球: 打つ人の手前（打つ向き）で弾み、打点まで上がってから飛んでいく
+	const pre: Point | undefined = s.afterBounce ? [x1 + ux * PRE_BOUNCE_FT, y1 + uy * PRE_BOUNCE_FT] : undefined;
+	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces, netAt), ms, pre };
 }
 
 /**
@@ -183,6 +185,8 @@ const DRIVE_CLEAR_FT = 0.8;
  * ベースラインの後ろで受ける球（サーブ・リターン・深い球出し）は深く弾み、キッチンやトランで受ける球は少し手前で弾む。
  */
 const BOUNCE_BEFORE = { baseline: 4.3, other: 2.1 } as const;
+/** 打つ前に一度弾ませる球（afterBounce）が、打つ人の何 ft 手前で弾むか */
+const PRE_BOUNCE_FT = 1.8;
 
 /**
  * バウンドの印の位置。at は線の長さに対する割合（アニメーションで、ボールがそこを通ったときに印を出す）。

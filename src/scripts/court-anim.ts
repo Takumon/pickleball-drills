@@ -3,6 +3,8 @@
  * 打球はボールを線に沿って動かし（線も伸ばして描く）、人の動きは人を移動先まで動かす。
  */
 const SHOT_MS = 900;
+/** 打つ前に一度弾ませる球（data-pre）で、弾んでから打点まで上がる時間（ミリ秒） */
+const PRE_MS = 450;
 /** ボールの大きさ（高さ 1ft あたり）。高さそのものは右の帯（横から見た図）で見せる */
 const BALL_R_GROUND = 0.6;
 const BALL_R_PER_FT = 0.05;
@@ -139,7 +141,14 @@ function setup(root: HTMLElement) {
 				sg?.setAttribute('transform', '');
 			});
 			// 打つ手なら打つ人のパドルから、人が動くだけの手なら前の手の終わりの位置にボールを置く
-			drawBall(balls[0] ? ballAt(balls[0], animate ? 0 : 1) : startBall[i]);
+			const pre = balls[0]?.dataset.pre?.split(',').map(Number);
+			drawBall(
+				balls[0]
+					? animate && pre
+						? { x: pre[0], y: pre[1], h: 0 }
+						: ballAt(balls[0], animate ? 0 : 1)
+					: startBall[i],
+			);
 			drawTrace(animate ? 0 : 1);
 		};
 		reset();
@@ -153,9 +162,21 @@ function setup(root: HTMLElement) {
 		// 打球の種類ごとの時間（data-ms）。1つの場面に複数あるときは一番長いものに合わせる
 		const durations = [...balls, ...moves].map((p) => Number(p.dataset.ms) || SHOT_MS);
 		const duration = durations.length ? Math.max(...durations) : SHOT_MS;
+		// 打つ前に一度弾ませる球: 手前で弾んだボールが打点まで上がってから、打球が始まる
+		const preAttr = balls[0]?.dataset.pre?.split(',').map(Number);
+		const preMs = preAttr ? PRE_MS : 0;
 		const t0 = performance.now();
 		const tick = (now: number) => {
-			const t = Math.min(1, (now - t0) / duration);
+			const elapsed = now - t0;
+			if (preAttr && elapsed < preMs) {
+				const u = elapsed / preMs;
+				const start = ballAt(balls[0], 0);
+				const up = Math.sin((u * Math.PI) / 2); // 弾んで上がり、打点の手前でゆるむ
+				drawBall({ x: preAttr[0] + (start.x - preAttr[0]) * u, y: preAttr[1] + (start.y - preAttr[1]) * u, h: start.h * up });
+				raf = requestAnimationFrame(tick);
+				return;
+			}
+			const t = Math.min(1, (elapsed - preMs) / duration);
 			const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // 人の動き: ease-in-out
 			const eb = Math.sin((t * Math.PI) / 2); // ボール: 打った瞬間が速く、少しずつ減速する
 			showMarks(eb);

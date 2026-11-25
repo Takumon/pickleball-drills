@@ -30,6 +30,8 @@ interface Line {
 	heights?: string;
 	/** アニメーションで飛ぶ（動く）時間（ミリ秒） */
 	ms?: number;
+	/** 打つ前に弾む位置（afterBounce） */
+	pre?: Point;
 }
 interface Props {
 	figures: Figure[];
@@ -139,6 +141,7 @@ const isSub = (t: string) => t === 'move';
 						data-kind={animated ? (l.type === 'move' ? 'move' : 'ball') : undefined}
 						data-player={animated && l.type === 'move' && typeof l.from === 'string' ? l.from : undefined}
 						data-ms={animated ? l.ms : undefined}
+						data-pre={animated && l.pre ? `${l.pre[0]},${l.pre[1]}` : undefined}
 						data-h={animated ? l.heights : undefined}
 					/>
 				</>
@@ -147,13 +150,21 @@ const isSub = (t: string) => t === 'move';
 	}
 
 	{
-		lines.flatMap((l) =>
-			(l.bounces ?? []).map((b) => (
+		lines.flatMap((l) => [
+			// 打つ前に弾む位置（その手の始まりに出す）
+			...(l.pre
+				? [
+						<g class:list={['bounce', { on: !animated }]} data-at={-1}>
+							<circle cx={l.pre[0]} cy={l.pre[1]} r={MARK} />
+						</g>,
+					]
+				: []),
+			...(l.bounces ?? []).map((b) => (
 				<g class:list={['bounce', { on: !animated }]} data-at={b.at}>
 					<circle cx={b.pt[0]} cy={b.pt[1]} r={MARK} />
 				</g>
 			)),
-		)
+		])
 	}
 
 	{
@@ -209,7 +220,7 @@ const isSub = (t: string) => t === 'move';
 				<path class="side-trace" d="" />
 				{/* 横から見た図でも、ボールが地面に触れた位置に、コートの図と同じ黄色い輪を同じタイミングで出す */}
 				{lines.flatMap((l) =>
-					(l.bounces ?? []).map((b) => (
+					[...(l.pre ? [{ pt: l.pre, at: -1 }] : []), ...(l.bounces ?? [])].map((b) => (
 						<g class:list={['bounce', 'side-bounce', { on: !animated }]} data-at={b.at}>
 							<circle cx={side.x0} cy={b.pt[1]} r={MARK} />
 						</g>

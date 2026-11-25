@@ -192,7 +192,7 @@ const isSub = (t: string) => t === 'move';
 				{[0, k1, k2, COURT.length]
 					.filter((y) => y >= side.top + 2.2 && y <= side.bottom - 0.6)
 					.map((y) => (
-						<line class="side-mark" x1={side.x0 - SIDE_BAND - 0.25} y1={y} x2={side.x0 + 0.25} y2={y} />
+						<line class="side-mark" x1={side.x0 - SIDE_BAND} y1={y} x2={side.x0} y2={y} />
 					))}
 				{/* 柵: 地面から柵の高さまでの支柱と、奥行きの向きにのびる横木 */}
 				{fences.map(([a, b]) => {

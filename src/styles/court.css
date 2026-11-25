@@ -207,8 +207,9 @@
 	fill: var(--court-kitchen);
 }
 .court .side-mark {
-	stroke: var(--side-ink);
-	stroke-width: 0.15;
+	/* 帯の幅に収め、コートの図の線と同じ色・太さにする */
+	stroke: var(--court-line);
+	stroke-width: 0.25;
 }
 .court .side-fence line {
 	stroke: var(--fence);

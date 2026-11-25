@@ -3,6 +3,7 @@
 	/* コートは実物と同じく濃い色の面に白い線で描き、ライトでもダークでも同じ見え方にする。
 	   ページの背景が明るいライトでは、面を少し明るくして重たく見えないようにする */
 	--court-surface: #2f6b48;
+	--court-apron: #24563a;
 	--court-kitchen: #3d8058;
 	--court-zone: rgb(255 214 10 / 0.18);
 	--court-line: #ffffff;
@@ -30,6 +31,7 @@
 }
 [data-theme='dark'] .court {
 	--court-surface: #23382a;
+	--court-apron: #1a2b20;
 	--court-kitchen: #2d4a35;
 	--court-zone: rgb(250 204 21 / 0.12);
 	--court-line: #e5e7eb;
@@ -126,6 +128,9 @@
 	width: 100%;
 	height: auto;
 	display: block;
+}
+.court .apron {
+	fill: var(--court-apron);
 }
 .court .surface {
 	fill: var(--court-surface);

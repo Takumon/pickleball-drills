@@ -80,6 +80,8 @@ const isSub = (t: string) => t === 'move';
 		</marker>
 	</defs>
 
+	{/* コートの外まわり（ベースラインの後ろなど）も地面として塗る。人がコートの外に立っても、ページの背景に溶けないようにする */}
+	<rect class="apron" x={vbX} y={vbY} width={side ? side.x0 - 0.9 - vbX : vbW} height={vbH} rx="0.6" />
 	<rect class="surface" x="0" y="0" width={COURT.width} height={COURT.length} />
 	<rect class="kitchen" x="0" y={k1} width={COURT.width} height={COURT.kitchen * 2} />
 	{

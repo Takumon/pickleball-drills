@@ -168,9 +168,28 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		margin: 0;
 		border-bottom: 1px solid var(--sl-color-gray-6);
 	}
-	#menu-view .menu-item.kind-break, #menu-view .menu-item.kind-note {
+	#menu-view .menu-item.kind-note {
 		padding: 0.6rem 0.25rem;
 		color: var(--sl-color-gray-2);
+	}
+	/* 休憩は練習の区切りなので、行ではなく、左右に線をのばした仕切りとして見せる */
+	#menu-view .menu-item.kind-break {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin: 0.9rem 0;
+		padding: 0.2rem 0;
+		border-bottom: 0;
+		color: var(--sl-color-gray-3);
+		font-size: var(--sl-text-sm);
+		font-weight: 600;
+		letter-spacing: 0.05em;
+	}
+	#menu-view .menu-item.kind-break::before,
+	#menu-view .menu-item.kind-break::after {
+		content: '';
+		flex: 1;
+		border-top: 2px dashed var(--sl-color-gray-4);
 	}
 	#menu-view .menu-drill {
 		display: flex;

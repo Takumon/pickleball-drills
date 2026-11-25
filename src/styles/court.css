@@ -256,7 +256,28 @@
 .court .bounce.on {
 	opacity: 1;
 }
-.court .bounce.pop {
+.court .bounce-link {
+	stroke-width: 0.12;
+	stroke-dasharray: 0.4 0.3;
+	opacity: 0;
+}
+.court .bounce.pop .bounce-link {
+	animation: bounce-link 1.4s ease-out;
+}
+@keyframes bounce-link {
+	from {
+		opacity: 0.9;
+	}
+	to {
+		opacity: 0;
+	}
+}
+/* 輪だけを大きく出してから縮める（結ぶ点線は動かさない） */
+.court .bounce circle {
+	transform-box: fill-box;
+	transform-origin: center;
+}
+.court .bounce.pop circle {
 	animation: bounce-pop 0.45s ease-out;
 }
 @keyframes bounce-pop {

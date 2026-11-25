@@ -197,6 +197,16 @@ const isSub = (t: string) => t === 'move';
 					);
 				})}
 				<path class="side-trace" d="" />
+				{/* 横から見た図でも、ボールが地面に触れた位置に、コートの図と同じ黄色い輪を同じタイミングで出す */}
+				{lines.flatMap((l) =>
+					(l.bounces ?? []).map((b) => (
+						<g class:list={['bounce', 'side-bounce', { on: !animated }]} data-at={b.at}>
+							{/* 弾んだ瞬間だけ、コートの輪と横の輪を点線で結んで、同じバウンドだと分かるようにする */}
+							<line class="bounce-link" x1={b.pt[0] + MARK} y1={b.pt[1]} x2={side.x0 - MARK} y2={b.pt[1]} />
+							<circle cx={side.x0} cy={b.pt[1]} r={MARK} />
+						</g>
+					)),
+				)}
 				<circle class="side-ball" r="0.4" cx="-10" cy="-10" />
 			</g>
 		)

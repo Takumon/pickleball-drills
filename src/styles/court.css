@@ -23,7 +23,8 @@
 	/* コートの外（横から見た高さの帯）に描く線と文字。ページの背景の上で見えるように、ライトとダークで変える */
 	--side-ink: #6b7280;
 	--side-panel: #eef1f4;
-	--side-mark: #c5cad1;
+	--side-mark: #a7aeb8;
+	--side-fence: #8f97a3;
 	margin: 1rem auto;
 	max-width: 340px;
 }
@@ -42,7 +43,8 @@
 	--fence: #9aa1ab;
 	--side-ink: #9ca3af;
 	--side-panel: #1f2a24;
-	--side-mark: #4b5563;
+	--side-mark: #5f6873;
+	--side-fence: #9aa1ab;
 }
 .court .anim {
 	max-width: 340px;
@@ -200,7 +202,7 @@
 	font-family: system-ui, sans-serif;
 }
 .court .side-fence line {
-	stroke: var(--fence);
+	stroke: var(--side-fence);
 	stroke-width: 0.2;
 	stroke-linecap: round;
 }
@@ -240,7 +242,7 @@
 .court .side-ball {
 	fill: var(--ball);
 	stroke: #1f2937;
-	stroke-width: 0.08;
+	stroke-width: 0.12;
 }
 .court .ball-body {
 	fill: var(--ball);

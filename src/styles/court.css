@@ -315,10 +315,10 @@
 .court .player.role-practice .body {
 	fill: var(--me);
 }
-.court .player .halo {
+.court .player .inner-ring {
 	fill: none;
-	stroke: var(--me);
-	stroke-width: 0.22;
+	stroke: var(--me-ink);
+	stroke-width: 0.14;
 }
 .court .player.role-practice text {
 	fill: var(--me-ink);

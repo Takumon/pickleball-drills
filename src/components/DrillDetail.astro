@@ -134,6 +134,14 @@ const serviceOf = (url: string) => {
 		cursor: pointer;
 		font-weight: 600;
 	}
+	/* 箇条書きの字下げは、記号（・や番号）が収まる分だけにする（ブラウザの既定の 40px は広すぎる） */
+	.field ul,
+	.field ol {
+		padding-inline-start: 1.3em;
+	}
+	.field li + li {
+		margin-top: 0.15rem;
+	}
 	.none {
 		color: var(--sl-color-gray-3);
 	}

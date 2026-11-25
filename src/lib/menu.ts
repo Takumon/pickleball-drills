@@ -122,3 +122,28 @@ export interface CatalogDrill {
 
 /** 分数の表示（例: 2 → "2分"、1.5 → "1.5分"） */
 export const fmtMin = (n: number) => `${trim(n)}分`;
+
+/** ドリルの表示名（派生形があれば「名前（フォア）」） */
+export function drillName(it: Extract<MenuItem, { kind: 'drill' }>, byId: Map<string, CatalogDrill>): string {
+	const d = byId.get(it.id);
+	if (!d) return `見つからないドリル（${it.id}）`;
+	const v = d.variants.find((x) => x.key === it.variant);
+	return v ? `${d.title}（${v.name}）` : d.title;
+}
+
+/** チャットに投稿する文章（今の投稿に近い形）。最後にメニューのURLを付ける */
+export function menuToText(menu: Menu, byId: Map<string, CatalogDrill>, url: string): string {
+	const lines: string[] = [];
+	if (menu.theme?.trim()) lines.push(`テーマ：${menu.theme.trim()}`, '');
+	for (const b of blocks(menu)) {
+		if (b.heading !== undefined) lines.push(`■ ${b.heading}${b.minutes ? ` ${trim(b.minutes)}分` : ''}`);
+		for (const it of b.items) {
+			if (it.kind === 'drill') lines.push(`・${drillName(it, byId)} ${trim(it.min)}min * ${it.sets}`);
+			else if (it.kind === 'break') lines.push(`・休憩 ${trim(it.min)}分`);
+			else if (it.kind === 'note') lines.push(`・${it.text}${it.min ? `（${trim(it.min)}分）` : ''}`);
+		}
+		lines.push('');
+	}
+	lines.push(url);
+	return lines.join('\n');
+}

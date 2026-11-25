@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import preact from '@astrojs/preact';
 import { categories } from './src/config/categories.ts';
 
 // https://astro.build/config
@@ -8,6 +9,8 @@ export default defineConfig({
 	site: 'https://takumon.github.io',
 	base: '/pickleball-drills',
 	integrations: [
+		// ビルダー（/builder/）の画面部品にだけ使う
+		preact(),
 		starlight({
 			title: 'ピックルボール ドリル集',
 			locales: {

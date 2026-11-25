@@ -19,11 +19,13 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 			<li><a href={`${base}/principles/`}>大原則</a></li>
 			<li><a href={`${base}/glossary/`}>用語集</a></li>
 		</ul>
+		<p class="builder-link"><a href={`${base}/builder/`}>メニューを作る</a></p>
 	</div>
 
 	<div id="menu-view" hidden data-base={base}>
 		<p class="menu-summary"><span class="menu-theme"></span><span class="menu-total"></span></p>
 		<div class="menu-list"></div>
+		<p class="menu-edit"><a href="#">このメニューを編集</a></p>
 	</div>
 </StarlightPage>
 
@@ -42,6 +44,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		const h1 = document.querySelector('main h1');
 		if (h1) h1.textContent = '練習メニュー';
 		render(menu);
+		view.querySelector<HTMLAnchorElement>('.menu-edit a')!.href = `${base}/builder/${location.search}`;
 	}
 
 	async function render(m: NonNullable<typeof menu>) {
@@ -137,6 +140,17 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		return li;
 	}
 </script>
+
+<style>
+	/* 作り手向けの入口は目立たせない */
+	.builder-link {
+		margin-top: 3rem;
+		font-size: var(--sl-text-xs);
+	}
+	.builder-link a {
+		color: var(--sl-color-gray-3);
+	}
+</style>
 
 <style is:global>
 	/* メニューの行は JavaScript で作るので、スコープなしのスタイルを #menu-view の中に限って当てる */
@@ -256,6 +270,14 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		font: inherit;
 		font-size: var(--sl-text-sm);
 		cursor: pointer;
+	}
+	#menu-view .menu-edit {
+		margin-top: 2.5rem;
+		font-size: var(--sl-text-xs);
+		text-align: right;
+	}
+	#menu-view .menu-edit a {
+		color: var(--sl-color-gray-3);
 	}
 	#menu-view .menu-open-page {
 		font-size: var(--sl-text-xs);

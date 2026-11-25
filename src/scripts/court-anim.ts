@@ -245,8 +245,9 @@ function setup(root: HTMLElement) {
  * ページを開いたときのほか、メニュー表示のように、あとからドリルの中身を差し込んだときにも呼ぶ。
  */
 export function setupCourtAnimations(root: ParentNode = document) {
-	// 試作: ?style=dots で、打球を点の並びで描く
-	if (new URLSearchParams(location.search).get('style') === 'dots') document.documentElement.dataset.shotStyle = 'dots';
+	// 試作: ?style=dots（点の並び）や ?style=dash（短い線の並び）で、打球の描き方を切り替える
+	const style = new URLSearchParams(location.search).get('style');
+	if (style === 'dots' || style === 'dash') document.documentElement.dataset.shotStyle = style;
 	root.querySelectorAll<HTMLElement>('[data-court-anim]:not([data-court-ready])').forEach((el) => {
 		el.dataset.courtReady = '';
 		setup(el);

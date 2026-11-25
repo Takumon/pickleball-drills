@@ -190,8 +190,18 @@
 [data-shot-style='dots'] .court .shot-dots {
 	display: inline;
 }
-[data-shot-style='dots'] .court .shot:not(.sub) {
+[data-shot-style='dots'] .court .shot:not(.sub),
+[data-shot-style='dash'] .court .shot:not(.sub) {
 	stroke: transparent;
+}
+/* 試作: ?style=dash のときは、一定の時間に進んだ距離を短い線で描く（線が長いほど速く、太いほど高い） */
+.court .shot-dashes {
+	display: none;
+	stroke: var(--shot);
+	stroke-linecap: round;
+}
+[data-shot-style='dash'] .court .shot-dashes {
+	display: inline;
 }
 .court .arrowhead {
 	fill: var(--shot);

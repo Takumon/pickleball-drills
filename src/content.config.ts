@@ -144,7 +144,7 @@ const drill = z.object({
 	setup: z.string(),
 	feed: z.string(),
 	steps: z.array(z.string()).min(1),
-	points: z.array(z.string()).max(3).default([]),
+	points: z.array(z.string()).max(5).default([]),
 	diagram: diagram.optional(),
 	variants: z.array(variant).default([]),
 	/** ビルダーでこのドリルを足したときの初期値（何分×何セット）。その日の実際の時間はメニューの URL が持つ。ドリルのページには出さない */

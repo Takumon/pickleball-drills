@@ -232,10 +232,14 @@
 	stroke: #1f2937;
 	stroke-width: 0.08;
 }
-.court .ball {
+.court .ball-body {
 	fill: var(--ball);
 	stroke: #1f2937;
-	stroke-width: 0.12;
+	stroke-width: 0.2;
+}
+/* ピックルボールの穴 */
+.court .ball .hole {
+	fill: #8a6a00;
 }
 .court .fence line {
 	stroke: var(--fence);

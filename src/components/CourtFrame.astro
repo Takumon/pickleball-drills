@@ -209,5 +209,19 @@ const isSub = (t: string) => t === 'move';
 			</g>
 		)
 	}
-	{animated && <circle class="ball" r="0.55" cx="-10" cy="-10" />}
+	{
+		// ボールは穴のあいたピックルボールとして描く（半径 1 の形を、アニメーションで位置と大きさに合わせて動かす）
+		animated && (
+			<g class="ball" transform="translate(-10 -10) scale(0.55)">
+				<circle class="ball-body" cx="0" cy="0" r="1" />
+				<circle class="hole" cx="0" cy="0" r="0.16" />
+				<circle class="hole" cx="0.502" cy="0.290" r="0.14" />
+				<circle class="hole" cx="0.000" cy="0.580" r="0.14" />
+				<circle class="hole" cx="-0.502" cy="0.290" r="0.14" />
+				<circle class="hole" cx="-0.502" cy="-0.290" r="0.14" />
+				<circle class="hole" cx="-0.000" cy="-0.580" r="0.14" />
+				<circle class="hole" cx="0.502" cy="-0.290" r="0.14" />
+			</g>
+		)
+	}
 </svg>

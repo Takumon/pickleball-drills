@@ -4,9 +4,9 @@
  */
 const SHOT_MS = 900;
 /** ボールの大きさ（高さ 1ft あたり）。高さそのものは右の帯（横から見た図）で見せる */
-const BALL_R_GROUND = 0.45;
+const BALL_R_GROUND = 0.6;
 const BALL_R_PER_FT = 0.05;
-const BALL_R_MAX = 0.9;
+const BALL_R_MAX = 1;
 const PAUSE_MS = 700;
 const LOOP_PAUSE_MS = 1600;
 
@@ -67,7 +67,7 @@ function setup(root: HTMLElement) {
 		frames.forEach((f, k) => (f.style.display = k === i ? '' : 'none'));
 		dots.forEach((d, k) => d.classList.toggle('active', k === i));
 		const frame = frames[i];
-		const ball = frame.querySelector<SVGCircleElement>('.ball')!;
+		const ball = frame.querySelector<SVGGElement>('.ball')!;
 		const balls = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="ball"]')];
 		const sideBall = frame.querySelector<SVGCircleElement>('.side-ball');
 		const sideTrace = frame.querySelector<SVGPathElement>('.side-trace');
@@ -122,13 +122,12 @@ function setup(root: HTMLElement) {
 		// 高さは右の帯（横から見た図）で見せる。pos がなければ隠す
 		const drawBall = (pos?: BallPos) => {
 			if (!pos) {
-				ball.setAttribute('cx', '-10');
+				ball.setAttribute('transform', 'translate(-10 -10) scale(0.55)');
 				sideBall?.setAttribute('cx', '-10');
 				return;
 			}
-			ball.setAttribute('cx', `${pos.x}`);
-			ball.setAttribute('cy', `${pos.y}`);
-			ball.setAttribute('r', `${Math.min(BALL_R_MAX, BALL_R_GROUND + pos.h * BALL_R_PER_FT)}`);
+			const r = Math.min(BALL_R_MAX, BALL_R_GROUND + pos.h * BALL_R_PER_FT);
+			ball.setAttribute('transform', `translate(${pos.x} ${pos.y}) scale(${r})`);
 			sideBall?.setAttribute('cx', `${sideX(pos.h)}`);
 			sideBall?.setAttribute('cy', `${pos.y}`);
 		};

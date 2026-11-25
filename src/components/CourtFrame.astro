@@ -28,10 +28,6 @@ interface Line {
 	bounces?: { pt: Point; at: number }[];
 	/** アニメーションのボールの高さ（ft）の列 */
 	heights?: string;
-	/** 試作: 点で描くときの点（一定の時間ごとのボールの位置と大きさ） */
-	dots?: { x: number; y: number; r: number }[];
-	/** 試作: 短い線で描くときの線（一定の時間に進んだ距離と、高さに応じた太さ） */
-	dashes?: { x1: number; y1: number; x2: number; y2: number; w: number }[];
 }
 interface Props {
 	figures: Figure[];
@@ -141,20 +137,6 @@ const isSub = (t: string) => t === 'move';
 						data-ms={animated ? shotDurationMs[l.type as ShotType] : undefined}
 						data-h={animated ? l.heights : undefined}
 					/>
-					{l.dashes && l.dashes.length > 0 && (
-						<g class="shot-dashes" mask={reveal ? `url(#${uid}-m${i})` : undefined}>
-							{l.dashes.map((d) => (
-								<line x1={d.x1} y1={d.y1} x2={d.x2} y2={d.y2} stroke-width={d.w} />
-							))}
-						</g>
-					)}
-					{l.dots && l.dots.length > 0 && (
-						<g class="shot-dots" mask={reveal ? `url(#${uid}-m${i})` : undefined}>
-							{l.dots.map((d) => (
-								<circle cx={d.x} cy={d.y} r={d.r} />
-							))}
-						</g>
-					)}
 				</>
 			);
 		})

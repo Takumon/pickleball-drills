@@ -5,7 +5,6 @@ import {
 	roleLabels,
 	shotLabels,
 	shotCurve,
-	shotDurationMs,
 	heightLevels,
 	shotHeights,
 	defaultReceiveHeight,
@@ -104,33 +103,7 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 	const label =
 		s.label ?? (s.type === 'move' ? '移動' : s.feed ? `球出し（${shotLabels[s.type]}）` : shotLabels[s.type]);
 	const bounces = bouncesOf(s, b.anchor, pointAt);
-	// 試作: 点の並びで打球を描く（?style=dots のときだけ表示）。
-	// 点 = 一定の時間ごとのボールの位置。間隔が広いほど速く、点が大きいほど高い
-	const hf = heightFn(s, bounces);
-	const dots: { x: number; y: number; r: number }[] = [];
-	if (hf) {
-		const n = Math.max(4, Math.round(shotDurationMs[s.type] / DOT_MS));
-		for (let i = 1; i < n; i++) {
-			const r = Math.sin(((i / n) * Math.PI) / 2); // アニメーションと同じ減速
-			const [x, y] = pointAt(r);
-			dots.push({ x, y, r: DOT_R0 + hf(r) * DOT_R_PER_FT });
-		}
-	}
-	// 試作: 短い線の並びで打球を描く（?style=dash のときだけ表示）。
-	// 線1本 = 一定の時間にボールが進んだ距離。線が長いほど速く、線が太いほど高い
-	const dashes: { x1: number; y1: number; x2: number; y2: number; w: number }[] = [];
-	if (hf) {
-		const n = Math.max(3, Math.round(shotDurationMs[s.type] / DASH_MS));
-		for (let i = 0; i < n; i++) {
-			const ease = (t: number) => Math.sin((t * Math.PI) / 2); // アニメーションと同じ減速
-			const ra = ease(i / n);
-			const rb = ease((i + DASH_ON) / n);
-			const [ax, ay] = pointAt(ra);
-			const [bx, by] = pointAt(rb);
-			dashes.push({ x1: ax, y1: ay, x2: bx, y2: by, w: DASH_W0 + hf((ra + rb) / 2) * DASH_W_PER_FT });
-		}
-	}
-	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces), dots, dashes };
+	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces) };
 }
 
 /**
@@ -176,16 +149,6 @@ function heightFn(s: Shot, bounces: { at: number }[]): ((t: number) => number) |
 	}
 	return height;
 }
-
-/** 点で描く試作: 点の時間の間隔（ミリ秒）と大きさ */
-const DOT_MS = 90;
-/** 短い線で描く試作: 線1本の時間の間隔（ミリ秒）、そのうち線を引く割合、太さ */
-const DASH_MS = 110;
-const DASH_ON = 0.6;
-const DASH_W0 = 0.15;
-const DASH_W_PER_FT = 0.07;
-const DOT_R0 = 0.12;
-const DOT_R_PER_FT = 0.045;
 
 /** サーブ・リターンでバウンド位置を書かなかったときの位置（線の長さに対する割合） */
 const AUTO_BOUNCE = 0.82;

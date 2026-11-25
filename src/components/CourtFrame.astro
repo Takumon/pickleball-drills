@@ -42,6 +42,9 @@ interface Props {
 }
 const { figures, lines, viewBox, zones, fences = [], uid, playerR, title, animated = false, step } = Astro.props;
 const MARK = 0.6;
+/** 柵の支柱の大きさと間隔（ft） */
+const FENCE_POST = 0.5;
+const FENCE_POST_GAP = 1.6;
 const k1 = COURT.net - COURT.kitchen;
 const k2 = COURT.net + COURT.kitchen;
 const isSub = (t: string) => t === 'move';
@@ -73,7 +76,22 @@ const isSub = (t: string) => t === 'move';
 		<line x1={COURT.width / 2} y1={k2} x2={COURT.width / 2} y2={COURT.length} />
 	</g>
 	<line class="net" x1="-1" y1={COURT.net} x2={COURT.width + 1} y2={COURT.net} />
-	{fences.map(([a, b]) => <line class="fence" x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} />)}
+	{
+		// 柵: 細い横木と、一定の間隔の支柱で描く（打球の線と見分けられるよう、色も形も変える）
+		fences.map(([a, b]) => {
+			const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+			const n = Math.max(1, Math.round(len / FENCE_POST_GAP));
+			const posts = Array.from({ length: n + 1 }, (_, i) => [a[0] + ((b[0] - a[0]) * i) / n, a[1] + ((b[1] - a[1]) * i) / n]);
+			return (
+				<g class="fence">
+					<line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} />
+					{posts.map(([x, y]) => (
+						<rect x={x - FENCE_POST / 2} y={y - FENCE_POST / 2} width={FENCE_POST} height={FENCE_POST} rx="0.06" />
+					))}
+				</g>
+			);
+		})
+	}
 
 	{
 		lines.map((l, i) => {

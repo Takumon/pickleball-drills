@@ -7,6 +7,73 @@ export const COURT = { width: 20, length: 44, net: 22, kitchen: 7 } as const;
 /** トランの位置 = キッチンラインとベースラインの中間（上側 y=7.5、下側 y=36.5） */
 export const TRAN = { top: 7.5, bottom: 36.5 } as const;
 
+/**
+ * 名前の付いた立ち位置。ドリルのデータでは `at: near-right-baseline` のように「手前/奥・左/右・深さ」で書く。
+ * - 手前（near）= 下側の自分たち、奥（far）= 上側の相手。
+ * - 左（left）・右（right）は図で見た左右のレーンの真ん中。
+ * - 深さ: kitchen = キッチンライン付近、tran = トラン（キッチンラインとベースラインの中間）、
+ *   baseline = ベースラインの後ろ（サーブ・リターン・3rdショットを打つ位置）。
+ */
+export const LANES = { left: 5, right: 15 } as const;
+export const DEPTHS = {
+	far: { kitchen: 14, tran: TRAN.top, baseline: -2.5 },
+	near: { kitchen: 30, tran: TRAN.bottom, baseline: 46.5 },
+} as const;
+export type Side = keyof typeof DEPTHS;
+export type Lane = keyof typeof LANES;
+export type Depth = keyof (typeof DEPTHS)['far'];
+const SPOT = /^(near|far)-(left|right)-(kitchen|tran|baseline)$/;
+
+/** 名前の付いた立ち位置（例: near-right-baseline）の座標。名前でなければ undefined */
+export function spotPoint(name: string): [number, number] | undefined {
+	const m = name.match(SPOT);
+	if (!m) return undefined;
+	return [LANES[m[2] as Lane], DEPTHS[m[1] as Side][m[3] as Depth]];
+}
+
+/**
+ * ドロップの的にする柵（L字）。相手のキッチンに、サイドラインから 40cm、キッチンラインからパドル1本分の位置に置く。
+ * データでは `fence: far-left` のように「奥/手前・左/右」で書く（左右は図で見た左右。柵はそのレーンのサイドライン側に置く）。
+ */
+export const FENCE = {
+	/** サイドラインからの距離（40cm） */
+	fromSideline: 0.4 / 0.3048,
+	/** キッチンラインからの距離（パドル1本分 ≒ 40cm） */
+	fromKitchenLine: 0.4 / 0.3048,
+	/** キッチンラインと平行な横木の長さ */
+	railAlongKitchen: 6.7,
+	/** ネットの手前で止める距離 */
+	stopBeforeNet: 0.5,
+	/** 着地点: 柵の角をねらう（クロスドロップ）ときは角から、柵の内側をねらうときはさらに内側へ、それぞれ縦横にこの距離 */
+	cornerInset: 1,
+	insideInset: 2.2,
+} as const;
+const FENCE_SPEC = /^(near|far)-(left|right)$/;
+
+/** 柵の線分と、着地点（corner = 柵の角のすぐ内側、inside = 柵の内側）の座標 */
+export function fenceGeometry(spec: string) {
+	const m = spec.match(FENCE_SPEC);
+	if (!m) throw new Error(`コート図: fence は near-left のように「手前/奥-左/右」で書く（"${spec}"）`);
+	const far = m[1] === 'far';
+	const left = m[2] === 'left';
+	const kitchenLine = far ? COURT.net - COURT.kitchen : COURT.net + COURT.kitchen;
+	const toNet = far ? 1 : -1; // キッチンラインからネットへ向かう向き
+	const inward = left ? 1 : -1; // サイドラインからコートの内側へ向かう向き
+	const x0 = left ? FENCE.fromSideline : COURT.width - FENCE.fromSideline;
+	const y0 = kitchenLine + toNet * FENCE.fromKitchenLine;
+	const p = (dx: number, dy: number): [number, number] => [round(x0 + inward * dx), round(y0 + toNet * dy)];
+	const corner = p(0, 0);
+	const segments: [[number, number], [number, number]][] = [
+		[corner, p(FENCE.railAlongKitchen, 0)],
+		[corner, [corner[0], round(COURT.net - toNet * FENCE.stopBeforeNet)]],
+	];
+	return {
+		segments,
+		targets: { corner: p(FENCE.cornerInset, FENCE.cornerInset), inside: p(FENCE.insideInset, FENCE.insideInset) },
+	};
+}
+const round = (n: number) => Math.round(n * 100) / 100;
+
 /** 人の役割（色分けと凡例に使う） */
 export const roleLabels = {
 	feed: '球出し役',

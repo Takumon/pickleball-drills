@@ -3,7 +3,18 @@ import { z } from 'astro/zod';
 import { docsLoader } from '@astrojs/starlight/loaders';
 import { docsSchema } from '@astrojs/starlight/schema';
 import { categoryCodes } from './config/categories';
-import { heightLevels, roleLabels, shotLabels, zoneRects, type HeightLevel, type Role, type ShotType, type ZoneName } from './config/court';
+import {
+	fenceGeometry,
+	heightLevels,
+	roleLabels,
+	shotLabels,
+	spotPoint,
+	zoneRects,
+	type HeightLevel,
+	type Role,
+	type ShotType,
+	type ZoneName,
+} from './config/court';
 
 const keysOf = <T extends string>(o: Record<T, unknown>) => Object.keys(o) as [T, ...T[]];
 const point = z.tuple([z.number(), z.number()]);
@@ -14,8 +25,10 @@ const diagram = z.object({
 		.array(
 			z.object({
 				id: z.string(),
-				x: z.number(),
-				y: z.number(),
+				/** 立ち位置の名前（例: near-right-baseline。config/court.ts の DEPTHS・LANES）。x・y の代わりに書く */
+				at: z.string().optional(),
+				x: z.number().optional(),
+				y: z.number().optional(),
 				role: z.enum(keysOf<Role>(roleLabels)).default('practice'),
 				label: z.string().optional(),
 				/** パドルの構え: ready=体の前 / fh=フォア側 / bh=バック側 */
@@ -54,7 +67,9 @@ const diagram = z.object({
 		)
 		.default([]),
 	zones: z.array(z.enum(keysOf<ZoneName>(zoneRects))).default([]),
-	/** 柵（コートに置く目印）。[[x1, y1], [x2, y2]] の線分の列。ドロップの的など */
+	/** ドロップの的の柵（例: far-left）。config/court.ts の FENCE の決まりで位置を計算する。打球の to に fence.corner / fence.inside と書ける */
+	fence: z.string().optional(),
+	/** 決まりに当てはまらない柵を、[[x1, y1], [x2, y2]] の線分で直接書くとき */
 	fences: z.array(z.tuple([point, point])).default([]),
 	/** auto=使っている範囲だけ縦に切り出す / full=コート全体 */
 	crop: z.enum(['auto', 'full']).default('auto'),
@@ -63,7 +78,33 @@ const diagram = z.object({
 	// 番号（n）のある打球とない打球が混ざると、番号のない打球はどのコマにも入らず描かれない
 	(d) => d.shots.every((s) => s.n !== undefined) || d.shots.every((s) => s.n === undefined),
 	{ message: 'コート図: 打球の番号 n は、全部の打球に付けるか、全部付けないかのどちらかにする', path: ['shots'] },
-);
+).transform((d, ctx) => {
+	// 名前で書いた位置（立ち位置・柵・着地点）を、config/court.ts の決まりで座標にする
+	const fence = d.fence ? fenceGeometry(d.fence) : undefined;
+	const ids = new Set(d.players.map((p) => p.id));
+	const resolve = (ref: string | [number, number]): string | [number, number] => {
+		if (typeof ref !== 'string' || ids.has(ref)) return ref;
+		if (ref === 'fence.corner' || ref === 'fence.inside') {
+			if (!fence) ctx.addIssue({ code: 'custom', message: `コート図: ${ref} を使うには fence を書く` });
+			return fence ? fence.targets[ref === 'fence.corner' ? 'corner' : 'inside'] : [0, 0];
+		}
+		const spot = spotPoint(ref);
+		if (!spot) ctx.addIssue({ code: 'custom', message: `コート図: "${ref}" は人の ID でも位置の名前でもない` });
+		return spot ?? [0, 0];
+	};
+	const players = d.players.map((p) => {
+		const spot = p.at ? spotPoint(p.at) : undefined;
+		if (p.at && !spot) ctx.addIssue({ code: 'custom', message: `コート図: at "${p.at}" は位置の名前ではない（例: near-right-baseline）` });
+		if (!spot && (p.x === undefined || p.y === undefined)) ctx.addIssue({ code: 'custom', message: `コート図: 人 ${p.id} に at か x・y を書く` });
+		return { ...p, x: spot ? spot[0] : (p.x ?? 0), y: spot ? spot[1] : (p.y ?? 0) };
+	});
+	return {
+		...d,
+		players,
+		shots: d.shots.map((s) => ({ ...s, from: resolve(s.from), to: resolve(s.to) })),
+		fences: [...(fence?.segments ?? []), ...d.fences],
+	};
+});
 export type Diagram = z.infer<typeof diagram>;
 
 const variant = z.object({

@@ -181,6 +181,18 @@
 	stroke-width: 0.3;
 	stroke-dasharray: 0.7 0.5;
 }
+/* 試作: ?style=dots のときは、打球を「一定の時間ごとのボールの位置」の点の並びで描く
+   （間隔が広いほど速く、点が大きいほど高い）。線は消して矢印の先だけ残す */
+.court .shot-dots {
+	display: none;
+	fill: var(--shot);
+}
+[data-shot-style='dots'] .court .shot-dots {
+	display: inline;
+}
+[data-shot-style='dots'] .court .shot:not(.sub) {
+	stroke: transparent;
+}
 .court .arrowhead {
 	fill: var(--shot);
 }

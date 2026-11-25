@@ -245,6 +245,8 @@ function setup(root: HTMLElement) {
  * ページを開いたときのほか、メニュー表示のように、あとからドリルの中身を差し込んだときにも呼ぶ。
  */
 export function setupCourtAnimations(root: ParentNode = document) {
+	// 試作: ?style=dots で、打球を点の並びで描く
+	if (new URLSearchParams(location.search).get('style') === 'dots') document.documentElement.dataset.shotStyle = 'dots';
 	root.querySelectorAll<HTMLElement>('[data-court-anim]:not([data-court-ready])').forEach((el) => {
 		el.dataset.courtReady = '';
 		setup(el);

@@ -1,8 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import type { Drill } from '../content.config';
-import { categories } from '../config/categories';
-import { fieldLabels, visibleFields, detailFields, type DrillField } from '../config/drill-display';
+import { fieldLabels, visibleFields, detailGroups, type DrillField } from '../config/drill-display';
 import Court from './Court.astro';
 
 interface Props {
@@ -10,7 +9,6 @@ interface Props {
 }
 const { drill } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const category = categories.find((c) => c.code === drill.category);
 
 const docs = await getCollection('docs', (e) => !!e.data.drill);
 const relatedDrills = drill.related
@@ -34,15 +32,19 @@ function hasContent(field: DrillField): boolean {
 	}
 }
 const shown = visibleFields.filter(hasContent);
-const hidden = detailFields.filter(hasContent);
+const groups = detailGroups
+	.map((g) => ({ label: g.label, fields: g.fields.filter(hasContent) }))
+	.filter((g) => g.fields.length > 0);
 ---
 
 <div class="drill">
 	{
-		[{ fields: shown, inDetails: false }, { fields: hidden, inDetails: true }].map(({ fields, inDetails }) => {
+		[{ fields: shown, label: undefined }, ...groups].map(({ fields, label }) => {
+			// トグルの名前と同じ見出しは、中では繰り返さない
+			const showHeading = (field: DrillField) => field !== 'diagram' && !(fields.length === 1 && fieldLabels[field] === label);
 			const body = fields.map((field) => (
 				<section class="field">
-					{field !== 'diagram' && <h3>{fieldLabels[field]}</h3>}
+					{showHeading(field) && <h3>{fieldLabels[field]}</h3>}
 					{field === 'setup' && <p>{drill.setup}</p>}
 					{field === 'feed' && <p>{drill.feed}</p>}
 					{field === 'purpose' && <p>{drill.purpose}</p>}
@@ -66,7 +68,7 @@ const hidden = detailFields.filter(hasContent);
 						<ul>
 							{relatedDrills.map((e) => (
 								<li>
-									<a href={`${base}/${e.id}/`}>{e.data.title}</a> <code>{e.data.drill!.id}</code>
+									<a href={`${base}/${e.id}/`}>{e.data.title}</a>
 								</li>
 							))}
 						</ul>
@@ -76,7 +78,7 @@ const hidden = detailFields.filter(hasContent);
 							{drill.variants.map((v) => (
 								<>
 									<dt>
-										{v.name} <code>{drill.id}.{v.key}</code>
+										{v.name}
 									</dt>
 									<dd>
 										{v.setup && <p>人数・配置: {v.setup}</p>}
@@ -104,19 +106,10 @@ const hidden = detailFields.filter(hasContent);
 					)}
 				</section>
 			));
-			// ID・カテゴリ・別名はページ上部には出さず、「詳細」の最後に置く
-			return inDetails ? (
+			return label ? (
 				<details class="more">
-					<summary>詳細</summary>
+					<summary>{label}</summary>
 					{body}
-					<section class="field">
-						<h3>ID・カテゴリ</h3>
-						<p class="meta">
-							<code>{drill.id}</code>
-							<span>{category?.label}</span>
-							{drill.aliases.length > 0 && <span class="aliases">別名: {drill.aliases.join('、')}</span>}
-						</p>
-					</section>
 				</details>
 			) : (
 				body
@@ -126,20 +119,12 @@ const hidden = detailFields.filter(hasContent);
 </div>
 
 <style>
-	.drill .meta {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem 0.75rem;
-		align-items: center;
-		color: var(--sl-color-gray-3);
-		font-size: var(--sl-text-sm);
-	}
 	.field h3 {
 		font-size: var(--sl-text-lg);
 		margin-top: 1.25rem;
 	}
 	.more {
-		margin-top: 1.5rem;
+		margin-top: 1rem;
 		border: 1px solid var(--sl-color-gray-5);
 		border-radius: 0.5rem;
 		padding: 0.5rem 1rem;

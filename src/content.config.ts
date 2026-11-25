@@ -137,7 +137,7 @@ const drill = z.object({
 	/** 別名・旧称（検索用） */
 	aliases: z.array(z.string()).default([]),
 	/** 場面: このドリルが想定する試合の場面（何が起きていて、何が困るか）。目的の前に出す */
-	scene: z.string().optional(),
+	scene: z.string(),
 	purpose: z.string(),
 	setup: z.string(),
 	feed: z.string(),

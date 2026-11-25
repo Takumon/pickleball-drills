@@ -202,6 +202,7 @@ export const heightLevels = {
 	head: { label: '肩より上・頭付近', note: '強めのボレーの打点', ft: 5.5 },
 	aboveTape: { label: '白帯から上', note: 'サーブ・リターン・ドロップの頂点', ft: 6.0 },
 	overhead: { label: '頭より上', note: 'スマッシュの打点', ft: 7.5 },
+	highArc: { label: '頭のかなり上', note: '下がって打つボレーで、キッチンへ落とす球の頂点', ft: 10 },
 	sky: { label: 'かなり上', note: 'ロブの頂点', ft: 14 },
 } as const;
 export type HeightLevel = keyof typeof heightLevels;

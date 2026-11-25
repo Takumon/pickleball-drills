@@ -7,16 +7,17 @@
 	--court-zone: rgb(255 214 10 / 0.18);
 	--court-line: #ffffff;
 	--court-net: #f3f4f6;
-	--shot: #f472b6;
+	/* 打球の線は水色。濃い緑のコート、白い線、黄色のボール、人の色のどれとも見分けやすい */
+	--shot: #67e8f9;
 	--ball: #facc15;
 	--sub: #d1d5db;
 	--label: #ffffff;
 	--r-feed: #f59e0b;
 	--r-practice: #2563eb;
-	--r-partner: #60a5fa;
+	--r-partner: #c4b5fd;
 	--r-opponent: #9ca3af;
 	--paddle: #f3f4f6;
-	--fence: #e0b072;
+	--fence: #d8c3a0;
 	/* コートの外（横から見た高さの帯）に描く線と文字。ページの背景の上で見えるように、ライトとダークで変える */
 	--side-ink: #6b7280;
 	--side-panel: #eef1f4;
@@ -34,7 +35,7 @@
 	--sub: #9ca3af;
 	--label: #f9fafb;
 	--paddle: #e5e7eb;
-	--fence: #d6a565;
+	--fence: #cbb48c;
 	--side-ink: #9ca3af;
 	--side-panel: #1f2a24;
 }

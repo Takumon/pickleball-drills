@@ -89,7 +89,10 @@ export const shotLabels = {
 	drop: 'ドロップ',
 	reset: 'リセット',
 	drive: 'ドライブ・ストローク',
-	volley: 'ボレー',
+	absorb: '受け流しボレー',
+	block: 'ブロックボレー',
+	roll: 'ロールボレー',
+	punch: 'パンチボレー',
 	speedup: 'スピードアップ',
 	lob: 'ロブ',
 	smash: 'スマッシュ',
@@ -113,7 +116,10 @@ export const shotCurve: Record<ShotType, number> = {
 	speedup: 0,
 	smash: 0,
 	drive: 0,
-	volley: 0,
+	absorb: 0,
+	block: 0,
+	roll: 0,
+	punch: 0,
 	move: 0,
 };
 
@@ -126,7 +132,10 @@ export const shotSpeedKmh: Record<ShotType, number> = {
 	smash: 75,
 	speedup: 70,
 	drive: 65,
-	volley: 55,
+	punch: 60,
+	roll: 50,
+	block: 40,
+	absorb: 25,
 	serve: 50,
 	return: 50,
 	drop: 30,
@@ -191,7 +200,14 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
 	dink: { hit: 'underTape', peak: 'overTape' },
 	reset: { hit: 'underTape', peak: 'overTape' },
 	drive: { hit: 'belowWaist', peak: 'tape' },
-	volley: { hit: 'waistToShoulder', peak: 'waistToShoulder' },
+	// 受け流しボレー: ネットより下で面を作って当て、弧を描いてゆっくり落とす（ディンクやドロップをノーバウンドで受け流す）
+	absorb: { hit: 'underTape', peak: 'overTape' },
+	// ブロックボレー: 体の前に来た速い球を、振らずに面で止めて返す
+	block: { hit: 'waistToShoulder', peak: 'waistToShoulder' },
+	// ロールボレー: 下から振り上げて回転をかけ、ネットを越えたあとに沈める（ドライブと同じ沈む軌道）
+	roll: { hit: 'underTape', peak: 'tape' },
+	// パンチボレー: ネットより上の球を、上から足元へ速く打ち込む
+	punch: { hit: 'waistToShoulder', peak: 'waistToShoulder' },
 	speedup: { hit: 'overTape', peak: 'overTape' },
 	smash: { hit: 'overhead', peak: 'overhead' },
 	lob: { hit: 'belowWaist', peak: 'sky' },

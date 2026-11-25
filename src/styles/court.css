@@ -164,12 +164,13 @@
 .court .shot.t-speedup,
 .court .shot.t-smash,
 .court .shot.t-drive,
-.court .shot.t-volley {
+.court .shot.t-punch {
 	stroke-width: 0.65;
 }
 .court .shot.t-dink,
 .court .shot.t-drop,
-.court .shot.t-reset {
+.court .shot.t-reset,
+.court .shot.t-absorb {
 	stroke-width: 0.35;
 	stroke-dasharray: 0.05 0.55;
 }

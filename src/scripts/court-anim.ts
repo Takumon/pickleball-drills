@@ -96,7 +96,7 @@ function setup(root: HTMLElement) {
 			const len = m.getTotalLength();
 			const start = m.getPointAtLength(0);
 			const end = m.getPointAtLength(len);
-			return { g, sg, dx: end.x - start.x, dy: end.y - start.y };
+			return { g, sg, dx: end.x - start.x, dy: end.y - start.y, delay: Number(m.dataset.delay) || 0 };
 		});
 		const lens = balls.map((b) => b.getTotalLength());
 		// 線はマスク側の線（.reveal）を伸ばして見せる。本体の線は点線・破線のまま描ける
@@ -171,7 +171,8 @@ function setup(root: HTMLElement) {
 			return;
 		}
 		// 打球の種類ごとの時間（data-ms）。1つの場面に複数あるときは一番長いものに合わせる
-		const durations = [...balls, ...moves].map((p) => Number(p.dataset.ms) || SHOT_MS);
+		// 動き出しが遅れる人（data-delay）は、その分も含める
+		const durations = [...balls, ...moves].map((p) => (Number(p.dataset.ms) || SHOT_MS) + (Number(p.dataset.delay) || 0));
 		const duration = durations.length ? Math.max(...durations) : SHOT_MS;
 		// 打つ前に一度弾ませる球: 手前で弾んだボールが打点まで上がってから、打球が始まる
 		const preAttr = balls[0]?.dataset.pre?.split(',').map(Number);
@@ -198,7 +199,6 @@ function setup(root: HTMLElement) {
 			}
 			setPreRings(!!preAttr);
 			const t = Math.min(1, (elapsed - preMs) / duration);
-			const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // 人の動き: ease-in-out
 			const eb = Math.sin((t * Math.PI) / 2); // ボール: 打った瞬間が速く、少しずつ減速する
 			showMarks(eb);
 			balls.forEach((b, k) => {
@@ -208,9 +208,12 @@ function setup(root: HTMLElement) {
 					drawTrace(eb);
 				}
 			});
-			movers.forEach(({ g, sg, dx, dy }) => {
-				g?.setAttribute('transform', `translate(${dx * e} ${dy * e})`);
-				sg?.setAttribute('transform', `translate(0 ${dy * e})`);
+			movers.forEach(({ g, sg, dx, dy, delay }) => {
+				// 動き出しが遅れる人は、遅れたぶん短い時間で同じ終わりの時刻に着く
+				const tm = Math.min(1, Math.max(0, (elapsed - preMs - delay) / (duration - delay)));
+				const em = tm < 0.5 ? 2 * tm * tm : 1 - (-2 * tm + 2) ** 2 / 2;
+				g?.setAttribute('transform', `translate(${dx * em} ${dy * em})`);
+				sg?.setAttribute('transform', `translate(0 ${dy * em})`);
 			});
 			if (t < 1) raf = requestAnimationFrame(tick);
 			else {

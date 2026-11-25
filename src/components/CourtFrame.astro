@@ -32,6 +32,8 @@ interface Line {
 	ms?: number;
 	/** 打つ前に弾む位置（afterBounce） */
 	pre?: Point;
+	/** 動き出すまでの遅れ（ミリ秒）。相手の打球を見てから動く人 */
+	delay?: number;
 }
 interface Props {
 	figures: Figure[];
@@ -144,6 +146,7 @@ const isSub = (t: string) => t === 'move';
 						data-player={animated && l.type === 'move' && typeof l.from === 'string' ? l.from : undefined}
 						data-ms={animated ? l.ms : undefined}
 						data-pre={animated && l.pre ? `${l.pre[0]},${l.pre[1]}` : undefined}
+						data-delay={animated && l.delay ? l.delay : undefined}
 						data-h={animated ? l.heights : undefined}
 					/>
 				</>

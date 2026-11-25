@@ -9,6 +9,7 @@ import {
 	shotHeights,
 	defaultReceiveHeight,
 	type HeightLevel,
+	reactionMs,
 } from '../config/court';
 import CourtFrame from './CourtFrame.astro';
 import '../styles/court.css';
@@ -247,7 +248,12 @@ const panels = groups.map((g) => {
 	const byIdTo = new Map(
 		diagram.players.map((p) => [p.id, movedTo.has(p.id) ? figureOf(p, movedTo.get(p.id)!) : byId.get(p.id)!]),
 	);
-	const lines = g.shots.map((s) => lineOf(s, byId, groups.length > 1, byIdTo));
+	const lines = g.shots.map((s) => ({
+		...lineOf(s, byId, groups.length > 1, byIdTo),
+		// 相手の打球を見て動く人は、反応する時間だけ遅れて動き出す（自分で打ちながら動くときは遅れない）
+		delay:
+			s.type === 'move' && g.shots.some((o) => o.type !== 'move' && o.from !== s.from) ? reactionMs : undefined,
+	}));
 	// 横から見た図で描くパドルの高さ: この手で打つ人は打つ高さ、受ける人は受ける高さ、ほかは既定の高さ。
 	// 同じ手で2つ以上打つときも、それぞれの打球から決める
 	const sideH = (id: string) => {

@@ -157,6 +157,12 @@ export const shotSpeedKmh: Record<ShotType, number> = {
 };
 /** アニメーションをどれだけゆっくり再生するか（実際の何倍の時間をかけるか） */
 export const ANIM_SLOWDOWN = 1.7;
+/**
+ * 人が相手の打球を見てから動き出すまでの時間（秒）。相手が打った手と同じ手で動く人（ロブを見て下がる、
+ * 打たれた球に合わせてサイドステップするなど）は、この分だけ遅れて動き出す。自分で打ちながら動くときは遅れない
+ */
+export const REACTION_S = 0.3;
+export const reactionMs = Math.round(REACTION_S * 1000 * ANIM_SLOWDOWN);
 /** 1手の時間の下限・上限（ミリ秒）。短すぎて見えない・長すぎて待たされることがないようにする */
 export const ANIM_MS_MIN = 400;
 export const ANIM_MS_MAX = 2000;

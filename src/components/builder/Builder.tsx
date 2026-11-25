@@ -183,8 +183,15 @@ export default function Builder({ base }: { base: string }) {
 								{d.variants.length > 0 && (
 									<span class="variant-adds">
 										{d.variants.map((v) => (
-											<button type="button" class="variant-add" onClick={() => addDrill(d, v.key)} title={`${v.name}で足す`}>
+											<button
+												type="button"
+												class={`variant-add${v.default ? ' is-default' : ''}`}
+												onClick={() => addDrill(d, v.key)}
+												title={`${v.name}で足す`}
+											>
 												＋{v.name}
+												{/* デフォルト（図で描いている派生形）。メニューには派生形を書かない */}
+												{v.default && <span class="default-tag">デフォルト</span>}
 											</button>
 										))}
 									</span>

@@ -120,6 +120,19 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 	.builder .catalog-list .title {
 		flex: 1;
 	}
+	.builder .catalog-list .variant-adds {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		margin-top: 4px;
+	}
+	.builder .catalog-list .variant-add {
+		padding: 1px 8px;
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		color: var(--accent);
+		font-size: 0.8rem;
+	}
 	.builder .catalog-list .meta {
 		color: var(--muted);
 		font-size: 0.8rem;

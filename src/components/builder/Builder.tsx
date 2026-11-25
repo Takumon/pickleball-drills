@@ -103,8 +103,15 @@ export default function Builder({ base }: { base: string }) {
 			return next;
 		});
 
-	const addDrill = (d: CatalogDrill) =>
-		add({ kind: 'drill', id: d.id, min: d.builderDefault?.min ?? 2, sets: d.builderDefault?.sets ?? 5 });
+	/** ドリルを足す。派生形を指定したときは、それを選んだ状態で足す（図の派生形なら指定しないのと同じ） */
+	const addDrill = (d: CatalogDrill, variantKey?: string) =>
+		add({
+			kind: 'drill',
+			id: d.id,
+			variant: d.variants.find((v) => v.key === variantKey && !v.default)?.key,
+			min: d.builderDefault?.min ?? 2,
+			sets: d.builderDefault?.sets ?? 5,
+		});
 
 	const copy = async (text: string, msg: string) => {
 		try {
@@ -170,7 +177,19 @@ export default function Builder({ base }: { base: string }) {
 							<button type="button" class="add" onClick={() => addDrill(d)} title="メニューに足す">
 								＋
 							</button>
-							<span class="title">{d.title}</span>
+							<span class="title">
+								{d.title}
+								{/* 派生形があるドリルは、派生形を選んで足せる */}
+								{d.variants.length > 0 && (
+									<span class="variant-adds">
+										{d.variants.map((v) => (
+											<button type="button" class="variant-add" onClick={() => addDrill(d, v.key)} title={`${v.name}で足す`}>
+												＋{v.name}
+											</button>
+										))}
+									</span>
+								)}
+							</span>
 							<span class="meta">
 								{d.builderDefault ? `${fmtMin(d.builderDefault.min)}×${d.builderDefault.sets}` : ''}
 								<a href={d.url} target="_blank" rel="noopener" title="ドリルのページを開く">

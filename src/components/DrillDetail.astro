@@ -62,11 +62,6 @@ const hidden = detailFields.filter(hasContent);
 							))}
 						</ul>
 					)}
-					{field === 'time' && drill.time && (
-						<p>
-							{drill.time.min}分 × {drill.time.sets}セット
-						</p>
-					)}
 					{field === 'related' && (
 						<ul>
 							{relatedDrills.map((e) => (

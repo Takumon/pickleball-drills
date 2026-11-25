@@ -92,8 +92,8 @@ const drill = z.object({
 	points: z.array(z.string()).max(3).default([]),
 	diagram: diagram.optional(),
 	variants: z.array(variant).default([]),
-	/** 標準時間（ビルダーの初期値） */
-	time: z.object({ min: z.number(), sets: z.number().int() }).optional(),
+	/** ビルダーでこのドリルを足したときの初期値（何分×何セット）。その日の実際の時間はメニューの URL が持つ。ドリルのページには出さない */
+	builderDefault: z.object({ min: z.number(), sets: z.number().int() }).optional(),
 	/** 関連ドリルのID */
 	related: z.array(z.string()).default([]),
 	notes: z.string().optional(),

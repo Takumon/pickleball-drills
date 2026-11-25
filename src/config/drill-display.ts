@@ -11,7 +11,6 @@ export const fieldLabels = {
 	diagram: '図',
 	purpose: '目的',
 	variants: '派生形',
-	time: '標準時間',
 	related: '関連ドリル',
 	notes: '補足',
 } as const;
@@ -23,4 +22,4 @@ export type DrillField = keyof typeof fieldLabels;
 export const visibleFields: DrillField[] = ['diagram', 'purpose', 'setup', 'feed', 'steps', 'points'];
 
 /** 「詳細」トグルの中に隠す項目 */
-export const detailFields: DrillField[] = ['variants', 'time', 'related', 'notes'];
+export const detailFields: DrillField[] = ['variants', 'related', 'notes'];

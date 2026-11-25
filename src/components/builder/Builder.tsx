@@ -104,7 +104,7 @@ export default function Builder({ base }: { base: string }) {
 		});
 
 	const addDrill = (d: CatalogDrill) =>
-		add({ kind: 'drill', id: d.id, min: d.time?.min ?? 2, sets: d.time?.sets ?? 5 });
+		add({ kind: 'drill', id: d.id, min: d.builderDefault?.min ?? 2, sets: d.builderDefault?.sets ?? 5 });
 
 	const copy = async (text: string, msg: string) => {
 		try {
@@ -172,7 +172,7 @@ export default function Builder({ base }: { base: string }) {
 							</button>
 							<span class="title">{d.title}</span>
 							<span class="meta">
-								{d.time ? `${fmtMin(d.time.min)}×${d.time.sets}` : ''}
+								{d.builderDefault ? `${fmtMin(d.builderDefault.min)}×${d.builderDefault.sets}` : ''}
 								<a href={d.url} target="_blank" rel="noopener" title="ドリルのページを開く">
 									↗
 								</a>

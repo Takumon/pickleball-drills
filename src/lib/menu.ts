@@ -117,7 +117,8 @@ export interface CatalogDrill {
 	url: string;
 	fragment: string;
 	variants: { key: string; name: string }[];
-	time?: { min: number; sets: number };
+	/** ビルダーで足したときの初期値 */
+	builderDefault?: { min: number; sets: number };
 }
 
 /** 分数の表示（例: 2 → "2分"、1.5 → "1.5分"） */

@@ -22,7 +22,7 @@ export async function GET() {
 				url: `${base}/${e.id}/`,
 				fragment: `${base}/fragments/${d.id}/`,
 				variants: d.variants.map((v) => ({ key: v.key, name: v.name })),
-				time: d.time,
+				builderDefault: d.builderDefault,
 			};
 		})
 		.sort((a, b) => catIndex(a.category) - catIndex(b.category) || a.order - b.order || a.id.localeCompare(b.id));

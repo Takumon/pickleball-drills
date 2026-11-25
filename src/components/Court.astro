@@ -103,7 +103,9 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 	const label =
 		s.label ?? (s.type === 'move' ? '移動' : s.feed ? `球出し（${shotLabels[s.type]}）` : shotLabels[s.type]);
 	const bounces = bouncesOf(s, b.anchor, pointAt);
-	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces) };
+	// ネットを越える位置（線の長さに対する割合）。越えなければ undefined
+	const netAt = (y1 - COURT.net) * (y2 - COURT.net) < 0 ? (COURT.net - y1) / (y2 - y1) : undefined;
+	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces, netAt) };
 }
 
 /**
@@ -118,13 +120,13 @@ function receiveHeight(s: Shot) {
 	const next = rest.find((n) => n.type !== 'move' && n.from === s.to);
 	return next && next.type !== 'move' ? ft(next.hit ?? shotHeights[next.type].hit) : ft(defaultReceiveHeight);
 }
-function heightsOf(s: Shot, bounces: { at: number }[]) {
-	const height = heightFn(s, bounces);
+function heightsOf(s: Shot, bounces: { at: number }[], netAt?: number) {
+	const height = heightFn(s, bounces, netAt);
 	return height && Array.from({ length: 41 }, (_, i) => height(i / 40).toFixed(2)).join(',');
 }
 
 /** 線に沿った高さ（ft）を返す関数。t は線の長さに対する割合 */
-function heightFn(s: Shot, bounces: { at: number }[]): ((t: number) => number) | undefined {
+function heightFn(s: Shot, bounces: { at: number }[], netAt?: number): ((t: number) => number) | undefined {
 	if (s.type === 'move') return undefined;
 	const h0 = ft(s.hit ?? shotHeights[s.type].hit);
 	const peak = ft(s.peak ?? shotHeights[s.type].peak);
@@ -135,6 +137,23 @@ function heightFn(s: Shot, bounces: { at: number }[]): ((t: number) => number) |
 		return (u: number) => (1 - u) ** 2 * ha + 2 * u * (1 - u) * c + u ** 2 * hb;
 	};
 	const b = bounces[0]?.at;
+	// ドライブ（ストローク）: 低く打ち出して少しだけ弧を描き、ネットの白帯を越える手前で山になり、
+	// トップスピンでネットを越えたあとにぐっと沈む（前半はゆるやかに上がり、後半は加速して下がる）
+	if (s.type === 'drive') {
+		const end = b !== undefined && b < 0.999 ? b : 1;
+		const hEnd = b !== undefined ? 0 : recv;
+		const ta = Math.min(0.8, Math.max(0.2, (netAt ?? 0.5) * 0.9)) * end;
+		const hA = Math.max(h0, hEnd, ft('tape')) + DRIVE_CLEAR_FT;
+		const dip = (t: number) => {
+			if (t <= ta) return h0 + (hA - h0) * (1 - (1 - t / ta) ** 2);
+			return hA + (hEnd - hA) * ((t - ta) / (end - ta)) ** 2.4;
+		};
+		if (end < 1) {
+			const after = hop(0, recv, recv);
+			return (t) => (t <= end ? dip(t) : after((t - end) / (1 - end)));
+		}
+		return dip;
+	}
 	let height: (t: number) => number;
 	if (b !== undefined && b <= 0.001) {
 		// 打った直後に弾む（バウンド位置が打つ人のすぐそば）: 地面から受ける高さまで上がるだけにする
@@ -149,6 +168,9 @@ function heightFn(s: Shot, bounces: { at: number }[]): ((t: number) => number) |
 	}
 	return height;
 }
+
+/** ドライブがネットの白帯の上をどれだけ越えるか（ft） */
+const DRIVE_CLEAR_FT = 0.8;
 
 /** サーブ・リターンでバウンド位置を書かなかったときの位置（線の長さに対する割合） */
 const AUTO_BOUNCE = 0.82;

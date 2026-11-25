@@ -84,11 +84,11 @@ export type ZoneName = keyof typeof zoneRects;
  */
 export const heightLevels = {
 	ground: { label: '地面', note: 'バウンドする位置', ft: 0 },
-	belowWaist: { label: '腰の下', note: 'サーブの打点', ft: 2.0 },
+	belowWaist: { label: '腰の下', note: 'サーブ・ストローク（ドライブ）の打点', ft: 2.0 },
 	underTape: { label: '白帯のちょい下', note: 'ロールの打点', ft: 2.5 },
 	tape: { label: 'ネットの白帯', note: 'ネットの高さ', ft: 2.9 },
 	overTape: { label: '白帯のちょい上', note: 'フリックの打点、ディンクの頂点', ft: 3.3 },
-	waistToShoulder: { label: '腰上〜肩下', note: 'ボレー・ドライブの打点', ft: 4.0 },
+	waistToShoulder: { label: '腰上〜肩下', note: 'ボレーの打点', ft: 4.0 },
 	head: { label: '肩より上・頭付近', note: '強めのボレーの打点', ft: 5.5 },
 	aboveTape: { label: '白帯から上', note: 'サーブ・リターン・ドロップの頂点', ft: 6.0 },
 	overhead: { label: '頭より上', note: 'スマッシュの打点', ft: 7.5 },
@@ -107,7 +107,7 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
 	drop: { hit: 'belowWaist', peak: 'aboveTape' },
 	dink: { hit: 'underTape', peak: 'overTape' },
 	reset: { hit: 'underTape', peak: 'overTape' },
-	drive: { hit: 'waistToShoulder', peak: 'tape' },
+	drive: { hit: 'belowWaist', peak: 'tape' },
 	volley: { hit: 'waistToShoulder', peak: 'waistToShoulder' },
 	speedup: { hit: 'overTape', peak: 'overTape' },
 	smash: { hit: 'overhead', peak: 'overhead' },

@@ -1,84 +1,43 @@
 ---
 /**
- * 練習メニューのビルダー（PC向け）。サイドバーやヘッダーからはリンクしない。
- * 入口は、トップページの一番下の小さなリンクと、メニュー表示の「このメニューを編集」だけ。
+ * 練習メニューのビルダー（PC向け）。サイトの枠（ヘッダー、ライト／ダークの切り替え）の中に置き、サイドバーは出さない。
+ * サイドバーやヘッダーからはリンクしない。入口は、トップページの一番下の小さなリンクと、メニュー表示の「このメニューを編集」だけ。
  */
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import Builder from '../components/builder/Builder';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
-<!doctype html>
-<html lang="ja">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="robots" content="noindex" />
-		<title>メニューを作る | ピックルボール ドリル集</title>
-	</head>
-	<body>
-		<header class="site">
-			<a href={`${base}/`}>ピックルボール ドリル集</a>
-			<h1>メニューを作る</h1>
-		</header>
+<StarlightPage frontmatter={{ title: 'メニューを作る', template: 'splash', pagefind: false, head: [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex' } }] }}>
+	<div class="not-content">
 		<Builder client:only="preact" base={base} />
-	</body>
-</html>
+	</div>
+</StarlightPage>
 
 <style is:global>
-	:root {
-		color-scheme: light dark;
-		--bg: #ffffff;
-		--panel: #f6f7f9;
-		--fg: #1a1a1a;
-		--muted: #6b7280;
-		--line: #d9dce1;
-		--accent: #2563eb;
-		--danger: #dc2626;
-		--ok: #15803d;
-	}
-	@media (prefers-color-scheme: dark) {
-		:root {
-			--bg: #17181c;
-			--panel: #202228;
-			--fg: #ececec;
-			--muted: #9ca3af;
-			--line: #353841;
-			--accent: #60a5fa;
-			--danger: #f87171;
-			--ok: #4ade80;
-		}
-	}
-	* {
-		box-sizing: border-box;
-	}
-	body {
-		margin: 0;
-		background: var(--bg);
+	/* 色はサイト（Starlight）の変数に合わせ、ライト／ダークの切り替えに連動させる */
+	.builder {
+		--bg: var(--sl-color-bg);
+		--panel: var(--sl-color-gray-6);
+		--fg: var(--sl-color-white);
+		--muted: var(--sl-color-gray-3);
+		--line: var(--sl-color-gray-5);
+		--accent: var(--sl-color-accent);
+		--danger: var(--sl-color-red);
+		--ok: var(--sl-color-green);
 		color: var(--fg);
-		font-family: system-ui, -apple-system, 'Hiragino Sans', sans-serif;
 		font-size: 15px;
 	}
-	header.site {
-		display: flex;
-		align-items: baseline;
-		gap: 1rem;
-		padding: 12px 20px;
-		border-bottom: 1px solid var(--line);
+	.builder *,
+	.builder *::before,
+	.builder *::after {
+		box-sizing: border-box;
 	}
-	header.site a {
-		color: var(--muted);
-		text-decoration: none;
-		font-size: 0.85rem;
-	}
-	header.site h1 {
-		margin: 0;
-		font-size: 1.2rem;
-	}
-	input,
-	select,
-	button,
-	.button {
+			.builder input,
+	.builder select,
+	.builder button,
+	.builder .button {
 		font: inherit;
 		color: inherit;
 		background: var(--bg);
@@ -86,25 +45,25 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		border-radius: 6px;
 		padding: 4px 8px;
 	}
-	button,
-	.button {
+	.builder button,
+	.builder .button {
 		cursor: pointer;
 		background: var(--panel);
 		text-decoration: none;
 		display: inline-block;
 	}
-	button:disabled {
+	.builder button:disabled {
 		opacity: 0.35;
 		cursor: default;
 	}
-	input[type='number'] {
+	.builder input[type='number'] {
 		width: 4.2em;
 	}
 	.builder {
 		display: grid;
 		grid-template-columns: minmax(260px, 340px) 1fr;
 		gap: 20px;
-		padding: 16px 20px 40px;
+		padding: 0 0 40px;
 		align-items: start;
 	}
 	/* PC向けの画面だが、幅が狭いときは縦に並べ、行の中身を折り返して横にはみ出さないようにする */
@@ -129,91 +88,91 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		font-size: 1rem;
 		margin: 0 0 8px;
 	}
-	.catalog {
+	.builder .catalog {
 		position: sticky;
-		top: 12px;
+		top: calc(var(--sl-nav-height) + 12px);
 		background: var(--panel);
 		border: 1px solid var(--line);
 		border-radius: 10px;
 		padding: 12px;
-		max-height: calc(100vh - 90px);
+		max-height: calc(100vh - var(--sl-nav-height) - 24px);
 		display: flex;
 		flex-direction: column;
 	}
-	.filters {
+	.builder .filters {
 		display: grid;
 		gap: 6px;
 		margin-bottom: 8px;
 	}
-	.catalog-list {
+	.builder .catalog-list {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 		overflow-y: auto;
 	}
-	.catalog-list li {
+	.builder .catalog-list li {
 		display: flex;
 		align-items: center;
 		gap: 8px;
 		padding: 6px 2px;
 		border-bottom: 1px solid var(--line);
 	}
-	.catalog-list .title {
+	.builder .catalog-list .title {
 		flex: 1;
 	}
-	.catalog-list .meta {
+	.builder .catalog-list .meta {
 		color: var(--muted);
 		font-size: 0.8rem;
 		white-space: nowrap;
 		display: flex;
 		gap: 6px;
 	}
-	.catalog-list .meta a {
+	.builder .catalog-list .meta a {
 		color: var(--muted);
 		text-decoration: none;
 	}
-	.catalog-list .add {
+	.builder .catalog-list .add {
 		padding: 2px 8px;
 		color: var(--accent);
 		font-weight: 700;
 	}
-	.empty {
+	.builder .empty {
 		color: var(--muted);
 		padding: 12px 4px;
 		list-style: none;
 	}
-	.menu-head {
+	.builder .menu-head {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 10px 20px;
 		margin-bottom: 10px;
 	}
-	.menu-head label {
+	.builder .menu-head label {
 		display: flex;
 		align-items: center;
 		gap: 6px;
 	}
-	.menu-head input[type='text'] {
+	.builder .menu-head input[type='text'] {
 		width: 16em;
 	}
-	.sum {
+	.builder .sum {
 		margin: 0;
 	}
-	.sum .remain {
+	.builder .sum .remain {
 		color: var(--ok);
 	}
-	.sum .over {
+	.builder .sum .over {
 		color: var(--danger);
 		font-weight: 700;
 	}
-	.rows {
+	.builder .rows {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 		border-top: 1px solid var(--line);
 	}
-	.row {
+	.builder .row {
 		display: flex;
 		align-items: center;
 		gap: 8px;
@@ -221,34 +180,34 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		border-bottom: 1px solid var(--line);
 		background: var(--bg);
 	}
-	.row.drag-over {
+	.builder .row.drag-over {
 		box-shadow: inset 0 3px 0 var(--accent);
 	}
-	.row.kind-heading {
+	.builder .row.kind-heading {
 		background: var(--panel);
 		font-weight: 700;
 	}
-	.row.kind-break .body {
+	.builder .row.kind-break .body {
 		color: var(--muted);
 	}
-	.handle {
+	.builder .handle {
 		cursor: grab;
 		color: var(--muted);
 		padding: 0 4px;
 		user-select: none;
 	}
-	.body {
+	.builder .body {
 		flex: 1;
 		display: flex;
 		align-items: center;
 		gap: 6px;
 		min-width: 0;
 	}
-	.body .grow {
+	.builder .body .grow {
 		flex: 1;
 		min-width: 6em;
 	}
-	.body .tag {
+	.builder .body .tag {
 		font-size: 0.75rem;
 		color: var(--muted);
 		border: 1px solid var(--line);
@@ -256,52 +215,52 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		padding: 0 6px;
 		white-space: nowrap;
 	}
-	.body .min {
+	.builder .body .min {
 		color: var(--muted);
 		font-size: 0.85rem;
 		min-width: 3.5em;
 		text-align: right;
 	}
-	.row-actions {
+	.builder .row-actions {
 		display: flex;
 		gap: 4px;
 	}
-	.row-actions button {
+	.builder .row-actions button {
 		padding: 2px 7px;
 	}
-	.add-buttons,
-	.actions {
+	.builder .add-buttons,
+	.builder .actions {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
 		margin-top: 12px;
 		align-items: center;
 	}
-	.actions .primary {
-		background: var(--accent);
-		border-color: var(--accent);
-		color: #fff;
+	.builder .actions .primary {
+		background: var(--sl-color-text-accent);
+		border-color: var(--sl-color-text-accent);
+		color: var(--sl-color-black);
 	}
-	.actions .danger {
+	.builder .actions .danger {
 		border-color: var(--danger);
 		color: var(--danger);
 	}
-	.notice {
+	.builder .notice {
 		color: var(--ok);
 		font-size: 0.9rem;
 	}
-	.import {
+	.builder .import {
 		margin-top: 20px;
 		color: var(--muted);
 	}
-	.import summary {
+	.builder .import summary {
 		cursor: pointer;
 	}
-	.import-row {
+	.builder .import-row {
 		display: flex;
 		gap: 8px;
 	}
-	.import-row input {
+	.builder .import-row input {
 		flex: 1;
 	}
 </style>

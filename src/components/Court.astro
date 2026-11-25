@@ -119,7 +119,7 @@ function receiveHeight(s: Shot) {
 	return next && next.type !== 'move' ? ft(next.hit ?? shotHeights[next.type].hit) : ft(defaultReceiveHeight);
 }
 function heightsOf(s: Shot, bounces: { at: number }[]) {
-	if (s.type === 'move' || diagram.bounceMark === 'none') return undefined;
+	if (s.type === 'move') return undefined;
 	const h0 = ft(s.hit ?? shotHeights[s.type].hit);
 	const peak = ft(s.peak ?? shotHeights[s.type].peak);
 	const recv = receiveHeight(s);
@@ -246,7 +246,6 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 							zones={diagram.zones}
 							uid={`${uid}a${i}`}
 							playerR={PLAYER_R}
-							bounceMark={diagram.bounceMark}
 							title={`${title}（アニメーション ${i + 1}）`}
 							animated
 							step={i}
@@ -282,7 +281,6 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 						zones={diagram.zones}
 						uid={`${uid}p${i}`}
 						playerR={PLAYER_R}
-						bounceMark={diagram.bounceMark}
 						title={multi ? `${title} ${i + 1}` : title}
 					/>
 				</div>
@@ -415,10 +413,12 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 							const i = Math.min(Math.floor(x), hs.length - 2);
 							h = hs[i] + (hs[i + 1] - hs[i]) * (x - i);
 						}
-						const lift = hs ? h * LIFT_PER_FT : 0;
+						const r = hs ? Math.min(BALL_R_MAX, BALL_R_GROUND + h * BALL_R_PER_FT) : 0.55;
+						// 図の上端からはみ出さないよう、浮かせる量を抑える
+						const lift = hs ? Math.min(h * LIFT_PER_FT, Math.max(0, p.y - (frame.viewBox.baseVal.y + r))) : 0;
 						ball.setAttribute('cx', `${p.x}`);
 						ball.setAttribute('cy', `${p.y - lift}`);
-						ball.setAttribute('r', `${hs ? Math.min(BALL_R_MAX, BALL_R_GROUND + h * BALL_R_PER_FT) : 0.55}`);
+						ball.setAttribute('r', `${r}`);
 						shadow.setAttribute('cx', `${hs ? p.x : -10}`);
 						shadow.setAttribute('cy', `${p.y}`);
 						pole.setAttribute('x1', `${hs ? p.x : -10}`);

@@ -56,8 +56,6 @@ const diagram = z.object({
 	zones: z.array(z.enum(keysOf<ZoneName>(zoneRects))).default([]),
 	/** auto=使っている範囲だけ縦に切り出す / full=コート全体 */
 	crop: z.enum(['auto', 'full']).default('auto'),
-	/** バウンドの印の形（試作中。ring=輪 / cross=× / none=印なし。試作中のページだけ指定する） */
-	bounceMark: z.enum(['ring', 'cross', 'none']).default('none'),
 	caption: z.string().optional(),
 });
 export type Diagram = z.infer<typeof diagram>;

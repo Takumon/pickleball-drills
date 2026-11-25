@@ -2,7 +2,7 @@
 /**
  * 「図の見方」ページ用の凡例。打球の線・人の描き方を、実際の図と同じスタイル（styles/court.css）で描く。
  */
-import { roleLabels, shotLabels, shotDurationMs, shotCurve, type Role, type ShotType } from '../config/court';
+import { heightLevels, roleLabels, shotLabels, shotDurationMs, shotCurve, type Role, type ShotType } from '../config/court';
 import '../styles/court.css';
 
 const order: ShotType[] = ['speedup', 'smash', 'volley', 'drive', 'serve', 'return', 'reset', 'dink', 'drop', 'lob', 'move'];
@@ -76,6 +76,27 @@ const sec = (ms: number) => `${(ms / 1000).toFixed(2).replace(/0$/, '')}秒`;
 						<td>{sec(shotDurationMs[t])}</td>
 					</tr>
 				))
+			}
+		</tbody>
+	</table>
+
+	<h2>ボールの高さとバウンド</h2>
+	<p>アニメーションでは、ボールの真下の地面に影を描きます。影は打球の線の上を進み、ボールは高さの分だけ影から浮かせて描きます。高い球ほどボールが大きく、影から離れます。</p>
+	<p>ボールが影に重なったところがバウンドです。そこに黄色い輪を描きます。輪のない球は、ノーバウンドで打ちます。</p>
+	<table class="legend-table">
+		<thead>
+			<tr><th>高さ</th><th>目安</th></tr>
+		</thead>
+		<tbody>
+			{
+				Object.values(heightLevels)
+					.toReversed()
+					.map((l) => (
+						<tr>
+							<td>{l.label}</td>
+							<td>{l.note}</td>
+						</tr>
+					))
 			}
 		</tbody>
 	</table>

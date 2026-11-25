@@ -106,8 +106,6 @@
 	color: var(--sl-color-white, #111);
 }
 .court svg.court-svg {
-	/* 浮かせたボールが図の上端からはみ出しても切らない */
-	overflow: visible;
 	width: 100%;
 	height: auto;
 	display: block;

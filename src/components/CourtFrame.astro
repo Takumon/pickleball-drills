@@ -46,6 +46,9 @@ interface Props {
 }
 const { figures, lines, viewBox, zones, fences = [], uid, playerR, title, animated = false, side, step } = Astro.props;
 const NET_FT = 2.9;
+/** 横から見た図: コートの帯の幅と、柵の高さ（ft、仮の値） */
+const SIDE_BAND = 0.45;
+const FENCE_FT = 1;
 // 線を伸ばして見せるマスクの範囲。図の表示範囲（viewBox）に余白を足して、どこに引いた線も切れないようにする
 const [vbX, vbY, vbW, vbH] = viewBox.split(/\s+/).map(Number);
 const maskBox = { x: vbX - 10, y: vbY - 10, width: vbW + 20, height: vbH + 20 };
@@ -183,6 +186,27 @@ const isSub = (t: string) => t === 'move';
 				<rect class="side-panel" x={side.x0 - 0.7} y={side.top + 0.3} width={side.width + 1} height={side.bottom - side.top - 0.6} rx="0.6" />
 				<text class="side-title" x={side.x0 + side.width / 2 - 0.3} y={side.top + 1.4}>横から見た高さ</text>
 				<line class="side-ground" x1={side.x0} y1={side.top + 2.2} x2={side.x0} y2={side.bottom - 0.6} />
+				{/* 地面の上のコート: コートとキッチンを同じ色の帯で描き、ベースラインとキッチンラインに白い印を付ける */}
+				<rect class="side-court" x={side.x0 - SIDE_BAND} y={Math.max(0, side.top + 2.2)} width={SIDE_BAND} height={Math.min(COURT.length, side.bottom - 0.6) - Math.max(0, side.top + 2.2)} />
+				<rect class="side-kitchen" x={side.x0 - SIDE_BAND} y={k1} width={SIDE_BAND} height={k2 - k1} />
+				{[0, k1, k2, COURT.length]
+					.filter((y) => y >= side.top + 2.2 && y <= side.bottom - 0.6)
+					.map((y) => (
+						<line class="side-mark" x1={side.x0 - SIDE_BAND - 0.25} y1={y} x2={side.x0 + 0.25} y2={y} />
+					))}
+				{/* 柵: 地面から柵の高さまでの支柱と、奥行きの向きにのびる横木 */}
+				{fences.map(([a, b]) => {
+					const top = side.x0 + FENCE_FT * side.k;
+					const ys = [a[1], b[1]];
+					return (
+						<g class="side-fence">
+							{Math.abs(a[1] - b[1]) > 0.01 && <line x1={top} y1={a[1]} x2={top} y2={b[1]} />}
+							{ys.map((y) => (
+								<line x1={side.x0} y1={y} x2={top} y2={y} />
+							))}
+						</g>
+					);
+				})}
 				<line class="side-net" x1={side.x0} y1={COURT.net} x2={side.x0 + NET_FT * side.k} y2={COURT.net} />
 				{figures.map((p) => {
 					const head = side.x0 + BODY_FT * side.k;

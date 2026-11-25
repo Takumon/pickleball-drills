@@ -1,5 +1,4 @@
 ---
-import { getCollection } from 'astro:content';
 import type { Drill } from '../content.config';
 import { fieldLabels, visibleFields, detailGroups, type DrillField } from '../config/drill-display';
 import Court from './Court.astro';
@@ -8,15 +7,6 @@ interface Props {
 	drill: Drill;
 }
 const { drill } = Astro.props;
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-
-const docs = await getCollection('docs', (e) => !!e.data.drill);
-const relatedDrills = drill.related
-	.map((rid) => docs.find((e) => e.data.drill?.id === rid))
-	.filter((e) => e !== undefined);
-// まだないドリルや書き間違いの ID は表示から外し、ビルドのときに知らせる（IDを付け替えたときの見落としに気づくため）
-const unresolved = drill.related.filter((rid) => !docs.some((e) => e.data.drill?.id === rid));
-if (unresolved.length > 0) console.warn(`[drill] ${drill.id}: 関連ドリルに見つからない ID があります: ${unresolved.join(', ')}`);
 
 /** 項目に表示できる中身があるか */
 function hasContent(field: DrillField): boolean {
@@ -25,8 +15,6 @@ function hasContent(field: DrillField): boolean {
 		case 'points':
 		case 'variants':
 			return (drill[field] as unknown[]).length > 0;
-		case 'related':
-			return relatedDrills.length > 0;
 		default:
 			return !!drill[field];
 	}
@@ -61,15 +49,6 @@ const groups = detailGroups
 						<ul>
 							{drill.points.map((s) => (
 								<li>{s}</li>
-							))}
-						</ul>
-					)}
-					{field === 'related' && (
-						<ul>
-							{relatedDrills.map((e) => (
-								<li>
-									<a href={`${base}/${e.id}/`}>{e.data.title}</a>
-								</li>
 							))}
 						</ul>
 					)}

@@ -145,8 +145,6 @@ const drill = z.object({
 	variants: z.array(variant).default([]),
 	/** ビルダーでこのドリルを足したときの初期値（何分×何セット）。その日の実際の時間はメニューの URL が持つ。ドリルのページには出さない */
 	builderDefault: z.object({ min: z.number(), sets: z.number().int() }).optional(),
-	/** 関連ドリルのID */
-	related: z.array(z.string()).default([]),
 	notes: z.string().optional(),
 });
 

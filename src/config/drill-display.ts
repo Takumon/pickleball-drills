@@ -12,7 +12,6 @@ export const fieldLabels = {
 	diagram: '図',
 	purpose: '目的',
 	variants: '派生形',
-	related: '関連ドリル',
 	notes: '補足',
 } as const;
 
@@ -29,7 +28,6 @@ export const visibleFields: DrillField[] = ['diagram', 'purpose', 'points'];
  */
 export const detailGroups: { label: string; fields: DrillField[] }[] = [
 	{ label: '練習方法の詳細', fields: ['setup', 'feed', 'steps', 'variants', 'notes'] },
-	{ label: '関連ドリル', fields: ['related'] },
 ];
 
 // ID・カテゴリ・別名・メニューを組むときの初期値（builderDefault）は、データとしては持つが、ページには出さない。

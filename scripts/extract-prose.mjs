@@ -19,7 +19,15 @@ const out = [];
 for (const file of files) {
 	const fm = parse(readFileSync(file, 'utf8').split('---')[1]);
 	const d = fm.drill;
-	out.push(`# ${fm.title}`, fm.description, `目的: ${d.purpose}`, `人数・配置: ${d.setup}`, `球出し: ${d.feed}`);
+	out.push(
+		`# ${fm.title}`,
+		fm.description,
+		`想定する試合の場面: ${d.scene}`,
+		`その場面でやりたいこと: ${d.purpose}`,
+		`練習の目的: ${d.focus}`,
+		`人数・配置: ${d.setup}`,
+		`球出し: ${d.feed}`,
+	);
 	d.steps.forEach((s, i) => out.push(`${i + 1}. ${s}`));
 	(d.points ?? []).forEach((p) => out.push(`- ${p}`));
 	(d.variants ?? []).forEach((v) => out.push(`派生形 ${v.name}: ${v.note ?? ''}`));

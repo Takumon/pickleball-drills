@@ -121,11 +121,13 @@ const variant = z.object({
 	/** URLで使う派生形キー（例: rst003.ankle の ankle） */
 	key: z.string().regex(/^[a-z0-9]+$/),
 	name: z.string(),
+	/** 図（アニメーション）はこの派生形で描いている。派生形があるドリルでは、ちょうど1つに付ける */
+	default: z.boolean().default(false),
 	/** 指定した項目だけ本体の内容を上書きする */
 	setup: z.string().optional(),
 	feed: z.string().optional(),
 	steps: z.array(z.string()).optional(),
-	points: z.array(z.string()).max(3).optional(),
+	points: z.array(z.string()).max(5).optional(),
 	diagram: diagram.optional(),
 	note: z.string().optional(),
 });
@@ -155,6 +157,9 @@ const drill = z.object({
 	 * 練習する人が、サイトの説明だけでは分かりにくいときに見て理解を深めるためのもの。公開されているものだけを載せる
 	 */
 	links: z.array(z.object({ title: z.string(), url: z.string().url() })).default([]),
+}).refine((d) => d.variants.length === 0 || d.variants.filter((v) => v.default).length === 1, {
+	message: '派生形があるときは、図で描いている派生形（default: true）をちょうど1つ決める',
+	path: ['variants'],
 });
 
 export type Drill = z.infer<typeof drill>;

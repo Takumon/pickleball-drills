@@ -55,7 +55,7 @@ const serviceOf = (url: string) => {
 						<p
 							class="variant-now"
 							hidden
-							data-variants={JSON.stringify(Object.fromEntries(drill.variants.map((v) => [v.key, { name: v.name, note: v.note }])))}
+							data-variants={JSON.stringify(Object.fromEntries(drill.variants.map((v) => [v.key, { name: v.name, note: v.note, default: v.default }])))}
 						>
 							<strong class="variant-now-name" />
 							<span class="variant-now-note" />
@@ -93,6 +93,7 @@ const serviceOf = (url: string) => {
 								<>
 									<dt>
 										{v.name}
+										{v.default && <span class="diagram-tag">（図はこれ）</span>}
 									</dt>
 									<dd>
 										{v.setup && <p>人数・配置: {v.setup}</p>}
@@ -176,6 +177,12 @@ const serviceOf = (url: string) => {
 		border-left: 4px solid var(--sl-color-accent);
 		border-radius: 0.3rem;
 		background: var(--sl-color-gray-6);
+	}
+	.diagram-tag {
+		margin-inline-start: 0.4em;
+		color: var(--sl-color-gray-3);
+		font-size: var(--sl-text-sm);
+		font-weight: 400;
 	}
 	.variant-now-name {
 		margin-inline-end: 0.5em;

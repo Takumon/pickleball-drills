@@ -46,9 +46,9 @@ interface Props {
 }
 const { figures, lines, viewBox, zones, fences = [], uid, playerR, title, animated = false, side, step } = Astro.props;
 const NET_FT = 2.9;
-/** 横から見た図: 柵の高さ（ft、仮の値）と、ラインの位置を示す地面の線の切れ目の長さ */
+/** 横から見た図: 柵の高さ（ft、仮の値）と、ラインの位置で地面の線の色を変える長さ */
 const FENCE_FT = 1;
-const GROUND_GAP = 0.5;
+const GROUND_MARK = 0.6;
 // 線を伸ばして見せるマスクの範囲。図の表示範囲（viewBox）に余白を足して、どこに引いた線も切れないようにする
 const [vbX, vbY, vbW, vbH] = viewBox.split(/\s+/).map(Number);
 const maskBox = { x: vbX - 10, y: vbY - 10, width: vbW + 20, height: vbH + 20 };
@@ -185,16 +185,13 @@ const isSub = (t: string) => t === 'move';
 			<g class="side">
 				<rect class="side-panel" x={side.x0 - 0.7} y={side.top + 0.3} width={side.width + 1} height={side.bottom - side.top - 0.6} rx="0.6" />
 				<text class="side-title" x={side.x0 + side.width / 2 - 0.3} y={side.top + 1.4}>横から見た高さ</text>
-				{/* 地面の線（補助の図なので1色だけ）。ベースラインとキッチンラインの位置は、線の小さな切れ目で示す */}
-				{(() => {
-					const top = side.top + 2.2;
-					const bottom = side.bottom - 0.6;
-					const cuts = [0, k1, k2, COURT.length].filter((y) => y > top && y < bottom);
-					const ends = [top, ...cuts.flatMap((y) => [y - GROUND_GAP / 2, y + GROUND_GAP / 2]), bottom];
-					return Array.from({ length: ends.length / 2 }, (_, i) => (
-						<line class="side-ground" x1={side.x0} y1={ends[i * 2]} x2={side.x0} y2={ends[i * 2 + 1]} />
-					));
-				})()}
+				{/* 地面の線（補助の図なので1色）。ベースラインとキッチンラインの位置だけ、同じ太さのまま色を変える */}
+				<line class="side-ground" x1={side.x0} y1={side.top + 2.2} x2={side.x0} y2={side.bottom - 0.6} />
+				{[0, k1, k2, COURT.length]
+					.filter((y) => y > side.top + 2.2 && y < side.bottom - 0.6)
+					.map((y) => (
+						<line class="side-ground side-mark" x1={side.x0} y1={y - GROUND_MARK / 2} x2={side.x0} y2={y + GROUND_MARK / 2} />
+					))}
 				{/* 柵: 地面から柵の高さまでの支柱と、奥行きの向きにのびる横木 */}
 				{fences.map(([a, b]) => {
 					const top = side.x0 + FENCE_FT * side.k;

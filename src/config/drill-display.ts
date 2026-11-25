@@ -10,6 +10,7 @@ export const fieldLabels = {
 	steps: 'やり方',
 	points: 'ポイント',
 	diagram: '図',
+	scene: '場面',
 	purpose: '目的',
 	variants: '派生形',
 	notes: '補足',
@@ -21,7 +22,7 @@ export type DrillField = keyof typeof fieldLabels;
 /** 最初から見せる項目（練習中に必ず見てほしいもの） */
 // 練習中に長い文は読まない。動き（配置・球出し・やり方）はアニメーションで伝わるので、
 // 最初から見せるのは、図と、なぜやるか（目的）と、意識すること（ポイント）だけにする
-export const visibleFields: DrillField[] = ['diagram', 'purpose', 'points'];
+export const visibleFields: DrillField[] = ['diagram', 'scene', 'purpose', 'points'];
 
 /**
  * 折りたたんで見せる項目のまとまり。趣旨の違うものは別のトグルにする（配列の順が表示順）。

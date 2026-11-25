@@ -21,7 +21,10 @@ export async function GET() {
 				order: e.data.sidebar?.order ?? 999,
 				url: `${base}/${e.id}/`,
 				fragment: `${base}/fragments/${d.id}/`,
-				variants: d.variants.map((v) => ({ key: v.key, name: v.name, default: v.default })),
+				// デフォルト（図で描いている派生形）を先頭に並べる。ビルダーでは最初の派生形がデフォルトと分かるように
+				variants: [...d.variants]
+					.sort((a, b) => Number(b.default) - Number(a.default))
+					.map((v) => ({ key: v.key, name: v.name, default: v.default })),
 				builderDefault: d.builderDefault,
 			};
 		})

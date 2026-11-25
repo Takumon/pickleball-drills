@@ -140,7 +140,7 @@ const drill = z.object({
 	scene: z.string(),
 	purpose: z.string(),
 	/** 練習の目的（見出し）: 同じ場面のドリルの中で、この練習で特に取り組むこと（1文）。purpose は「その場面でやりたいこと」 */
-	focus: z.string().optional(),
+	focus: z.string(),
 	setup: z.string(),
 	feed: z.string(),
 	steps: z.array(z.string()).min(1),

@@ -59,7 +59,11 @@ const diagram = z.object({
 	/** auto=使っている範囲だけ縦に切り出す / full=コート全体 */
 	crop: z.enum(['auto', 'full']).default('auto'),
 	caption: z.string().optional(),
-});
+}).refine(
+	// 番号（n）のある打球とない打球が混ざると、番号のない打球はどのコマにも入らず描かれない
+	(d) => d.shots.every((s) => s.n !== undefined) || d.shots.every((s) => s.n === undefined),
+	{ message: 'コート図: 打球の番号 n は、全部の打球に付けるか、全部付けないかのどちらかにする', path: ['shots'] },
+);
 export type Diagram = z.infer<typeof diagram>;
 
 const variant = z.object({

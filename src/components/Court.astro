@@ -130,7 +130,10 @@ function heightsOf(s: Shot, bounces: { at: number }[]) {
 	};
 	const b = bounces[0]?.at;
 	let height: (t: number) => number;
-	if (b !== undefined && b < 0.999) {
+	if (b !== undefined && b <= 0.001) {
+		// 打った直後に弾む（バウンド位置が打つ人のすぐそば）: 地面から受ける高さまで上がるだけにする
+		height = hop(0, recv, recv);
+	} else if (b !== undefined && b < 0.999) {
 		// 途中で弾む: 着地まで1つ目の山、弾んでから受ける高さまで上がる
 		const first = hop(h0, 0, peak);
 		const second = hop(0, recv, recv);
@@ -183,12 +186,13 @@ const panels = groups.map((g) => {
 	const figures = diagram.players.map((p) => figureOf(p, positions.get(p.id)!));
 	const byId = new Map(figures.map((f) => [f.id, f]));
 	const lines = g.shots.map((s) => lineOf(s, byId, groups.length > 1));
-	// 横から見た図で描くパドルの高さ: この手で打つ人は打つ高さ、受ける人は受ける高さ、ほかは既定の高さ
-	const hitShot = g.shots.find((s) => s.type !== 'move');
+	// 横から見た図で描くパドルの高さ: この手で打つ人は打つ高さ、受ける人は受ける高さ、ほかは既定の高さ。
+	// 同じ手で2つ以上打つときも、それぞれの打球から決める
 	const sideH = (id: string) => {
-		if (hitShot && hitShot.type !== 'move') {
-			if (hitShot.from === id) return ft(hitShot.hit ?? shotHeights[hitShot.type].hit);
-			if (hitShot.to === id) return receiveHeight(hitShot);
+		for (const s of g.shots) {
+			if (s.type === 'move') continue;
+			if (s.from === id) return ft(s.hit ?? shotHeights[s.type].hit);
+			if (s.to === id) return receiveHeight(s);
 		}
 		return ft(defaultReceiveHeight);
 	};
@@ -273,22 +277,21 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 					<button type="button" data-act="next" aria-label="次の手">▶</button>
 					<span class="anim-steps">
 						{panels.map((pn, i) => (
-							<span class="anim-step" data-step-dot={i}>
+							<button type="button" class="anim-step" data-step-dot={i} aria-label={`${i + 1}手目を見る`}>
 								{pn.n !== undefined ? circled(pn.n) : i + 1}
-							</span>
+							</button>
 						))}
 					</span>
 				</div>
 			</div>
 		)
 	}
-	{/* 複数の手がある図はアニメーションだけを出す。コマ割りは1手だけの図のときに使う */}
+	{/* 複数の手がある図はアニメーションだけを出す。1手だけの図は、止まった図を1枚出す */}
 	{!multi && (
 	<div class="panels">
 		{
 			panels.map((pn, i) => (
 				<div class="panel">
-					{multi && pn.n !== undefined && <div class="panel-no">{circled(pn.n)}</div>}
 					<CourtFrame
 						figures={pn.figures}
 						lines={pn.lines}
@@ -297,7 +300,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 							fences={diagram.fences}
 						uid={`${uid}p${i}`}
 						playerR={PLAYER_R}
-						title={multi ? `${title} ${i + 1}` : title}
+						title={title}
 					/>
 				</div>
 			))
@@ -378,8 +381,25 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			}
 			return { x: p.x, y: p.y, h };
 		};
-		/** 1手の終わりにボールがあった位置。次の手でも同じ位置から見せて、手と手のつながりを見せる */
-		let lastBall: BallPos | undefined;
+		/**
+		 * 手 i を始めるときにボールがある位置（= それより前で最後に打った手の終わり）。
+		 * 人が動くだけの手では、この位置にボールを置いておく。どの手から見ても同じになるよう、前もって決めておく
+		 */
+		const startBall: (BallPos | undefined)[] = [];
+		{
+			let last: BallPos | undefined;
+			frames.forEach((f, k) => {
+				startBall[k] = last;
+				const p = f.querySelector<SVGPathElement>('path[data-kind="ball"]');
+				if (p) {
+					// 隠れている図では長さを測れないので、一時的に見せて測る
+					const prev = f.style.display;
+					f.style.display = '';
+					last = ballAt(p, 1);
+					f.style.display = prev;
+				}
+			});
+		}
 
 		function show(i: number, animate: boolean, done?: () => void) {
 			stop();
@@ -460,9 +480,8 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 					sg?.setAttribute('transform', '');
 				});
 				// 打つ手なら打つ人のパドルから、人が動くだけの手なら前の手の終わりの位置にボールを置く
-				drawBall(balls[0] ? ballAt(balls[0], animate ? 0 : 1) : lastBall);
+				drawBall(balls[0] ? ballAt(balls[0], animate ? 0 : 1) : startBall[i]);
 				drawTrace(animate ? 0 : 1);
-				if (balls[0] && !animate) lastBall = ballAt(balls[0], 1);
 			};
 			reset();
 			if (!animate) {
@@ -499,8 +518,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 					drawTrace(1);
 					// ボールは消さずに、届いた位置に残す（次の手はそこから始まる）
 					if (balls[0]) {
-						lastBall = ballAt(balls[0], 1);
-						drawBall(lastBall);
+						drawBall(ballAt(balls[0], 1));
 					}
 					done?.();
 				}

@@ -46,6 +46,9 @@ interface Props {
 }
 const { figures, lines, viewBox, zones, fences = [], uid, playerR, title, animated = false, side, step } = Astro.props;
 const NET_FT = 2.9;
+// 線を伸ばして見せるマスクの範囲。図の表示範囲（viewBox）に余白を足して、どこに引いた線も切れないようにする
+const [vbX, vbY, vbW, vbH] = viewBox.split(/\s+/).map(Number);
+const maskBox = { x: vbX - 10, y: vbY - 10, width: vbW + 20, height: vbH + 20 };
 /** 横から見た図の人の背の高さ（ft）とパドルの長さ */
 const BODY_FT = 5.5;
 const SIDE_PADDLE = 1.1;
@@ -117,7 +120,7 @@ const isSub = (t: string) => t === 'move';
 			return (
 				<>
 					{reveal && (
-						<mask id={`${uid}-m${i}`} maskUnits="userSpaceOnUse" x="-10" y="-10" width="40" height="64">
+						<mask id={`${uid}-m${i}`} maskUnits="userSpaceOnUse" x={maskBox.x} y={maskBox.y} width={maskBox.width} height={maskBox.height}>
 							<path class="reveal" d={l.d} data-i={i} fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" />
 						</mask>
 					)}

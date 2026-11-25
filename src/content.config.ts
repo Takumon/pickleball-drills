@@ -56,10 +56,11 @@ const diagram = z.object({
 				label: z.string().optional(),
 				/**
 				 * バウンドする位置。線の上のいちばん近い点に印を付ける。
-				 * 省略時: コートに落とす球（to が座標）は終点に印を付け、サーブ・リターンは相手の手前に自動で付ける。
+				 * front なら受ける人の手前（決まった距離）で弾む。
+				 * 省略時: コートに落とす球（to が座標）は終点に印を付け、サーブ・リターンは front と同じ。
 				 * false なら印を付けない（ノーバウンド）。
 				 */
-				bounce: z.union([point, z.literal(false)]).optional(),
+				bounce: z.union([point, z.literal(false), z.literal('front')]).optional(),
 				/** 打つ高さ・山の高さ（config/court.ts の heightLevels）。省略時は打球の種類で決まる。例: ロールのスピードアップは hit: underTape */
 				hit: z.enum(keysOf<HeightLevel>(heightLevels)).optional(),
 				peak: z.enum(keysOf<HeightLevel>(heightLevels)).optional(),

@@ -103,7 +103,8 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 	const mid = candidates.find(clear) ?? candidates.find((p) => Math.abs(p[1] - COURT.net) >= 1.6) ?? candidates[0];
 	const label =
 		s.label ?? (s.type === 'move' ? '移動' : s.feed ? `球出し（${shotLabels[s.type]}）` : shotLabels[s.type]);
-	const bounces = bouncesOf(s, b.anchor, pointAt);
+	const receiver = typeof s.to === 'string' ? byId.get(s.to) : undefined;
+	const bounces = bouncesOf(s, b.anchor, pointAt, receiver?.y);
 	// ネットを越える位置（線の長さに対する割合）。越えなければ undefined
 	const netAt = (y1 - COURT.net) * (y2 - COURT.net) < 0 ? (COURT.net - y1) / (y2 - y1) : undefined;
 	// 飛ぶ時間は距離 ÷ 球の種類ごとの速さ（同じ種類の球は、距離によらず同じ速さに見える）
@@ -175,13 +176,16 @@ function heightFn(s: Shot, bounces: { at: number }[], netAt?: number): ((t: numb
 /** ドライブがネットの白帯の上をどれだけ越えるか（ft） */
 const DRIVE_CLEAR_FT = 0.8;
 
-/** サーブ・リターンでバウンド位置を書かなかったときの位置（線の長さに対する割合） */
-const AUTO_BOUNCE = 0.82;
+/**
+ * 「受ける人の手前で弾む」球のバウンド位置: 受ける人（のパドル）から何 ft 手前で弾むか。
+ * ベースラインの後ろで受ける球（サーブ・リターン・深い球出し）は深く弾み、キッチンやトランで受ける球は少し手前で弾む。
+ */
+const BOUNCE_BEFORE = { baseline: 4.3, other: 2.1 } as const;
 
 /**
  * バウンドの印の位置。at は線の長さに対する割合（アニメーションで、ボールがそこを通ったときに印を出す）。
  */
-function bouncesOf(s: Shot, toAnchor: 'paddle' | 'body' | 'point', pointAt: (t: number) => Point) {
+function bouncesOf(s: Shot, toAnchor: 'paddle' | 'body' | 'point', pointAt: (t: number) => Point, receiverY?: number) {
 	if (s.type === 'move' || s.bounce === false) return [];
 	// 線を細かく区切って、長さの割合と点の対応を作る
 	const N = 200;
@@ -190,6 +194,13 @@ function bouncesOf(s: Shot, toAnchor: 'paddle' | 'body' | 'point', pointAt: (t: 
 	for (let i = 1; i <= N; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
 	const total = cum[N] || 1;
 	const at = (i: number) => ({ pt: pts[i], at: cum[i] / total });
+	// 受ける人の手前で弾む（bounce: front、サーブ・リターンの既定）: 受ける人の位置から決まった距離だけ手前
+	const front = () => {
+		const behindBaseline = receiverY !== undefined && (receiverY < 0 || receiverY > COURT.length);
+		const d = behindBaseline ? BOUNCE_BEFORE.baseline : BOUNCE_BEFORE.other;
+		return [at(Math.max(0, cum.findIndex((c) => c >= total - d)))];
+	};
+	if (s.bounce === 'front') return front();
 	if (s.bounce) {
 		const [bx, by] = s.bounce;
 		let best = 0;
@@ -199,7 +210,7 @@ function bouncesOf(s: Shot, toAnchor: 'paddle' | 'body' | 'point', pointAt: (t: 
 		return [at(best)];
 	}
 	if (toAnchor === 'point') return [at(N)];
-	if (s.type === 'serve' || s.type === 'return') return [at(cum.findIndex((c) => c / total >= AUTO_BOUNCE))];
+	if (s.type === 'serve' || s.type === 'return') return front();
 	return [];
 }
 

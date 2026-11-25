@@ -10,7 +10,7 @@ export const fieldLabels = {
 	steps: 'やり方',
 	points: 'ポイント',
 	diagram: '図',
-	scene: '試合のこんな場面で',
+	scene: '想定する試合の場面',
 	purpose: '目的',
 	variants: '派生形',
 	notes: '補足',

@@ -1,20 +1,25 @@
 /* コート図のスタイル。Court.astro（図）と DiagramLegend.astro（図の見方）で共有する */
 .court {
-	--court-surface: #dfeedd;
-	--court-kitchen: #c9e2c5;
-	--court-zone: rgb(255 214 10 / 0.22);
+	/* コートは実物と同じく濃い色の面に白い線で描き、ライトでもダークでも同じ見え方にする。
+	   ページの背景が明るいライトでは、面を少し明るくして重たく見えないようにする */
+	--court-surface: #2f6b48;
+	--court-kitchen: #3d8058;
+	--court-zone: rgb(255 214 10 / 0.18);
 	--court-line: #ffffff;
-	--court-net: #3a3a3a;
-	--shot: #db2777;
+	--court-net: #f3f4f6;
+	--shot: #f472b6;
 	--ball: #facc15;
-	--sub: #6b7280;
-	--label: #111827;
+	--sub: #d1d5db;
+	--label: #ffffff;
 	--r-feed: #f59e0b;
 	--r-practice: #2563eb;
 	--r-partner: #60a5fa;
 	--r-opponent: #9ca3af;
-	--paddle: #1f2937;
-	--fence: #a16207;
+	--paddle: #f3f4f6;
+	--fence: #e0b072;
+	/* コートの外（横から見た高さの帯）に描く線と文字。ページの背景の上で見えるように、ライトとダークで変える */
+	--side-ink: #6b7280;
+	--side-panel: #eef1f4;
 	margin: 1rem auto;
 	max-width: 340px;
 }
@@ -26,12 +31,12 @@
 	--court-kitchen: #2d4a35;
 	--court-zone: rgb(250 204 21 / 0.12);
 	--court-line: #e5e7eb;
-	--court-net: #f3f4f6;
-	--shot: #f472b6;
 	--sub: #9ca3af;
-	--fence: #d6a565;
 	--label: #f9fafb;
 	--paddle: #e5e7eb;
+	--fence: #d6a565;
+	--side-ink: #9ca3af;
+	--side-panel: #1f2a24;
 }
 .court .anim {
 	max-width: 340px;
@@ -176,22 +181,21 @@
 	fill: var(--sub);
 }
 .court .side-panel {
-	fill: var(--court-surface);
-	opacity: 0.35;
+	fill: var(--side-panel);
 }
 /* 横から見た高さは補助の情報なので、細く・淡く描く */
 .court .side-title {
 	font-size: 1px;
 	text-anchor: middle;
-	fill: var(--sub);
+	fill: var(--side-ink);
 	font-family: system-ui, sans-serif;
 }
 .court .side-ground {
-	stroke: var(--sub);
+	stroke: var(--side-ink);
 	stroke-width: 0.15;
 }
 .court .side-net {
-	stroke: var(--sub);
+	stroke: var(--side-ink);
 	stroke-width: 0.3;
 }
 .court .side-person {
@@ -206,13 +210,13 @@
 	fill: var(--role-color);
 }
 .court .side-paddle {
-	stroke: var(--paddle-side, #e5e7eb);
+	stroke: var(--side-ink);
 	stroke-width: 0.3;
 	stroke-linecap: round;
 }
 .court .side-trace {
 	fill: none;
-	stroke: var(--sub);
+	stroke: var(--side-ink);
 	stroke-width: 0.15;
 	stroke-dasharray: 0.35 0.3;
 }

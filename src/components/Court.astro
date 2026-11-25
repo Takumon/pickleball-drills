@@ -63,11 +63,11 @@ const inset = { body: PLAYER_R + 0.3, paddle: 0.45, point: 0 } as const;
  * 弧の大きさは打球の種類で決める（config/court.ts の shotCurve）。
  * データの curve は重なりよけ用なので、1コマに1手のコマ割り（straight=true）では使わない。
  */
-function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
+function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean, byIdTo: Map<string, Figure> = byId) {
 	const target = s.type === 'move' ? 'body' : 'paddle';
-	const resolve = (ref: string | Point) => {
+	const resolve = (ref: string | Point, map = byId) => {
 		if (typeof ref === 'string') {
-			const p = byId.get(ref);
+			const p = map.get(ref);
 			if (!p) throw new Error(`コート図: 人 "${ref}" が players にありません`);
 			return target === 'paddle'
 				? { pt: p.face, anchor: 'paddle' as const }
@@ -76,7 +76,8 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 		return { pt: ref, anchor: 'point' as const };
 	};
 	const a = resolve(s.from);
-	const b = resolve(s.to);
+	// 打球の行き先の人は、同じ手で動く（move）なら動いた先で受ける
+	const b = resolve(s.to, s.type === 'move' ? byId : byIdTo);
 	let [x1, y1] = a.pt;
 	let [x2, y2] = b.pt;
 	const len = Math.hypot(x2 - x1, y2 - y1) || 1;
@@ -101,9 +102,12 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 		Math.abs(p[1] - COURT.net) >= 1.6 && bodies.every(([bx, by]) => Math.hypot(p[0] - bx, p[1] - by) >= PLAYER_R + 1.6);
 	const candidates = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8].map(pointAt);
 	const mid = candidates.find(clear) ?? candidates.find((p) => Math.abs(p[1] - COURT.net) >= 1.6) ?? candidates[0];
-	const label =
-		s.label ?? (s.type === 'move' ? '移動' : s.feed ? `球出し（${shotLabels[s.type]}）` : shotLabels[s.type]);
-	const receiver = typeof s.to === 'string' ? byId.get(s.to) : undefined;
+	// 短い移動（サイドステップなど）は、名前を置くと人に重なるので、矢印だけで見せる
+	const shortMove = s.type === 'move' && len < SHORT_MOVE_FT;
+	const label = shortMove
+		? s.label
+		: (s.label ?? (s.type === 'move' ? '移動' : s.feed ? `球出し（${shotLabels[s.type]}）` : shotLabels[s.type]));
+	const receiver = typeof s.to === 'string' ? byIdTo.get(s.to) : undefined;
 	const bounces = bouncesOf(s, b.anchor, pointAt, receiver?.y);
 	// ネットを越える位置（線の長さに対する割合）。越えなければ undefined
 	const netAt = (y1 - COURT.net) * (y2 - COURT.net) < 0 ? (COURT.net - y1) / (y2 - y1) : undefined;
@@ -187,6 +191,8 @@ const DRIVE_CLEAR_FT = 0.8;
  * ベースラインの後ろで受ける球（サーブ・リターン・深い球出し）は深く弾み、キッチンやトランで受ける球は少し手前で弾む。
  */
 const BOUNCE_BEFORE = { baseline: 4.3, other: 2.1 } as const;
+/** これより短い移動には「移動」の名前を付けない（ft） */
+const SHORT_MOVE_FT = 6;
 /** 打つ前に手から弾ませる球（afterBounce）を、体の何 ft 前に落とすか */
 const PRE_BOUNCE_FT = 2;
 
@@ -235,7 +241,14 @@ const positions = new Map<string, Point>(diagram.players.map((p) => [p.id, [p.x,
 const panels = groups.map((g) => {
 	const figures = diagram.players.map((p) => figureOf(p, positions.get(p.id)!));
 	const byId = new Map(figures.map((f) => [f.id, f]));
-	const lines = g.shots.map((s) => lineOf(s, byId, groups.length > 1));
+	// 同じ手で動く人（打たれた球に合わせてサイドステップするなど）は、動いた先で球を受ける
+	const movedTo = new Map(
+		g.shots.flatMap((s) => (s.type === 'move' && typeof s.from === 'string' && typeof s.to !== 'string' ? [[s.from, s.to] as const] : [])),
+	);
+	const byIdTo = new Map(
+		diagram.players.map((p) => [p.id, movedTo.has(p.id) ? figureOf(p, movedTo.get(p.id)!) : byId.get(p.id)!]),
+	);
+	const lines = g.shots.map((s) => lineOf(s, byId, groups.length > 1, byIdTo));
 	// 横から見た図で描くパドルの高さ: この手で打つ人は打つ高さ、受ける人は受ける高さ、ほかは既定の高さ。
 	// 同じ手で2つ以上打つときも、それぞれの打球から決める
 	const sideH = (id: string) => {

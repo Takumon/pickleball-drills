@@ -326,7 +326,7 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 	 * 打球はボールを線に沿って動かし（線も伸ばして描く）、人の動きは人を移動先まで動かす。
 	 */
 	const SHOT_MS = 900;
-	/** ボールの浮かせ方と大きさ（高さ 1ft あたり）。影との距離と大きさで高さを見せる */
+	/** 影のずらし方とボールの大きさ（高さ 1ft あたり）。影との距離と大きさで高さを見せる */
 	const LIFT_PER_FT = 0.8;
 	const BALL_R_GROUND = 0.4;
 	const BALL_R_PER_FT = 0.1;
@@ -411,7 +411,8 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 					if (on && !m.classList.contains('on')) m.classList.add('on', ...(animate ? ['pop'] : []));
 					if (!on) m.classList.remove('on', 'pop');
 				});
-			// ボールを描く: 影を地面の位置に置き、ボールは高さの分だけ画面の上へ浮かせて大きく描く。
+			// ボールを描く: ボールは線の上（打つ人・受ける人のパドルの位置）に置き、高いほど大きく描く。
+			// 影はボールの真下の地面として、高さの分だけ画面の下へずらして描く。
 			// ボールが影に重なったところがバウンド。pos がなければ隠す
 			const drawBall = (pos?: BallPos) => {
 				if (!pos) {
@@ -422,17 +423,18 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 					return;
 				}
 				const r = Math.min(BALL_R_MAX, BALL_R_GROUND + pos.h * BALL_R_PER_FT);
-				// 図の上端からはみ出さないよう、浮かせる量を抑える
-				const lift = Math.min(pos.h * LIFT_PER_FT, Math.max(0, pos.y - (frame.viewBox.baseVal.y + r)));
+				// 図の下端からはみ出さないよう、ずらす量を抑える
+				const vb = frame.viewBox.baseVal;
+				const drop = Math.min(pos.h * LIFT_PER_FT, Math.max(0, vb.y + vb.height - 0.5 - pos.y));
 				ball.setAttribute('cx', `${pos.x}`);
-				ball.setAttribute('cy', `${pos.y - lift}`);
+				ball.setAttribute('cy', `${pos.y}`);
 				ball.setAttribute('r', `${r}`);
 				shadow.setAttribute('cx', `${pos.x}`);
-				shadow.setAttribute('cy', `${pos.y}`);
+				shadow.setAttribute('cy', `${pos.y + drop}`);
 				pole.setAttribute('x1', `${pos.x}`);
 				pole.setAttribute('x2', `${pos.x}`);
-				pole.setAttribute('y1', `${pos.y}`);
-				pole.setAttribute('y2', `${pos.y - lift}`);
+				pole.setAttribute('y1', `${pos.y + drop}`);
+				pole.setAttribute('y2', `${pos.y}`);
 			};
 			const reset = () => {
 				showMarks(animate ? -1 : 1);

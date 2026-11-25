@@ -50,20 +50,36 @@ export const shotCurve: Record<ShotType, number> = {
 	move: 0,
 };
 
-/** アニメーションで、打球（ボール）が飛ぶ時間・人が動く時間（ミリ秒）。小さいほど速い */
-export const shotDurationMs: Record<ShotType, number> = {
-	speedup: 450,
-	smash: 450,
-	volley: 550,
-	drive: 650,
-	serve: 1100,
-	return: 1100,
-	reset: 1200,
-	dink: 1300,
-	drop: 1400,
-	lob: 1600,
-	move: 1000,
+/**
+ * 打球のおおよその速さ（時速 km、実際の球速の目安）。人の動きは歩く・小走りの速さ。
+ * アニメーションでは、飛ぶ時間 = 距離 ÷ この速さ にして、同じ種類の球は距離によらず同じ速さに見せる。
+ * 実際の速さのままでは目で追えないので、全体を ANIM_SLOWDOWN 倍ゆっくり再生する（種類どうしの速さの比は保つ）。
+ */
+export const shotSpeedKmh: Record<ShotType, number> = {
+	smash: 75,
+	speedup: 70,
+	drive: 65,
+	volley: 55,
+	serve: 50,
+	return: 50,
+	drop: 30,
+	reset: 30,
+	lob: 30,
+	dink: 25,
+	move: 12,
 };
+/** アニメーションをどれだけゆっくり再生するか（実際の何倍の時間をかけるか） */
+export const ANIM_SLOWDOWN = 1.7;
+/** 1手の時間の下限・上限（ミリ秒）。短すぎて見えない・長すぎて待たされることがないようにする */
+export const ANIM_MS_MIN = 400;
+export const ANIM_MS_MAX = 2000;
+
+/** 距離（ft）と種類から、アニメーションで飛ぶ（動く）時間（ミリ秒）を出す */
+export function animMs(type: ShotType, distanceFt: number): number {
+	const ftPerSec = (shotSpeedKmh[type] * 1000) / 3600 / 0.3048;
+	const ms = (distanceFt / ftPerSec) * 1000 * ANIM_SLOWDOWN;
+	return Math.round(Math.min(ANIM_MS_MAX, Math.max(ANIM_MS_MIN, ms)));
+}
 
 /** 強調できるエリア（名前 → 矩形 [x, y, 幅, 高さ]） */
 export const zoneRects = {

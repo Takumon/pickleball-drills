@@ -2,7 +2,7 @@
 /**
  * 「図の見方」ページ用の凡例。打球の線・人の描き方を、実際の図と同じスタイル（styles/court.css）で描く。
  */
-import { heightLevels, roleLabels, shotLabels, shotDurationMs, type Role, type ShotType } from '../config/court';
+import { heightLevels, roleLabels, shotLabels, shotSpeedKmh, type Role, type ShotType } from '../config/court';
 import '../styles/court.css';
 
 const order: ShotType[] = ['speedup', 'smash', 'volley', 'drive', 'serve', 'return', 'reset', 'dink', 'drop', 'lob', 'move'];
@@ -37,13 +37,15 @@ const isSub = (t: ShotType) => t === 'move';
 const roles = Object.keys(roleLabels) as Role[];
 /** 見本の線（上から見た図の線はまっすぐ） */
 const samplePath = (_t: ShotType) => `M1.2 2 L12.4 2`;
-const sec = (ms: number) => `${(ms / 1000).toFixed(2).replace(/0$/, '')}秒`;
+/** 速さの目安（実際の球速。アニメーションは同じ比のままゆっくり再生する） */
+const speed = (t: ShotType) => `時速 約${shotSpeedKmh[t]}km`;
 ---
 
 <div class="court legend-page">
 	<h2>打球の線</h2>
 	<p>強く速い球は太い実線、柔らかく落とす球は細い点線、ロブは破線で描きます。人の移動は灰色の点線です。</p>
 	<p>球出しの線は出す球の種類で描き、「球出し（ディンク）」のように名前を付けます。</p>
+	<p>表の速さは実際の球速の目安です。アニメーションでは、同じ種類の球は距離によらず同じ速さで飛びます。目で追えるように、どの球も同じ割合でゆっくり再生しています。</p>
 	<table class="legend-table">
 		<thead>
 			<tr><th>見本</th><th>名前</th><th>線</th><th>太さ</th><th>速さ</th></tr>
@@ -70,7 +72,7 @@ const sec = (ms: number) => `${(ms / 1000).toFixed(2).replace(/0$/, '')}秒`;
 						<td>{t === 'move' ? '移動' : shotLabels[t]}</td>
 						<td>{style[t]}</td>
 						<td>{width[t]}</td>
-						<td>{sec(shotDurationMs[t])}</td>
+						<td>{speed(t)}</td>
 					</tr>
 				))
 			}

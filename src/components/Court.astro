@@ -5,6 +5,7 @@ import {
 	roleLabels,
 	shotLabels,
 	shotCurve,
+	animMs,
 	heightLevels,
 	shotHeights,
 	defaultReceiveHeight,
@@ -105,7 +106,9 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean) {
 	const bounces = bouncesOf(s, b.anchor, pointAt);
 	// ネットを越える位置（線の長さに対する割合）。越えなければ undefined
 	const netAt = (y1 - COURT.net) * (y2 - COURT.net) < 0 ? (COURT.net - y1) / (y2 - y1) : undefined;
-	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces, netAt) };
+	// 飛ぶ時間は距離 ÷ 球の種類ごとの速さ（同じ種類の球は、距離によらず同じ速さに見える）
+	const ms = animMs(s.type, Math.hypot(x2 - x1, y2 - y1));
+	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces, netAt), ms };
 }
 
 /**

@@ -1,0 +1,16 @@
+---
+/**
+ * メニュー表示に差し込むための、ドリルの中身だけのページ（ページの枠やサイドバーは付けない）。
+ * メニュー表示で行をタップしたときに読み込む。
+ */
+import { getCollection } from 'astro:content';
+import DrillDetail from '../../components/DrillDetail.astro';
+
+export async function getStaticPaths() {
+	const docs = await getCollection('docs', (e) => !!e.data.drill);
+	return docs.map((e) => ({ params: { id: e.data.drill!.id }, props: { drill: e.data.drill! } }));
+}
+const { drill } = Astro.props;
+---
+
+<DrillDetail drill={drill} />

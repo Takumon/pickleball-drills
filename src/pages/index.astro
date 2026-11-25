@@ -1,30 +1,202 @@
 ---
-// トップ兼メニュー表示ページ（?m=... があればメニュー表示）。現在は準備中のプレースホルダー。
+/**
+ * トップページ兼メニュー表示。
+ * クエリに m（メニュー）があれば、その日の練習メニューを表示する。なければ短いトップページを表示する。
+ * メニューの URL 形式は src/lib/menu.ts。
+ */
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import '../styles/court.css';
+
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
-<html lang="ja">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>ピックルボール ドリル集</title>
-		<style>
-			:root { color-scheme: light dark; --bg: #ffffff; --fg: #1a1a1a; --muted: #666; --accent: #2f7d32; }
-			@media (prefers-color-scheme: dark) { :root { --bg: #17181c; --fg: #ececec; --muted: #a0a0a0; --accent: #7bc67e; } }
-			body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif; line-height: 1.7; }
-			main { max-width: 640px; margin: 0 auto; padding: 32px 16px; }
-			a { color: var(--accent); }
-			.muted { color: var(--muted); font-size: 0.85rem; }
-		</style>
-	</head>
-	<body>
-		<main>
-			<h1>ピックルボール ドリル集</h1>
-			<p>練習会で使うドリル（練習メニュー）の説明をまとめたサイトです。現在準備中です。</p>
-			<ul>
-				<li><a href={`${base}/drills/`}>ドリル一覧</a></li>
-				<li><a href={`${base}/glossary/`}>用語集</a></li>
-			</ul>
-		</main>
-	</body>
-</html>
+<StarlightPage frontmatter={{ title: 'ピックルボール ドリル集', description: '練習会で使うドリルと練習メニュー' }}>
+	<div id="top-page">
+		<p>練習会で使うドリル（練習1つ分）の説明と、練習メニューをまとめたサイトです。</p>
+		<ul>
+			<li><a href={`${base}/drills/`}>ドリル一覧</a></li>
+			<li><a href={`${base}/legend/`}>図の見方</a></li>
+			<li><a href={`${base}/principles/`}>大原則</a></li>
+			<li><a href={`${base}/glossary/`}>用語集</a></li>
+		</ul>
+	</div>
+
+	<div id="menu-view" hidden data-base={base}>
+		<p class="menu-summary"><span class="menu-theme"></span><span class="menu-total"></span></p>
+		<div class="menu-list"></div>
+	</div>
+</StarlightPage>
+
+<script>
+	import { blocks, fmtMin, parseMenu, totalMinutes, type CatalogDrill, type MenuItem } from '../lib/menu';
+	import { setupCourtAnimations } from '../scripts/court-anim';
+
+	const view = document.getElementById('menu-view')!;
+	const base = view.dataset.base ?? '';
+	const menu = parseMenu(location.search);
+
+	if (menu) {
+		document.getElementById('top-page')!.hidden = true;
+		view.hidden = false;
+		document.title = `${menu.theme ? `${menu.theme} | ` : ''}練習メニュー | ピックルボール ドリル集`;
+		const h1 = document.querySelector('main h1');
+		if (h1) h1.textContent = '練習メニュー';
+		render(menu);
+	}
+
+	async function render(m: NonNullable<typeof menu>) {
+		const catalog: CatalogDrill[] = await (await fetch(`${base}/drills.json`)).json();
+		const byId = new Map(catalog.map((d) => [d.id, d]));
+		view.querySelector('.menu-theme')!.textContent = m.theme ? `テーマ：${m.theme}` : '';
+		view.querySelector('.menu-total')!.textContent = `合計 ${fmtMin(totalMinutes(m))}`;
+		const list = view.querySelector('.menu-list')!;
+		for (const b of blocks(m)) {
+			const sec = document.createElement('section');
+			sec.className = 'menu-block';
+			if (b.heading !== undefined) {
+				const h = document.createElement('h2');
+				h.className = 'menu-heading';
+				h.innerHTML = `<span></span><span class="min"></span>`;
+				h.children[0].textContent = `■ ${b.heading}`;
+				h.children[1].textContent = b.minutes ? fmtMin(b.minutes) : '';
+				sec.append(h);
+			}
+			for (const it of b.items) sec.append(row(it, byId));
+			list.append(sec);
+		}
+	}
+
+	function row(it: MenuItem, byId: Map<string, CatalogDrill>): HTMLElement {
+		const li = document.createElement('div');
+		li.className = `menu-item kind-${it.kind}`;
+		if (it.kind === 'break') {
+			li.textContent = `休憩 ${fmtMin(it.min)}`;
+			return li;
+		}
+		if (it.kind === 'note') {
+			li.textContent = it.min ? `${it.text}（${fmtMin(it.min)}）` : it.text;
+			return li;
+		}
+		if (it.kind !== 'drill') return li;
+		const d = byId.get(it.id);
+		const variant = d?.variants.find((v) => v.key === it.variant);
+		const name = d ? `${d.title}${variant ? `（${variant.name}）` : ''}` : `見つからないドリル（${it.id}）`;
+		const btn = document.createElement('button');
+		btn.type = 'button';
+		btn.className = 'menu-drill';
+		btn.setAttribute('aria-expanded', 'false');
+		btn.innerHTML = `<span class="name"></span><span class="time"></span><span class="chev" aria-hidden="true">›</span>`;
+		btn.querySelector('.name')!.textContent = name;
+		btn.querySelector('.time')!.textContent = `${fmtMin(it.min)}×${it.sets}`;
+		li.append(btn);
+		if (!d) {
+			btn.disabled = true;
+			return li;
+		}
+		const panel = document.createElement('div');
+		panel.className = 'menu-panel';
+		panel.hidden = true;
+		li.append(panel);
+		btn.addEventListener('click', async () => {
+			const open = panel.hidden;
+			panel.hidden = !open;
+			btn.setAttribute('aria-expanded', String(open));
+			if (open && !panel.dataset.loaded) {
+				panel.dataset.loaded = '1';
+				panel.textContent = '読み込み中…';
+				try {
+					const html = await (await fetch(d.fragment)).text();
+					panel.innerHTML = html;
+					const link = document.createElement('p');
+					link.className = 'menu-open-page';
+					link.innerHTML = `<a></a>`;
+					link.querySelector('a')!.href = d.url;
+					link.querySelector('a')!.textContent = 'ドリルのページを開く';
+					panel.append(link);
+					setupCourtAnimations(panel);
+				} catch {
+					panel.textContent = '読み込めませんでした。';
+					delete panel.dataset.loaded;
+				}
+			}
+		});
+		return li;
+	}
+</script>
+
+<style is:global>
+	/* メニューの行は JavaScript で作るので、スコープなしのスタイルを #menu-view の中に限って当てる */
+	#menu-view .menu-summary {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 0.25rem 1rem;
+		font-weight: 600;
+	}
+	#menu-view .menu-block {
+		margin-top: 1.25rem;
+	}
+	#menu-view .menu-heading {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		font-size: var(--sl-text-lg);
+		margin: 0 0 0.25rem;
+		padding-bottom: 0.25rem;
+		border-bottom: 1px solid var(--sl-color-gray-5);
+	}
+	#menu-view .menu-heading .min {
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+		font-weight: 600;
+	}
+	#menu-view .menu-item {
+		margin: 0;
+		border-bottom: 1px solid var(--sl-color-gray-6);
+	}
+	#menu-view .menu-item.kind-break, #menu-view .menu-item.kind-note {
+		padding: 0.6rem 0.25rem;
+		color: var(--sl-color-gray-2);
+	}
+	#menu-view .menu-drill {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		padding: 0.7rem 0.25rem;
+		margin: 0;
+		background: none;
+		border: 0;
+		color: inherit;
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+	#menu-view .menu-drill .name {
+		flex: 1;
+		font-weight: 600;
+	}
+	#menu-view .menu-drill .time {
+		color: var(--sl-color-gray-3);
+		white-space: nowrap;
+		font-size: var(--sl-text-sm);
+	}
+	#menu-view .menu-drill .chev {
+		color: var(--sl-color-gray-3);
+		transition: transform 0.15s;
+	}
+	#menu-view .menu-drill[aria-expanded='true'] .chev {
+		transform: rotate(90deg);
+	}
+	#menu-view .menu-drill:disabled {
+		cursor: default;
+		opacity: 0.6;
+	}
+	#menu-view .menu-panel {
+		padding: 0 0.25rem 1rem;
+	}
+	#menu-view .menu-open-page {
+		font-size: var(--sl-text-sm);
+		margin-top: 0.75rem;
+	}
+</style>

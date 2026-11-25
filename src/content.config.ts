@@ -9,6 +9,7 @@ import {
 	roleLabels,
 	shotLabels,
 	spotPoint,
+	landInFront,
 	zoneRects,
 	type HeightLevel,
 	type Role,
@@ -85,22 +86,28 @@ const diagram = z.object({
 	// 名前で書いた位置（立ち位置・柵・着地点）を、config/court.ts の決まりで座標にする
 	const fence = d.fence ? fenceGeometry(d.fence) : undefined;
 	const ids = new Set(d.players.map((p) => p.id));
-	const resolve = (ref: string | [number, number]): string | [number, number] => {
-		if (typeof ref !== 'string' || ids.has(ref)) return ref;
-		if (ref === 'fence.corner' || ref === 'fence.inside') {
-			if (!fence) ctx.addIssue({ code: 'custom', message: `コート図: ${ref} を使うには fence を書く` });
-			return fence ? fence.targets[ref === 'fence.corner' ? 'corner' : 'inside'] : [0, 0];
-		}
-		const spot = spotPoint(ref);
-		if (!spot) ctx.addIssue({ code: 'custom', message: `コート図: "${ref}" は人の ID でも位置の名前でもない` });
-		return spot ?? [0, 0];
-	};
 	const players = d.players.map((p) => {
 		const spot = p.at ? spotPoint(p.at) : undefined;
 		if (p.at && !spot) ctx.addIssue({ code: 'custom', message: `コート図: at "${p.at}" は位置の名前ではない（例: near-right-baseline）` });
 		if (!spot && (p.x === undefined || p.y === undefined)) ctx.addIssue({ code: 'custom', message: `コート図: 人 ${p.id} に at か x・y を書く` });
 		return { ...p, x: spot ? spot[0] : (p.x ?? 0), y: spot ? spot[1] : (p.y ?? 0) };
 	});
+	const resolve = (ref: string | [number, number]): string | [number, number] => {
+		if (typeof ref !== 'string' || ids.has(ref)) return ref;
+		if (ref === 'fence.corner' || ref === 'fence.inside') {
+			if (!fence) ctx.addIssue({ code: 'custom', message: `コート図: ${ref} を使うには fence を書く` });
+			return fence ? fence.targets[ref === 'fence.corner' ? 'corner' : 'inside'] : [0, 0];
+		}
+		// 受ける人の手前に落とす（例: A.front）
+		const front = ref.match(/^(\w+)\.front$/);
+		if (front && ids.has(front[1])) {
+			const p = players.find((q) => q.id === front[1])!;
+			return landInFront(p.x, p.y);
+		}
+		const spot = spotPoint(ref);
+		if (!spot) ctx.addIssue({ code: 'custom', message: `コート図: "${ref}" は人の ID でも位置の名前でもない` });
+		return spot ?? [0, 0];
+	};
 	return {
 		...d,
 		players,

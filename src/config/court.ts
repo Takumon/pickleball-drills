@@ -10,11 +10,12 @@ export const TRAN = { top: 7.5, bottom: 36.5 } as const;
 /**
  * 名前の付いた立ち位置。ドリルのデータでは `at: near-right-baseline` のように「手前/奥・左/右・深さ」で書く。
  * - 手前（near）= 下側の自分たち、奥（far）= 上側の相手。
- * - 左（left）・右（right）は図で見た左右のレーンの真ん中。
+ * - 左（left）・右（right）は図で見た左右のレーンの真ん中。leftSide / rightSide はサイドライン寄り、
+ *   leftCenter / rightCenter はセンターライン寄り（半面の練習で斜めに打ち合うときなど）。
  * - 深さ: kitchen = キッチンライン付近、tran = トラン（キッチンラインとベースラインの中間）、
  *   baseline = ベースラインの後ろ（サーブ・リターン・3rdショットを打つ位置）。
  */
-export const LANES = { left: 5, right: 15 } as const;
+export const LANES = { leftSide: 1.5, left: 5, leftCenter: 8.5, rightCenter: 11.5, right: 15, rightSide: 18.5 } as const;
 export const DEPTHS = {
 	far: { kitchen: 14, tran: TRAN.top, baseline: -2.5 },
 	near: { kitchen: 30, tran: TRAN.bottom, baseline: 46.5 },
@@ -22,7 +23,7 @@ export const DEPTHS = {
 export type Side = keyof typeof DEPTHS;
 export type Lane = keyof typeof LANES;
 export type Depth = keyof (typeof DEPTHS)['far'];
-const SPOT = /^(near|far)-(left|right)-(kitchen|tran|baseline)$/;
+const SPOT = /^(near|far)-(leftSide|left|leftCenter|rightCenter|right|rightSide)-(kitchen|tran|baseline)$/;
 
 /** 名前の付いた立ち位置（例: near-right-baseline）の座標。名前でなければ undefined */
 export function spotPoint(name: string): [number, number] | undefined {
@@ -73,6 +74,13 @@ export function fenceGeometry(spec: string) {
 	};
 }
 const round = (n: number) => Math.round(n * 100) / 100;
+
+/** 「人の手前に落とす」着地点（to: A.front）: 受ける人のネット側、どれだけ手前か（ft） */
+export const LAND_IN_FRONT_FT = 2.5;
+/** 受ける人の手前の着地点の座標。y はその人の位置、ネットへ向かって LAND_IN_FRONT_FT */
+export function landInFront(x: number, y: number): [number, number] {
+	return [x, round(y + (y < COURT.net ? 1 : -1) * LAND_IN_FRONT_FT)];
+}
 
 /** 人の役割（色分けと凡例に使う） */
 export const roleLabels = {

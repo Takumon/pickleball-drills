@@ -257,14 +257,15 @@
 .court .bounce {
 	fill: none;
 	stroke: var(--ball);
-	stroke-width: 0.22;
+	/* 弾んだ位置は補助の情報なので、細く・薄く・小さく控えめに出す */
+	stroke-width: 0.14;
 	stroke-linecap: round;
 	opacity: 0;
 	transform-box: fill-box;
 	transform-origin: center;
 }
 .court .bounce.on {
-	opacity: 1;
+	opacity: 0.55;
 }
 /* 輪を大きく出してから縮める */
 .court .bounce circle {
@@ -276,7 +277,7 @@
 }
 @keyframes bounce-pop {
 	from {
-		transform: scale(2.2);
+		transform: scale(1.5);
 		opacity: 0.2;
 	}
 	to {

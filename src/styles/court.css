@@ -305,7 +305,7 @@
 	font-size: 2px;
 }
 .court .player text {
-	font-size: 1.1px;
+	font-size: 1px;
 	font-weight: 700;
 	text-anchor: middle;
 	dominant-baseline: central;
@@ -315,7 +315,7 @@
 .court .player .halo {
 	fill: none;
 	stroke: rgb(0 0 0 / 0.55);
-	stroke-width: 0.6;
+	stroke-width: 0.4;
 }
 .court .player .body {
 	fill: var(--person);
@@ -355,7 +355,7 @@
 
 /* 共有のプレビュー画像（止まった1枚の図）は、人を 1.5 倍で描く（Court.astro の FIG と合わせる） */
 .court.still .player text {
-	font-size: 1.65px;
+	font-size: 1.5px;
 }
 .court.still .player .body {
 	stroke-width: 0.33;

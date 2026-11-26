@@ -64,6 +64,8 @@ const SIDE_PADDLE = 1.1;
 const MARK = 0.45;
 /** 練習役の二重丸: 内側の線を、体の丸のふちから何 ft 内側に引くか */
 const INNER_RING_INSET = 0.25;
+/** 人の外側の暗い縁の幅（丸の縁からの距離） */
+const HALO_GAP = 0.3;
 /** 柵の支柱の大きさと間隔（ft） */
 const FENCE_POST = 0.5;
 const FENCE_POST_GAP = 1.6;
@@ -178,6 +180,8 @@ const isSub = (t: string) => t === 'move';
 			<g class={`player role-${p.role}`} data-player-id={animated ? p.id : undefined}>
 				<line class="arm" x1={p.shoulder[0]} y1={p.shoulder[1]} x2={p.hand[0]} y2={p.hand[1]} />
 				<line class="paddle" x1={p.hand[0]} y1={p.hand[1]} x2={p.tip[0]} y2={p.tip[1]} />
+				{/* 人の外側に暗い縁を付け、白い線（キッチンラインなど）と人の丸の境目を分かるようにする */}
+				<circle class="halo" cx={p.x} cy={p.y} r={playerR + HALO_GAP} />
 				<circle class="body" cx={p.x} cy={p.y} r={playerR} />
 				{/* 練習する人（練習役）は、丸の内側に線を入れて二重丸にする（外に足すと人が大きく見えるため）。2人とも練習するときは2人とも */}
 				{p.role === 'practice' && <circle class="inner-ring" cx={p.x} cy={p.y} r={playerR - INNER_RING_INSET} />}

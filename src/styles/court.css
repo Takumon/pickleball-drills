@@ -312,6 +312,11 @@
 	font-family: system-ui, sans-serif;
 	fill: var(--person-ink);
 }
+.court .player .halo {
+	fill: none;
+	stroke: rgb(0 0 0 / 0.55);
+	stroke-width: 0.6;
+}
 .court .player .body {
 	fill: var(--person);
 	stroke: #fff;

@@ -26,6 +26,8 @@ export default defineConfig({
 			customCss: ['./src/styles/custom.css'],
 			// 共有のプレビュー画像（og:image）をドリルのページに足す
 			routeMiddleware: './src/routeData.ts',
+			// iPhone のホーム画面やブックマークのアイコン（npm run og で public/favicon.svg から作る）
+			head: [{ tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/pickleball-drills/apple-touch-icon.png' } }],
 			components: {
 				MarkdownContent: './src/components/MarkdownContent.astro',
 			},

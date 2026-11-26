@@ -8,9 +8,11 @@ import { defineRouteMiddleware } from '@astrojs/starlight/route-data';
 export const onRequest = defineRouteMiddleware((context) => {
 	const route = context.locals.starlightRoute;
 	const drill = route.entry.data.drill;
-	if (!drill || !existsSync(`public/og/${drill.id}.png`)) return;
+	// ドリルのページはそのドリルの画像、ほかのページ（トップページ・練習メニューなど）はサイト共通の画像
+	const name = drill ? drill.id : 'site';
+	if (!existsSync(`public/og/${name}.png`)) return;
 	const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-	const image = new URL(`${base}/og/${drill.id}.png`, context.site).href;
+	const image = new URL(`${base}/og/${name}.png`, context.site).href;
 	route.head.push(
 		{ tag: 'meta', attrs: { property: 'og:image', content: image } },
 		{ tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },

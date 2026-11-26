@@ -67,6 +67,8 @@ const diagram = z.object({
 				/** 打つ高さ・山の高さ（config/court.ts の heightLevels）。省略時は打球の種類で決まる。例: ロールのスピードアップは hit: underTape */
 				hit: z.enum(keysOf<HeightLevel>(heightLevels)).optional(),
 				peak: z.enum(keysOf<HeightLevel>(heightLevels)).optional(),
+				/** 投げ下ろすような弧: 打った高さから上がらずに、だんだん速く下がっていく（上から投げ下ろす球出しなど）。peak は使わない */
+				fall: z.boolean().default(false),
 			}),
 		)
 		.default([]),

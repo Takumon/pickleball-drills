@@ -1,24 +1,71 @@
-// 共有のプレビュー画像（OGP、1200×630）を書き出す。`npm run build` の中で、`astro build` のあとに動く。
-// ビルドしたドリルごとの /og/<ID>/ のページをヘッドレスのブラウザで開き、dist/og/<ID>.png に保存する。
-// ビルドのたびに全部作り直すので、画像が古くなることはない（画像はリポジトリに入れない）。
-// ページの中身（どの手を描くか、文字の並び）は src/pages/og/[id].astro と src/lib/og.ts が決める。
+// 共有のプレビュー画像（OGP、1200×630）を手元で作る。CI では作らない（デプロイを速く保つため）。
 //
-// ブラウザ: Google Chrome があればそれを、なければ playwright-core の Chromium を使う。
-//   GitHub Actions では Chromium と日本語フォント（fonts-noto-cjk）を入れてから動かす（.github/workflows）。
-// 日本語のフォント: Mac はヒラギノ、GitHub Actions は Noto Sans CJK JP。
+//   npm run og            古い画像・ない画像だけを作り直す（public/og/<ID>.png）
+//   npm run og -- --check 古い画像・ない画像を一覧にするだけ（作らない）
+//   npm run og -- --all   全部作り直す
+//
+// 古いかどうかは「画像の材料の指紋（ハッシュ）」で見分ける。材料は、画像に出るもの（ドリル名・カテゴリ・
+// 練習の目的・図のデータ）と、描く側のコード（RENDERER）。作ったときの指紋を public/og/manifest.json に残し、
+// 今の指紋と違えば古いとみなす。描く側のコードを変えると、全部が古くなる。
+// 作った画像と manifest.json はコミットする。
+//
+// 作り方: サイトをビルドし、ドリルごとの /og/<ID>/ のページ（src/pages/og/[id].astro）をブラウザで撮る。
+// ブラウザは、この PC の Google Chrome（なければ playwright-core の Chromium）。
+import { createHash } from 'node:crypto';
+import { execSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
-import { chromium } from 'playwright-core';
+import { parse } from 'yaml';
 
+const DRILLS = 'src/content/docs/drills';
+const OUT = 'public/og';
+const MANIFEST = join(OUT, 'manifest.json');
 const DIST = 'dist';
-const OUT = join(DIST, 'og');
 const BASE = '/pickleball-drills';
-const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
+/** 描く側のコード。どれかが変わると、全部の画像が古くなる */
+const RENDERER = [
+	'src/pages/og/[id].astro',
+	'src/lib/og.ts',
+	'src/components/Court.astro',
+	'src/components/CourtFrame.astro',
+	'src/styles/court.css',
+	'src/config/court.ts',
+	'src/config/categories.ts',
+	'src/content.config.ts',
+];
 
-// dist を BASE の下に置いたものとして配る、小さな静的サーバー
+const args = new Set(process.argv.slice(2));
+const sha = (s) => createHash('sha256').update(s).digest('hex').slice(0, 16);
+const rendererHash = sha(RENDERER.map((f) => readFileSync(f, 'utf8')).join('\n'));
+
+// ドリルごとの指紋
+const drills = readdirSync(DRILLS, { withFileTypes: true })
+	.filter((d) => d.isDirectory())
+	.flatMap((d) => readdirSync(join(DRILLS, d.name)).filter((n) => n.endsWith('.md')).map((n) => join(DRILLS, d.name, n)))
+	.map((file) => {
+		const fm = parse(readFileSync(file, 'utf8').split('---')[1]);
+		const d = fm.drill;
+		const hash = sha(JSON.stringify({ r: rendererHash, title: fm.title, category: d.category, focus: d.focus, diagram: d.diagram }));
+		return { id: d.id, hash };
+	})
+	.sort((a, b) => a.id.localeCompare(b.id));
+
+const manifest = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {};
+const stale = drills.filter((d) => args.has('--all') || manifest[d.id] !== d.hash || !existsSync(join(OUT, `${d.id}.png`)));
+
+if (stale.length === 0) {
+	console.log('[og] プレビュー画像はすべて最新です');
+	process.exit(0);
+}
+console.log(`[og] 古い・ない画像: ${stale.map((d) => d.id).join(', ')}`);
+if (args.has('--check')) process.exit(1);
+
+// ビルドして、古いものだけ撮る
+execSync('npx astro build', { stdio: 'ignore' });
+const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const server = createServer((req, res) => {
-	let path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
+	const path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
 	if (!path.startsWith(BASE)) return res.writeHead(404).end();
 	let file = join(DIST, path.slice(BASE.length));
 	if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
@@ -28,21 +75,25 @@ const server = createServer((req, res) => {
 await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
 const port = server.address().port;
 
-const ids = readdirSync(join(DIST, 'og')).filter((id) => existsSync(join(DIST, 'og', id, 'index.html')));
-
-mkdirSync(OUT, { recursive: true });
+const { chromium } = await import('playwright-core');
 let browser;
 try {
 	browser = await chromium.launch({ channel: 'chrome' });
 } catch {
 	browser = await chromium.launch();
 }
+mkdirSync(OUT, { recursive: true });
 const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
-for (const id of ids) {
-	await page.goto(`http://127.0.0.1:${port}${BASE}/og/${id}/`, { waitUntil: 'networkidle' });
+for (const d of stale) {
+	await page.goto(`http://127.0.0.1:${port}${BASE}/og/${d.id}/`, { waitUntil: 'networkidle' });
 	await page.evaluate(() => document.fonts.ready);
-	await page.screenshot({ path: join(OUT, `${id}.png`) });
+	await page.screenshot({ path: join(OUT, `${d.id}.png`) });
+	manifest[d.id] = d.hash;
 }
 await browser.close();
 server.close();
-console.log(`[og] ${ids.length} 枚のプレビュー画像を書き出しました（${OUT}/<ID>.png）`);
+// 消えたドリルの記録は外す
+const ids = new Set(drills.map((d) => d.id));
+for (const k of Object.keys(manifest)) if (!ids.has(k)) delete manifest[k];
+writeFileSync(MANIFEST, JSON.stringify(Object.fromEntries(Object.entries(manifest).sort()), null, '\t') + '\n');
+console.log(`[og] ${stale.length} 枚を作り直しました（${OUT}/）。画像と manifest.json をコミットしてください`);

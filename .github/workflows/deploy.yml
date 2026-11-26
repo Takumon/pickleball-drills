@@ -19,21 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: withastro/action@v4
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
-      # 共有のプレビュー画像（scripts/og-images.mjs）を作るための、日本語フォントとヘッドレスのブラウザ
-      - name: Install Japanese fonts and Chromium
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y fonts-noto-cjk
-          npx playwright-core install --with-deps chromium
-      - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
 
   deploy:
     needs: build

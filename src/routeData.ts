@@ -1,13 +1,14 @@
 /**
  * ページの head に、共有のプレビュー画像（og:image）を足す。
- * ドリルのページは、ビルドのあとに書き出す /og/<ID>.png（scripts/og-images.mjs）を使う。
+ * ドリルのページは、手元で作ってコミットした public/og/<ID>.png（`npm run og`）を使う。画像がまだなければ付けない。
  */
+import { existsSync } from 'node:fs';
 import { defineRouteMiddleware } from '@astrojs/starlight/route-data';
 
 export const onRequest = defineRouteMiddleware((context) => {
 	const route = context.locals.starlightRoute;
 	const drill = route.entry.data.drill;
-	if (!drill) return;
+	if (!drill || !existsSync(`public/og/${drill.id}.png`)) return;
 	const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 	const image = new URL(`${base}/og/${drill.id}.png`, context.site).href;
 	route.head.push(

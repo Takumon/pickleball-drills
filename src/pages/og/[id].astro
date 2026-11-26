@@ -22,7 +22,23 @@ const ball = readFileSync('public/favicon.svg', 'utf8');
 // 長いまとまりは、ブラウザが日本語の文節で折り返す（word-break: auto-phrase）。
 // 長い題名は文字を少し小さくし、文節が1行に収まるようにする（「スピードアップからの」が「の」で切れるのを防ぐ）
 const segs = title.split(' ').reduce<string[]>((a, w) => (w === '→' && a.length ? [...a.slice(0, -1), `${a[a.length - 1]} →`] : [...a, w]), []);
-const titleSize = [...title].length > 18 ? 52 : 58;
+// 長いまとまりは、カタカナが始まる所（綱引き|クロスディンク）でも折り返せるようにする（<wbr>）。
+// 折り返せないまま1行に収まらない部分（chunk）があれば、その部分が1行に収まるまで文字を小さくする（44px まで）。
+// 1行に入る字数は、文字の大きさ 58px で約9.6字（題名の欄の幅 560px ÷ 文字の大きさ）
+const KATA = /[\u30A0-\u30FF]/;
+const pieces = (w: string) => {
+	const out: string[] = [];
+	for (const ch of [...w]) {
+		const prev = out.length ? [...out[out.length - 1]].at(-1)! : '';
+		// 開きかっこの直後では切らない（「（」だけが行末に残るため）
+		if (out.length && KATA.test(ch) && ch !== 'ー' && !KATA.test(prev) && !/[（(「『]/.test(prev)) out.push(ch);
+		else if (out.length) out[out.length - 1] += ch;
+		else out.push(ch);
+	}
+	return out;
+};
+const longest = Math.max(...segs.flatMap((w) => pieces(w).map((c) => [...c].length)));
+const titleSize = Math.max(44, Math.min([...title].length > 18 ? 52 : 58, Math.floor(560 / longest)));
 ---
 
 <!doctype html>
@@ -139,7 +155,14 @@ const titleSize = [...title].length > 18 ? 52 : 58;
 				<h1 style={`--title-size: ${titleSize}px`}>
 					{segs.map((w, i) => (
 						<>
-							<span class:list={['seg', { long: [...w].length > 9 }]}>{w}</span>
+							<span class:list={['seg', { long: [...w].length > 9 }]}>
+								{pieces(w).map((c, k) => (
+									<>
+										{k > 0 && <wbr />}
+										{c}
+									</>
+								))}
+							</span>
 							{i < segs.length - 1 && ' '}
 						</>
 					))}

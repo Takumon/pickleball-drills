@@ -341,6 +341,28 @@ const stillPanel = still
 			),
 		}
 	: undefined;
+// 止まった1枚の図では、線の名前どうしが重ならないように、あとの名前を上下にずらす。
+// 名前の箱は「文字数 × 文字の大きさ」の幅と、文字の大きさの 1.25 倍の高さで見積もる
+if (stillPanel) {
+	const h = labelFont * 1.25;
+	const placed: { x: number; y: number; half: number }[] = [];
+	const hits = (x: number, y: number, half: number) =>
+		placed.some((b) => Math.abs(b.x - x) < b.half + half && Math.abs(b.y - y) < h);
+	for (const l of stillPanel.lines) {
+		if (!l.label) continue;
+		const half = ([...l.label].length * labelFont) / 2 + 0.3;
+		// 番号（①など）が付いて長くなった分も、図の左右からはみ出さないように寄せ直す
+		const minX = -padX + half;
+		const maxX = COURT.width + padX - half;
+		const x = minX > maxX ? COURT.width / 2 : Math.min(Math.max(l.mid[0], minX), maxX);
+		const y0 = l.mid[1];
+		// 元の位置から近い順に、下・上・下・上… と1段ずつ試す
+		let y = y0;
+		for (let i = 1; hits(x, y, half) && i <= 8; i++) y = y0 + Math.ceil(i / 2) * h * (i % 2 ? 1 : -1);
+		l.mid = [x, y];
+		placed.push({ x, y, half });
+	}
+}
 ---
 
 <figure class:list={['court', { multi, still }]} style={`--cols: ${Math.min(panels.length, 4)}`}>

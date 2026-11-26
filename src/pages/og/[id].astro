@@ -18,6 +18,11 @@ export async function getStaticPaths() {
 const { title, drill } = Astro.props;
 const category = categories.find((c) => c.code === drill.category)?.label ?? '';
 const ball = readFileSync('public/favicon.svg', 'utf8');
+// 題名の折り返し: 空白で区切った語のまとまり（→ は前の語に付ける）は、短ければ途中で折り返さない（「玉」だけで行が切れるのを防ぐ）。
+// 長いまとまりは、ブラウザが日本語の文節で折り返す（word-break: auto-phrase）。
+// 長い題名は文字を少し小さくし、文節が1行に収まるようにする（「スピードアップからの」が「の」で切れるのを防ぐ）
+const segs = title.split(' ').reduce<string[]>((a, w) => (w === '→' && a.length ? [...a.slice(0, -1), `${a[a.length - 1]} →`] : [...a, w]), []);
+const titleSize = [...title].length > 18 ? 52 : 58;
 ---
 
 <!doctype html>
@@ -63,12 +68,18 @@ const ball = readFileSync('public/favicon.svg', 'utf8');
 				color: var(--green);
 			}
 			.og h1 {
-				font-size: 58px;
+				font-size: var(--title-size);
 				line-height: 1.22;
 				margin: 14px 0 22px;
 				font-weight: 800;
 				letter-spacing: -0.01em;
 				word-break: auto-phrase;
+			}
+			.og h1 .seg {
+				white-space: nowrap;
+			}
+			.og h1 .seg.long {
+				white-space: normal;
 			}
 			.og .focus {
 				font-size: 27px;
@@ -125,7 +136,14 @@ const ball = readFileSync('public/favicon.svg', 'utf8');
 		<div class="og">
 			<div class="tile text">
 				<div class="category">{category}</div>
-				<h1>{title}</h1>
+				<h1 style={`--title-size: ${titleSize}px`}>
+					{segs.map((w, i) => (
+						<>
+							<span class:list={['seg', { long: [...w].length > 9 }]}>{w}</span>
+							{i < segs.length - 1 && ' '}
+						</>
+					))}
+				</h1>
 				<p class="focus">{drill.focus}</p>
 				<div class="site">
 					<span class="ball" set:html={ball} />ピックルボール ドリル集<span class="by">by 練馬ピックル</span>

@@ -32,6 +32,10 @@ interface Line {
 	ms?: number;
 	/** 打つ前に弾む位置（afterBounce） */
 	pre?: Point;
+	/** トラップして弾ませる球: 受けた高さ（ft）。ここから少し上がってから落ちる */
+	preFromH?: number;
+	/** 球出しの球（新しいボールを出す）。アニメーションの連続性を測るときに、ここでボールが跳ぶのは正しい */
+	feed?: boolean;
 	/** 動き出すまでの遅れ（ミリ秒）。相手の打球を見てから動く人 */
 	delay?: number;
 	/** 人の動きで、体の中心が動く量（線の長さではなく、動く前と後の位置の差） */
@@ -157,6 +161,8 @@ const isSub = (t: string) => t === 'move';
 						data-shift={animated && l.shift ? l.shift.join(',') : undefined}
 						data-ms={animated ? l.ms : undefined}
 						data-pre={animated && l.pre ? `${l.pre[0]},${l.pre[1]}` : undefined}
+						data-pre-from-h={animated && l.preFromH !== undefined ? l.preFromH : undefined}
+						data-fresh={animated && l.type !== 'move' && (l.feed || (l.pre && l.preFromH === undefined)) ? '' : undefined}
 						data-delay={animated && l.delay ? l.delay : undefined}
 						data-h={animated ? l.heights : undefined}
 					/>

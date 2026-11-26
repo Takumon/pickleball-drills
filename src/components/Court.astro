@@ -120,9 +120,12 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean, byIdTo: M
 	// 弾む位置をパドルと同じ所にするので、上から見た図でボールが横に跳ばない
 	const hitter = typeof s.from === 'string' ? byId.get(s.from) : undefined;
 	const pre: Point | undefined = s.afterBounce && hitter ? [hitter.face[0], hitter.face[1]] : undefined;
+	// トラップ: この人に向かってくる球（ループで前にある球も含む）があれば、その球を受けた高さから始め、
+	// 面でポンと少し上げてから落とす。なければ手から落とす球出し
+	const preFromH = pre ? trapFromHeight(s) : undefined;
 	// 人の動きで、体の中心がどれだけ動くか。線は丸と重ならないよう両端を縮めて描くので、線の長さとは違う
 	const shift: Point | undefined = s.type === 'move' ? [b.pt[0] - a.pt[0], b.pt[1] - a.pt[1]] : undefined;
-	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces, netAt), ms, pre, shift };
+	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces, netAt), ms, pre, preFromH, shift };
 }
 
 /**
@@ -138,6 +141,20 @@ function receiveHeight(s: Shot) {
 	if (next && next.type !== 'move') return ft(next.hit ?? shotHeights[next.type].hit);
 	// 次に打つ球が図にないとき: 弾んでから受ける球は低い位置（膝の高さ）、ノーバウンドで受ける球は既定の高さ
 	return ft(s.bounce === 'front' ? 'knee' : defaultReceiveHeight);
+}
+/**
+ * 打つ前に弾ませる球（afterBounce）が、トラップ（相手から来た球を面で受けて少し上げる）かどうか。
+ * この人に向かってくる球を、打つ順を前へさかのぼって探す（最後まで見つからなければ、繰り返しの前の周の球も探す）。
+ * 見つかればその球を受けた高さ（ft）を返す。手から落とす球出しなら undefined
+ */
+function trapFromHeight(s: Shot): number | undefined {
+	const hits = diagram.shots.filter((t) => t.type !== 'move');
+	const i = hits.indexOf(s);
+	for (let k = 1; k < hits.length; k++) {
+		const t = hits[(i - k + hits.length) % hits.length];
+		if (t.to === s.from) return receiveHeight(t);
+	}
+	return undefined;
 }
 function heightsOf(s: Shot, bounces: { at: number }[], netAt?: number) {
 	const height = heightFn(s, bounces, netAt);

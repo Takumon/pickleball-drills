@@ -8,12 +8,32 @@ const PRE_MS = 800;
 /** そのうち、手から落としたボールが地面に着くまでの時間と、落とす手の高さ（ft） */
 const PRE_DROP_MS = 420;
 const HAND_FT = 3;
+/**
+ * トラップ（相手から来た球を面で受けて、ほんの少し上げる）: 受けた高さから POP_FT だけ上がってから落ちる。
+ * 前の手の終わり（球が届いたパドルの位置と高さ）から途切れずにつながるようにする
+ */
+const TRAP_POP_FT = 0.8;
+const TRAP_DROP_MS = 620;
+/** 弾んでから打点まで上がる時間 */
+const PRE_RISE_MS = PRE_MS - PRE_DROP_MS;
+/** 受けた高さ h0 から pop だけ上がって地面（0）に落ちる放物線（u: 0〜1） */
+const popArc = (h0: number, pop: number) => {
+	const a = 2 * pop + Math.sqrt(4 * pop * pop + 4 * pop * h0);
+	const b = h0 + a;
+	return (u: number) => Math.max(0, h0 + a * u - b * u * u);
+};
 /** ボールの大きさ（高さ 1ft あたり）。高さそのものは右の帯（横から見た図）で見せる */
 const BALL_R_GROUND = 0.6;
 const BALL_R_PER_FT = 0.05;
 const BALL_R_MAX = 1;
 const PAUSE_MS = 700;
 const LOOP_PAUSE_MS = 1600;
+/**
+ * 最後の手から最初の手へ戻るとき（ループ）: 人は最初の手の立ち位置まで歩いて戻り、ボールは新しい球になるなら消してから出し直す。
+ * 図が途切れたり、人やボールが跳んだりして見えないようにするため（docs/diagrams.md「アニメーション」の連続性）
+ */
+const REWIND_MS = 700;
+const BALL_FADE_MS = 300;
 
 function setup(root: HTMLElement) {
 	const frames = [...root.querySelectorAll<SVGSVGElement>('svg.frame')];
@@ -72,6 +92,8 @@ function setup(root: HTMLElement) {
 		frames.forEach((f, k) => (f.style.display = k === i ? '' : 'none'));
 		dots.forEach((d, k) => d.classList.toggle('active', k === i));
 		const frame = frames[i];
+		// ループで消したボールを、次に見せるときは元に戻す
+		frame.querySelectorAll<SVGElement>('.ball, .side-ball').forEach((b) => (b.style.opacity = ''));
 		const ball = frame.querySelector<SVGGElement>('.ball')!;
 		const balls = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="ball"]')];
 		const sideBall = frame.querySelector<SVGCircleElement>('.side-ball');
@@ -150,17 +172,16 @@ function setup(root: HTMLElement) {
 		const reset = () => {
 			showMarks(animate ? -1 : 1);
 			balls.forEach((_, k) => setReveal(k, animate ? 0 : 1));
-			movers.forEach(({ g, sg }) => {
-				g?.setAttribute('transform', '');
-				sg?.setAttribute('transform', '');
-			});
+			// 動く人だけでなく、ループで最初の立ち位置へ戻した人（rewind）の移動も消す
+			frame.querySelectorAll('[data-player-id], [data-side-player]').forEach((g) => g.setAttribute('transform', ''));
 			// 打つ手なら打つ人のパドルから、人が動くだけの手なら前の手の終わりの位置にボールを置く
 			const pre = balls[0]?.dataset.pre?.split(',').map(Number);
+			const preFromH = balls[0]?.dataset.preFromH;
 			setPreRings(!animate && !!pre);
 			drawBall(
 				balls[0]
 					? animate && pre
-						? { x: pre[0], y: pre[1], h: HAND_FT }
+						? { x: pre[0], y: pre[1], h: preFromH !== undefined ? Number(preFromH) : HAND_FT }
 						: ballAt(balls[0], animate ? 0 : 1)
 					: startBall[i],
 			);
@@ -180,20 +201,24 @@ function setup(root: HTMLElement) {
 		const duration = durations.length ? Math.max(...durations) : SHOT_MS;
 		// 打つ前に一度弾ませる球: 手前で弾んだボールが打点まで上がってから、打球が始まる
 		const preAttr = balls[0]?.dataset.pre?.split(',').map(Number);
-		const preMs = preAttr ? PRE_MS : 0;
+		// トラップなら、受けた高さから少し上がって落ちる。手から落とす球出しなら、手の高さから落ちる
+		const trapH = balls[0]?.dataset.preFromH !== undefined ? Number(balls[0].dataset.preFromH) : undefined;
+		const dropMs = trapH !== undefined ? TRAP_DROP_MS : PRE_DROP_MS;
+		const fall = trapH !== undefined ? popArc(trapH, TRAP_POP_FT) : (u: number) => HAND_FT * (1 - u * u);
+		const preMs = preAttr ? dropMs + PRE_RISE_MS : 0;
 		const t0 = performance.now();
 		const tick = (now: number) => {
 			const elapsed = now - t0;
 			if (preAttr && elapsed < preMs) {
 				const start = ballAt(balls[0], 0);
-				if (elapsed < PRE_DROP_MS) {
-					// 手から落とす: 手の高さから、だんだん速く地面へ
-					const u = elapsed / PRE_DROP_MS;
+				if (elapsed < dropMs) {
+					// 地面まで: 手から落とす球はだんだん速く、トラップした球はポンと少し上がってから落ちる
+					const u = elapsed / dropMs;
 					setPreRings(false);
-					drawBall({ x: preAttr[0], y: preAttr[1], h: HAND_FT * (1 - u * u) });
+					drawBall({ x: preAttr[0], y: preAttr[1], h: fall(u) });
 				} else {
 					// 弾んで打点まで上がる（上がるにつれてゆるむ）
-					const u = (elapsed - PRE_DROP_MS) / (preMs - PRE_DROP_MS);
+					const u = (elapsed - dropMs) / (preMs - dropMs);
 					setPreRings(true);
 					const up = Math.sin((u * Math.PI) / 2);
 					drawBall({ x: preAttr[0] + (start.x - preAttr[0]) * u, y: preAttr[1] + (start.y - preAttr[1]) * u, h: start.h * up });
@@ -234,11 +259,80 @@ function setup(root: HTMLElement) {
 		raf = requestAnimationFrame(tick);
 	}
 
+	/** 要素の translate(x y) を読む */
+	const translateOf = (el: Element | null): [number, number] => {
+		const m = el?.getAttribute('transform')?.match(/translate\(([-\d.e]+)[ ,]+([-\d.e]+)\)/);
+		return m ? [Number(m[1]), Number(m[2])] : [0, 0];
+	};
+	/** 最初の手で、最初のボールが出る位置（手から弾ませる球なら弾む位置）。ループのつながりを見るのに使う */
+	const firstBallStart = (): BallPos | undefined => {
+		const p = frames[0].querySelector<SVGPathElement>('path[data-kind="ball"]');
+		if (!p) return undefined;
+		const pre = p.dataset.pre?.split(',').map(Number);
+		if (pre) return { x: pre[0], y: pre[1], h: p.dataset.preFromH !== undefined ? Number(p.dataset.preFromH) : HAND_FT };
+		const prev = frames[0].style.display;
+		frames[0].style.display = '';
+		const b = ballAt(p, 0);
+		frames[0].style.display = prev;
+		return b;
+	};
+	/**
+	 * 最後の手 i から最初の手へ戻る: 人を最初の立ち位置まで動かし、ボールが最初の手の始まりとつながらなければ消す
+	 */
+	function rewind(i: number, done: () => void) {
+		const frame = frames[i];
+		const first = frames[0];
+		const moves: { g: Element; from: [number, number]; to: [number, number] }[] = [];
+		frame.querySelectorAll('[data-player-id]').forEach((g) => {
+			const id = (g as HTMLElement).dataset.playerId;
+			const body = g.querySelector('circle.body');
+			const body0 = first.querySelector(`[data-player-id="${id}"] circle.body`);
+			if (!body || !body0) return;
+			const to: [number, number] = [
+				Number(body0.getAttribute('cx')) - Number(body.getAttribute('cx')),
+				Number(body0.getAttribute('cy')) - Number(body.getAttribute('cy')),
+			];
+			moves.push({ g, from: translateOf(g), to });
+			const sg = frame.querySelector(`[data-side-player="${id}"]`);
+			const sg0 = first.querySelector(`[data-side-player="${id}"] .side-head`);
+			const head = sg?.querySelector('.side-head');
+			if (sg && sg0 && head) moves.push({ g: sg, from: translateOf(sg), to: [0, Number(sg0.getAttribute('cy')) - Number(head.getAttribute('cy'))] });
+		});
+		// ボール: 最初の手の始まりが、最後の手の終わりと同じ所でなければ（新しい球を出す、別の人から始まる）、消してから出し直す
+		const lastP = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="ball"]')][0];
+		const end = lastP ? ballAt(lastP, 1) : startBall[i];
+		const start = firstBallStart();
+		const fresh = !!first.querySelector('path[data-kind="ball"][data-fresh]');
+		// 位置が同じでも、高さが違えば（例: 肩の高さで受けた球を、膝の高さのディンクで打ち始める）つながらないので出し直す
+		const fade = !!start && (fresh || !end || Math.hypot(start.x - end.x, start.y - end.y) > 0.5 || Math.abs(start.h - end.h) > 0.5);
+		const balls = [...frame.querySelectorAll<SVGElement>('.ball, .side-ball')];
+		const t0 = performance.now();
+		const tick = (now: number) => {
+			const t = Math.min(1, (now - t0) / REWIND_MS);
+			const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+			for (const m of moves) m.g.setAttribute('transform', `translate(${m.from[0] + (m.to[0] - m.from[0]) * e} ${m.from[1] + (m.to[1] - m.from[1]) * e})`);
+			if (fade) balls.forEach((b) => (b.style.opacity = String(Math.max(0, 1 - (now - t0) / BALL_FADE_MS))));
+			if (t < 1) raf = requestAnimationFrame(tick);
+			else done();
+		};
+		raf = requestAnimationFrame(tick);
+	}
+
 	function playFrom(i: number) {
 		show(i, true, () => {
 			if (!playing) return;
 			const last = i === frames.length - 1;
-			timer = window.setTimeout(() => playFrom(last ? 0 : i + 1), last ? LOOP_PAUSE_MS : PAUSE_MS);
+			if (!last) {
+				timer = window.setTimeout(() => playFrom(i + 1), PAUSE_MS);
+				return;
+			}
+			// 最後の手: 少し止めて見せてから、最初の立ち位置へ戻し、最初の手へ
+			timer = window.setTimeout(() => {
+				if (!playing) return;
+				rewind(i, () => {
+					if (playing) timer = window.setTimeout(() => playFrom(0), PAUSE_MS);
+				});
+			}, LOOP_PAUSE_MS - REWIND_MS);
 		});
 	}
 

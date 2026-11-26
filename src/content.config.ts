@@ -78,6 +78,8 @@ const diagram = z.object({
 	/** auto=使っている範囲だけ縦に切り出す / full=コート全体 */
 	crop: z.enum(['auto', 'full']).default('auto'),
 	caption: z.string().optional(),
+	/** 共有のプレビュー画像に描く手（番号 n）。書かなければ決まりで選ぶ（src/lib/og.ts） */
+	ogSteps: z.array(z.number().int()).optional(),
 }).refine(
 	// 番号（n）のある打球とない打球が混ざると、番号のない打球はどのコマにも入らず描かれない
 	(d) => d.shots.every((s) => s.n !== undefined) || d.shots.every((s) => s.n === undefined),

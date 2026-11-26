@@ -300,6 +300,10 @@
 .court:not(.multi) .shot-label {
 	font-size: 1.3px;
 }
+/* 共有のプレビュー画像（止まった1枚の図）は、縮んで見えるので名前を大きく */
+.court.still .shot-label {
+	font-size: 2px;
+}
 .court .player text {
 	font-size: 1.1px;
 	font-weight: 700;

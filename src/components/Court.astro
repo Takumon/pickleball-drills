@@ -17,8 +17,10 @@ import '../styles/court.css';
 interface Props {
 	diagram: Diagram;
 	title?: string;
+	/** すべての手を1枚の止まった図に重ねて描く（共有のプレビュー画像用）。線の名前に①②を付ける */
+	still?: boolean;
 }
-const { diagram, title = 'コート図' } = Astro.props;
+const { diagram, title = 'コート図', still = false } = Astro.props;
 
 /** 人・腕・パドルは見やすさ優先で、コートの縮尺より大きく描く（単位はフィート相当） */
 const PLAYER_R = 1.3;
@@ -265,7 +267,7 @@ const panels = groups.map((g) => {
 	}
 	return { n: g.n, figures, lines };
 });
-const multi = panels.length > 1;
+const multi = !still && panels.length > 1;
 
 // 表示範囲: crop=auto なら、人と打球が入る縦の範囲だけを切り出す（横はコート全幅、ネットは必ず入れる）。
 // ただし、トランが関わる側（人や打球がキッチンラインより3ft以上後ろにある）は
@@ -299,7 +301,7 @@ const viewBox = `${-padX} ${top} ${COURT.width + padX * 2 + (side ? SIDE.gap + S
 
 // 線の名前が図の左右からはみ出さないよう、横位置を内側に寄せる。
 // 文字幅は全角1文字 ≒ フォントサイズとして見積もる（styles/court.css の .shot-label と合わせる）
-const labelFont = multi ? 1.7 : 1.3;
+const labelFont = multi ? 1.7 : still ? 2 : 1.3;
 for (const pn of panels) {
 	for (const l of pn.lines) {
 		if (!l.label) continue;
@@ -310,9 +312,38 @@ for (const pn of panels) {
 	}
 }
 const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 + n - 1) : `${n}.`);
+// 止まった1枚の図: 各手の線を、その手の時点の位置から引いて重ねる。人は最後の手の時点の位置に描く。
+// 行きと帰りの線が重ならないよう、どの線も進む向きの右側へ少しずらす（逆向きの線は反対側にずれて離れる）
+const STILL_OFFSET = 0.6;
+const offsetLine = <L extends { d: string; mid: Point; bounces?: { pt: Point; at: number }[] }>(l: L): L => {
+	const m = l.d.match(/^M([-\d.]+) ([-\d.]+) L([-\d.]+) ([-\d.]+)$/);
+	if (!m) return l;
+	const [x1, y1, x2, y2] = m.slice(1).map(Number);
+	const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+	// 進む向きの右側（画面の座標で y は下向き）
+	const ox = (-(y2 - y1) / len) * STILL_OFFSET;
+	const oy = ((x2 - x1) / len) * STILL_OFFSET;
+	const sh = (p: Point): Point => [p[0] + ox, p[1] + oy];
+	return {
+		...l,
+		d: `M${x1 + ox} ${y1 + oy} L${x2 + ox} ${y2 + oy}`,
+		mid: sh(l.mid),
+		bounces: l.bounces?.map((b) => ({ ...b, pt: sh(b.pt) })),
+	};
+};
+const stillPanel = still
+	? {
+			figures: panels[panels.length - 1].figures,
+			lines: panels.flatMap((pn) =>
+				pn.lines.map((l) =>
+					offsetLine(l.type !== 'move' && l.label && pn.n !== undefined ? { ...l, label: `${circled(pn.n)}${l.label}` } : l),
+				),
+			),
+		}
+	: undefined;
 ---
 
-<figure class:list={['court', { multi }]} style={`--cols: ${Math.min(panels.length, 4)}`}>
+<figure class:list={['court', { multi, still }]} style={`--cols: ${Math.min(panels.length, 4)}`}>
 	{
 		multi && (
 			<div class="anim" data-court-anim>
@@ -348,8 +379,26 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 
 			</div>
 		)
 	}
+	{
+		stillPanel && (
+			<div class="panels">
+				<div class="panel">
+					<CourtFrame
+						figures={stillPanel.figures}
+						lines={stillPanel.lines}
+						viewBox={viewBox}
+						zones={diagram.zones}
+						fences={diagram.fences}
+						uid={`${uid}s`}
+						playerR={PLAYER_R}
+						title={title}
+					/>
+				</div>
+			</div>
+		)
+	}
 	{/* 複数の手がある図はアニメーションだけを出す。1手だけの図は、止まった図を1枚出す */}
-	{!multi && (
+	{!multi && !stillPanel && (
 	<div class="panels">
 		{
 			panels.map((pn, i) => (

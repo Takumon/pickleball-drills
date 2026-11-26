@@ -246,6 +246,7 @@ export default function Builder({ base }: { base: string }) {
 										{d.variants.map((v) => (
 											<button type="button" class="variant-add" onClick={() => addDrill(d, v.key)} title={`${v.name}で足す`}>
 												＋{v.name}
+												{v.default && ' •'}
 											</button>
 										))}
 									</span>
@@ -329,7 +330,7 @@ export default function Builder({ base }: { base: string }) {
 					<button type="button" onClick={() => add({ kind: 'heading', text: '' })}>
 						＋見出し
 					</button>
-					<button type="button" onClick={() => add({ kind: 'break', min: 5 })}>
+					<button type="button" onClick={() => add({ kind: 'break', min: 2 })}>
 						＋休憩
 					</button>
 					<button type="button" onClick={() => add({ kind: 'note', text: '' })}>

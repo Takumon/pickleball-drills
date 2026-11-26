@@ -1,5 +1,6 @@
 /**
- * 練習メニューのビルダー（PC向け）。左でドリルを探して足し、右でメニューを組む。
+ * 練習メニューのビルダー（PC向け）。左でドリルを探して足し、真ん中でメニューを組む。
+ * 横幅が広い画面では、右にメニュー表示のページをスマホの幅で並べ、組んでいる内容を少し遅れて映す（プレビュー）。
  * 保存の機能は持たず、URL（メニュー表示のページ）が保存の代わり。作業中の内容だけはブラウザに残す。
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
@@ -77,6 +78,30 @@ export default function Builder({ base }: { base: string }) {
 	const query$ = menuToQuery(menu);
 	const viewUrl = `${location.origin}${base}/?${query$}`;
 	const sum = totalMinutes(menu);
+
+	// プレビュー: 入力のたびに読み込み直すと重いので、手が止まってから少し待って URL を変える。
+	// 読み込み直しても、見ていた位置（スクロール）は保つ
+	const [previewUrl, setPreviewUrl] = useState(viewUrl);
+	const previewRef = useRef<HTMLIFrameElement>(null);
+	const previewScroll = useRef(0);
+	useEffect(() => {
+		const t = window.setTimeout(() => {
+			try {
+				previewScroll.current = previewRef.current?.contentWindow?.scrollY ?? 0;
+			} catch {
+				/* 読めなくても続ける */
+			}
+			setPreviewUrl(viewUrl);
+		}, 500);
+		return () => window.clearTimeout(t);
+	}, [viewUrl]);
+	const restorePreviewScroll = () => {
+		try {
+			previewRef.current?.contentWindow?.scrollTo(0, previewScroll.current);
+		} catch {
+			/* 戻せなくても続ける */
+		}
+	};
 
 	// 作業中の内容をブラウザに残す
 	useEffect(() => {
@@ -382,6 +407,11 @@ export default function Builder({ base }: { base: string }) {
 						</button>
 					</div>
 				</details>
+			</section>
+
+			<section class="preview">
+				<h2>プレビュー（スマホの幅）</h2>
+				<iframe ref={previewRef} src={previewUrl} title="メニューのプレビュー" onLoad={restorePreviewScroll} />
 			</section>
 		</div>
 	);

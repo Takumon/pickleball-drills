@@ -93,10 +93,14 @@ function setup(root: HTMLElement) {
 			const g = frame.querySelector<SVGGElement>(`[data-player-id="${m.dataset.player}"]`);
 			// 横から見た図の人も、奥行き（縦）だけ一緒に動かす
 			const sg = frame.querySelector<SVGGElement>(`[data-side-player="${m.dataset.player}"]`);
+			// 動く量は、線の長さではなく体の中心の差（data-shift）。線は丸と重ならないよう両端を縮めてあり、
+			// 線の端まで動かすと、次の手で動いた先に描かれた人と位置がずれて、一瞬跳んで見えるため
+			const shift = m.dataset.shift?.split(',').map(Number);
 			const len = m.getTotalLength();
 			const start = m.getPointAtLength(0);
 			const end = m.getPointAtLength(len);
-			return { g, sg, dx: end.x - start.x, dy: end.y - start.y, delay: Number(m.dataset.delay) || 0 };
+			const [dx, dy] = shift ?? [end.x - start.x, end.y - start.y];
+			return { g, sg, dx, dy, delay: Number(m.dataset.delay) || 0 };
 		});
 		const lens = balls.map((b) => b.getTotalLength());
 		// 線はマスク側の線（.reveal）を伸ばして見せる。本体の線は点線・破線のまま描ける

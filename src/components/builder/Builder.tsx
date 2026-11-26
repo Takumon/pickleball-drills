@@ -25,6 +25,19 @@ interface State {
 }
 
 const STORAGE_KEY = 'pickleball-drills:builder';
+/** 3列の幅（左の「ドリルを探す」と右のプレビュー）。境目をドラッグして変え、ブラウザに残す */
+const WIDTHS_KEY = 'pickleball-drills:builder-widths';
+const COL = { cat: { min: 240, def: 380 }, prev: { min: 320, def: 400 }, menuMin: 360, gap: 20 } as const;
+type Widths = { cat: number; prev: number };
+const loadWidths = (): Widths => {
+	try {
+		const w = JSON.parse(localStorage.getItem(WIDTHS_KEY) ?? 'null');
+		if (w && typeof w.cat === 'number' && typeof w.prev === 'number') return w;
+	} catch {
+		/* 読めなければ既定の幅 */
+	}
+	return { cat: COL.cat.def, prev: COL.prev.def };
+};
 let nextUid = 1;
 const withUid = (it: MenuItem): Row => ({ ...it, uid: nextUid++ });
 const toMenu = (s: State): Menu => ({
@@ -57,6 +70,56 @@ function loadInitial(): State {
 export default function Builder({ base }: { base: string }) {
 	const [catalog, setCatalog] = useState<CatalogDrill[]>([]);
 	const [state, setState] = useState<State>(loadInitial);
+	// 列の幅: 境目（.splitter）を押さえて左右に動かす。真ん中の列は残りの幅で、狭くなりすぎないようにする
+	const [widths, setWidths] = useState<Widths>(loadWidths);
+	const [resizing, setResizing] = useState(false);
+	const builderRef = useRef<HTMLDivElement>(null);
+	const startResize = (side: 'cat' | 'prev', e: PointerEvent) => {
+		e.preventDefault();
+		const el = e.currentTarget as HTMLElement;
+		try {
+			el.setPointerCapture(e.pointerId);
+		} catch {
+			/* 続ける */
+		}
+		const startX = e.clientX;
+		const start = { ...widths };
+		const total = builderRef.current?.getBoundingClientRect().width ?? window.innerWidth;
+		setResizing(true);
+		let latest = start;
+		const onMove = (ev: PointerEvent) => {
+			const dx = ev.clientX - startX;
+			const other = side === 'cat' ? start.prev : start.cat;
+			const max = total - other - COL.menuMin - COL.gap * 2;
+			const v = side === 'cat' ? start.cat + dx : start.prev - dx;
+			const w = Math.round(Math.max(COL[side].min, Math.min(max, v)));
+			latest = { ...start, [side]: w };
+			setWidths(latest);
+		};
+		const onUp = () => {
+			el.removeEventListener('pointermove', onMove);
+			el.removeEventListener('pointerup', onUp);
+			el.removeEventListener('pointercancel', onUp);
+			setResizing(false);
+			try {
+				localStorage.setItem(WIDTHS_KEY, JSON.stringify(latest));
+			} catch {
+				/* 残せなくても続ける */
+			}
+		};
+		el.addEventListener('pointermove', onMove);
+		el.addEventListener('pointerup', onUp);
+		el.addEventListener('pointercancel', onUp);
+	};
+	const resetWidths = () => {
+		const w = { cat: COL.cat.def, prev: COL.prev.def };
+		setWidths(w);
+		try {
+			localStorage.removeItem(WIDTHS_KEY);
+		} catch {
+			/* 続ける */
+		}
+	};
 	const [category, setCategory] = useState('');
 	const [query, setQuery] = useState('');
 	const [notice, setNotice] = useState('');
@@ -240,8 +303,18 @@ export default function Builder({ base }: { base: string }) {
 	};
 
 	return (
-		<div class="builder">
+		<div
+			class={`builder${resizing ? ' resizing' : ''}`}
+			ref={builderRef}
+			style={{ '--cat-w': `${widths.cat}px`, '--prev-w': `${widths.prev}px` }}
+		>
 			<section class="catalog">
+				<div
+					class="splitter splitter-right"
+					onPointerDown={(e) => startResize('cat', e as unknown as PointerEvent)}
+					onDblClick={resetWidths}
+					title="ドラッグで幅を変える（ダブルクリックで元に戻す）"
+				/>
 				<h2>ドリルを探す</h2>
 				<div class="filters">
 					<select value={category} onChange={(e) => setCategory((e.target as HTMLSelectElement).value)}>
@@ -410,6 +483,12 @@ export default function Builder({ base }: { base: string }) {
 			</section>
 
 			<section class="preview">
+				<div
+					class="splitter splitter-left"
+					onPointerDown={(e) => startResize('prev', e as unknown as PointerEvent)}
+					onDblClick={resetWidths}
+					title="ドラッグで幅を変える（ダブルクリックで元に戻す）"
+				/>
 				<h2>プレビュー（スマホの幅）</h2>
 				<iframe ref={previewRef} src={previewUrl} title="メニューのプレビュー" onLoad={restorePreviewScroll} />
 			</section>

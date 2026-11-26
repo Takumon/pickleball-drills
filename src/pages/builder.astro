@@ -74,9 +74,52 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 	.builder .preview {
 		display: none;
 	}
+	.builder .splitter {
+		display: none;
+	}
 	@media (min-width: 1200px) {
 		.builder {
-			grid-template-columns: minmax(300px, 1fr) minmax(0, 560px) 400px;
+			/* 左と右の幅は、列の境目をドラッグして変える（Builder.tsx の --cat-w / --prev-w）。真ん中は残りの幅 */
+			grid-template-columns: var(--cat-w, 380px) minmax(0, 1fr) var(--prev-w, 400px);
+		}
+		/* 列の境目のつまみ。列と列の間（隙間の真ん中）に置き、押さえて左右に動かす */
+		.builder .splitter {
+			display: block;
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			width: 14px;
+			cursor: col-resize;
+			touch-action: none;
+			z-index: 3;
+		}
+		.builder .splitter-right {
+			right: -17px;
+		}
+		.builder .splitter-left {
+			left: -17px;
+		}
+		.builder .splitter::after {
+			content: '';
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: 6px;
+			width: 2px;
+			border-radius: 1px;
+			background: transparent;
+		}
+		.builder .splitter:hover::after,
+		.builder.resizing .splitter::after {
+			background: var(--accent);
+		}
+		/* ドラッグ中は、プレビューの iframe にマウスを取られないようにし、文字が選ばれないようにする */
+		.builder.resizing {
+			cursor: col-resize;
+			user-select: none;
+		}
+		.builder.resizing iframe {
+			pointer-events: none;
 		}
 		/* 真ん中の列が狭いときは、行の中身を折り返して列からはみ出さないようにする */
 		.builder .body {

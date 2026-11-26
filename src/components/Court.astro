@@ -265,6 +265,19 @@ const groups: { n?: number; shots: Shot[] }[] =
 	numbered.length > 0
 		? numbered.map((n) => ({ n, shots: diagram.shots.filter((s) => s.n === n) }))
 		: [{ shots: diagram.shots }];
+// 球が2つ以上同時に動く手: アニメーションで動かすボールは各手の最初の球なので、
+// 前の手の最初の球を受けた人が打つ球を、その手の最初に並べる（ボールが前の手の続きになる）
+{
+	let prevTo: string | undefined;
+	for (const g of groups) {
+		const hits = g.shots.filter((s) => s.type !== 'move');
+		const lead = (prevTo && hits.find((s) => s.from === prevTo)) || hits[0];
+		if (lead) {
+			g.shots = [lead, ...g.shots.filter((s) => s !== lead)];
+			prevTo = typeof lead.to === 'string' ? lead.to : undefined;
+		}
+	}
+}
 const positions = new Map<string, Point>(diagram.players.map((p) => [p.id, [p.x, p.y]]));
 const panels = groups.map((g) => {
 	const figures = diagram.players.map((p) => figureOf(p, positions.get(p.id)!));
@@ -276,12 +289,19 @@ const panels = groups.map((g) => {
 	const byIdTo = new Map(
 		diagram.players.map((p) => [p.id, movedTo.has(p.id) ? figureOf(p, movedTo.get(p.id)!) : byId.get(p.id)!]),
 	);
+	// 同じ手に同じ名前の線が2本以上あるとき（球を2つ以上同時に使うドリル）は、名前を最初の1本にだけ付ける（重なって読めないため）
+	const seenLabels = new Set<string>();
 	const lines = g.shots.map((s) => ({
 		...lineOf(s, byId, groups.length > 1, byIdTo),
 		// 相手の打球を見て動く人は、反応する時間だけ遅れて動き出す（自分で打ちながら動くときは遅れない）
 		delay:
 			s.type === 'move' && g.shots.some((o) => o.type !== 'move' && o.from !== s.from) ? reactionMs : undefined,
-	}));
+	})).map((l) => {
+		if (l.type === 'move' || !l.label) return l;
+		if (seenLabels.has(l.label)) return { ...l, label: undefined };
+		seenLabels.add(l.label);
+		return l;
+	});
 	// 横から見た図で描くパドルの高さ: この手で打つ人は打つ高さ、受ける人は受ける高さ、ほかは既定の高さ。
 	// 同じ手で2つ以上打つときも、それぞれの打球から決める
 	const sideH = (id: string) => {

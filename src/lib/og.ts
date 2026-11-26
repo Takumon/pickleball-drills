@@ -6,6 +6,7 @@
  * 2. きっかけの手: 主役の手より前で、主役以外の人が打った最後の1球
  * 3. きっかけの手から主役の手の前までの、主役の人の動き（サイドステップ、下がるなど）
  * それより前の手（最初のディンクの往復など）は描かない。
+ * 4. 主役の手に球が2つ以上あるとき（球を2つ以上同時に使うドリル）は、その手だけを描く（全部の球が同時に飛ぶ様子が決めの場面）
  * 合わないドリルは、図のデータの ogSteps で描く手（番号）を指定する。
  * 選んだ手は 1, 2… と番号を振り直し、人はその最初の手の時点の位置に置く。
  */
@@ -24,7 +25,9 @@ export function ogDiagram(d: Diagram): Diagram {
 		const main = [...hits].reverse().find((s) => typeof s.from === 'string' && practice.has(s.from));
 		if (!main) return d;
 		const trigger = [...hits].reverse().find((s) => steps(s) < steps(main) && s.from !== main.from);
-		if (!trigger) picked = [main];
+		const together = hits.filter((s) => steps(s) === steps(main));
+		if (together.length >= 2) picked = d.shots.filter((s) => steps(s) === steps(main));
+		else if (!trigger) picked = [main];
 		else
 			picked = d.shots.filter(
 				(s) =>

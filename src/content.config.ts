@@ -38,6 +38,13 @@ const diagram = z.object({
 				facing: z.enum(['up', 'down']).optional(),
 				/** 左利きで描く（既定は右利き） */
 				lefty: z.boolean().default(false),
+				/**
+				 * 相手の球を受けるときに動く位置（例: near-rightOuter-kitchen）。at が基本の位置になる。
+				 * 書いておくと、コードが動きを足す: 相手がこの人へ打った手で、反応して sidestep の位置へ動き（球はそこへ届く）、
+				 * 次に自分が打つ手で、打ちながら基本の位置へ戻る。最初の手で自分から打つ人は、受けたあとの sidestep の位置から始める
+				 * （繰り返したときに最後の立ち位置と最初の立ち位置がそろい、人が跳ばない）
+				 */
+				sidestep: z.string().optional(),
 			}),
 		)
 		.default([]),
@@ -112,10 +119,37 @@ const diagram = z.object({
 		if (!spot) ctx.addIssue({ code: 'custom', message: `コート図: "${ref}" は人の ID でも位置の名前でもない` });
 		return spot ?? [0, 0];
 	};
+	// 基本の位置と受けるときの位置（sidestep）の行き来を、打つ順から動き（move）として足す
+	const shots = [...d.shots];
+	const hits = d.shots.filter((s) => s.type !== 'move').sort((a, b) => (a.n ?? 0) - (b.n ?? 0));
+	for (const p of d.players) {
+		if (!p.sidestep) continue;
+		const side = spotPoint(p.sidestep);
+		if (!side) {
+			ctx.addIssue({ code: 'custom', message: `コート図: sidestep "${p.sidestep}" は位置の名前ではない` });
+			continue;
+		}
+		const first = hits.find((s) => s.to === p.id || s.from === p.id);
+		let atSide = !!first && first.from === p.id && first.to !== p.id;
+		if (atSide) {
+			const q = players.find((q) => q.id === p.id)!;
+			[q.x, q.y] = side;
+		}
+		const base = p.at ?? ([p.x ?? 0, p.y ?? 0] as [number, number]);
+		for (const s of hits) {
+			if (s.to === p.id && !atSide) {
+				shots.push({ from: p.id, to: p.sidestep, type: 'move', n: s.n, feed: false, afterBounce: false, fall: false });
+				atSide = true;
+			} else if (s.from === p.id && atSide) {
+				shots.push({ from: p.id, to: base, type: 'move', n: s.n, feed: false, afterBounce: false, fall: false });
+				atSide = false;
+			}
+		}
+	}
 	return {
 		...d,
 		players,
-		shots: d.shots.map((s) => ({ ...s, from: resolve(s.from), to: resolve(s.to) })),
+		shots: shots.map((s) => ({ ...s, from: resolve(s.from), to: resolve(s.to) })),
 		fences: [...(fence?.segments ?? []), ...d.fences],
 	};
 });

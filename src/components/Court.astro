@@ -150,9 +150,16 @@ function heightFn(s: Shot, bounces: { at: number }[], netAt?: number): ((t: numb
 	const h0 = ft(s.hit ?? shotHeights[s.type].hit);
 	const peak = ft(s.peak ?? shotHeights[s.type].peak);
 	const recv = receiveHeight(s);
-	// 高さの放物線（2次ベジェ）。山が両端より低ければ、そのままつなぐ
-	const hop = (ha: number, hb: number, p: number) => {
-		const c = p > Math.max(ha, hb) ? 2 * p - (ha + hb) / 2 : (ha + hb) / 2;
+	// 高さの放物線（2次ベジェ）。山が両端より低ければ、そのままつなぐ。
+	// netU（この区間の中でネットを越える位置、0〜1）があれば、ネットの白帯より NET_CLEAR_FT 上を必ず通るように山を上げる
+	// （ネットが区間の端に近いと、真ん中の山だけではネットの上で低くなりすぎるため）
+	const hop = (ha: number, hb: number, p: number, netU?: number) => {
+		let c = p > Math.max(ha, hb) ? 2 * p - (ha + hb) / 2 : (ha + hb) / 2;
+		if (netU !== undefined && netU > 0 && netU < 1) {
+			const need = ft('tape') + NET_CLEAR_FT;
+			const k = 2 * netU * (1 - netU);
+			c = Math.max(c, (need - (1 - netU) ** 2 * ha - netU ** 2 * hb) / k);
+		}
 		return (u: number) => (1 - u) ** 2 * ha + 2 * u * (1 - u) * c + u ** 2 * hb;
 	};
 	const b = bounces[0]?.at;
@@ -179,15 +186,17 @@ function heightFn(s: Shot, bounces: { at: number }[], netAt?: number): ((t: numb
 		height = hop(0, recv, recv);
 	} else if (b !== undefined && b < 0.999) {
 		// 途中で弾む: 着地まで1つ目の山、弾んでから受ける高さまで上がる
-		const first = hop(h0, 0, peak);
+		const first = hop(h0, 0, peak, netAt !== undefined && netAt < b ? netAt / b : undefined);
 		const second = hop(0, recv, recv);
 		height = (t) => (t <= b ? first(t / b) : second((t - b) / (1 - b)));
 	} else {
-		height = hop(h0, b !== undefined ? 0 : recv, peak);
+		height = hop(h0, b !== undefined ? 0 : recv, peak, netAt);
 	}
 	return height;
 }
 
+/** ドライブ以外の球が、ネットの上で白帯より少なくともどれだけ高く通るか（ft） */
+const NET_CLEAR_FT = 0.3;
 /** ドライブがネットの白帯の上をどれだけ越えるか（ft） */
 const DRIVE_CLEAR_FT = 0.8;
 

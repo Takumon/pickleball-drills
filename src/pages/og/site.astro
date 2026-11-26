@@ -6,10 +6,15 @@
  * 練馬ピックルの名前は、右下のタイルに小さく入れる（主張は控えめに）。タイルはボールのタイルと同じ濃い緑で、
  * ライム（差し色）はボールとコートの点線だけに使う。
  */
-import { readFileSync } from 'node:fs';
+import { getCollection } from 'astro:content';
+import { categories } from '../../config/categories';
 import { og } from '../../config/og';
 import { DEPTHS, LANES } from '../../config/court';
-const ball = readFileSync('public/favicon.svg', 'utf8');
+// 右上のタイル: ドリルがあるカテゴリの名前（並びはサイドバーと同じ）。全部ではないと分かるように、最後に etc. を付ける。
+// 長い名前は「・」の前だけにする（スピードアップ・ファイヤーファイト → スピードアップ）
+const used = new Set((await getCollection('docs')).flatMap((e) => (e.data.drill ? [e.data.drill.category] : [])));
+// タイルに収まるのは5行まで（カテゴリが増えても、並び順で先の5つだけを出す）
+const shown = categories.filter((c) => used.has(c.code)).slice(0, 5).map((c) => (c.label.length > 9 ? c.label.split('・')[0] : c.label));
 // 画像の中ではコートが小さく見えるので、人をドリルの図の K 倍で描く
 const K = 1.5;
 // 人の絵（ドリルの図と同じ形: 体の丸・腕・パドル）。A は奥で下向き、B は手前で上向き。全員右利き
@@ -97,14 +102,19 @@ const B = person('B', LANES.right, DEPTHS.near.kitchen, true);
 			.court svg {
 				height: 100%;
 			}
-			.ball {
+			.cats {
 				background: var(--tile);
+				color: var(--paper);
 				display: flex;
-				align-items: center;
+				flex-direction: column;
 				justify-content: center;
+				padding: 22px 26px;
+				font-size: 21px;
+				font-weight: 800;
+				line-height: 1.55;
 			}
-			.ball :global(svg) {
-				width: 68%;
+			.cats .etc {
+				color: var(--lime);
 			}
 			.brand {
 				background: var(--tile);
@@ -157,7 +167,10 @@ const B = person('B', LANES.right, DEPTHS.near.kitchen, true);
 					))}
 				</svg>
 			</div>
-			<div class="tile ball" set:html={ball} />
+			<div class="tile cats">
+				{shown.map((label) => <div>{label}</div>)}
+				<div class="etc">etc.</div>
+			</div>
 			<div class="tile brand"><small>BY</small><b>練馬ピックル</b></div>
 		</div>
 	</body>

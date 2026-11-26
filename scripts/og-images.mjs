@@ -62,11 +62,12 @@ const drills = readdirSync(DRILLS, { withFileTypes: true })
 		const fm = parse(readFileSync(file, 'utf8').split('---')[1]);
 		const d = fm.drill;
 		const hash = sha(JSON.stringify({ r: rendererHash, title: fm.title, category: d.category, focus: d.focus, diagram: d.diagram }));
-		return { id: d.id, hash, path: `/og/${d.id}/` };
+		return { id: d.id, category: d.category, hash, path: `/og/${d.id}/` };
 	})
 	.sort((a, b) => a.id.localeCompare(b.id));
-// サイト共通の画像（トップページと練習メニュー）。材料はそのページとボールの絵
-drills.push({ id: 'site', hash: sha(['src/pages/og/site.astro', 'src/config/og.ts', 'src/config/court.ts', 'public/favicon.svg'].map((f) => readFileSync(f, 'utf8')).join('\n')), path: '/og/site/' });
+// サイト共通の画像（トップページと練習メニュー）。材料はそのページ・配色・コートの値と、ドリルがあるカテゴリの一覧
+const usedCategories = [...new Set(drills.map((d) => d.category))].sort().join(',');
+drills.push({ id: 'site', hash: sha([...['src/pages/og/site.astro', 'src/config/og.ts', 'src/config/court.ts', 'src/config/categories.ts'].map((f) => readFileSync(f, 'utf8')), usedCategories].join('\n')), path: '/og/site/' });
 
 const manifest = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {};
 const stale = drills.filter((d) => args.has('--all') || manifest[d.id] !== d.hash || !existsSync(join(OUT, `${d.id}.png`)));

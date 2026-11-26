@@ -1,17 +1,18 @@
-// 共有のプレビュー画像（OGP、1200×630）を書き出す。`npm run og` で動かす（ビルドしてから、このスクリプト）。
-// ビルドしたドリルごとの /og/<ID>/ のページをヘッドレスのブラウザで開き、public/og/<ID>.png に保存する。
-// 画像はリポジトリに入れておき、ドリルを足したり図や文を直したりしたときに、手で作り直す（GitHub Actions では作らない）。
+// 共有のプレビュー画像（OGP、1200×630）を書き出す。`npm run build` の中で、`astro build` のあとに動く。
+// ビルドしたドリルごとの /og/<ID>/ のページをヘッドレスのブラウザで開き、dist/og/<ID>.png に保存する。
+// ビルドのたびに全部作り直すので、画像が古くなることはない（画像はリポジトリに入れない）。
 // ページの中身（どの手を描くか、文字の並び）は src/pages/og/[id].astro と src/lib/og.ts が決める。
 //
-// ブラウザ: この PC の Google Chrome を使う（なければ playwright-core の Chromium）。
-// 日本語のフォント: Mac のヒラギノを使う。
+// ブラウザ: Google Chrome があればそれを、なければ playwright-core の Chromium を使う。
+//   GitHub Actions では Chromium と日本語フォント（fonts-noto-cjk）を入れてから動かす（.github/workflows）。
+// 日本語のフォント: Mac はヒラギノ、GitHub Actions は Noto Sans CJK JP。
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { chromium } from 'playwright-core';
 
 const DIST = 'dist';
-const OUT = 'public/og';
+const OUT = join(DIST, 'og');
 const BASE = '/pickleball-drills';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
 
@@ -44,4 +45,4 @@ for (const id of ids) {
 }
 await browser.close();
 server.close();
-console.log(`[og] ${ids.length} 枚のプレビュー画像を書き出しました（${OUT}/<ID>.png）。コミットしてください`);
+console.log(`[og] ${ids.length} 枚のプレビュー画像を書き出しました（${OUT}/<ID>.png）`);

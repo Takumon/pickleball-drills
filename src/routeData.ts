@@ -1,19 +1,13 @@
 /**
  * ページの head に、共有のプレビュー画像（og:image）を足す。
- * ドリルのページは、public/og/<ID>.png（`npm run og` で書き出してコミットしたもの）を使う。
- * 画像がまだないドリルは、プレビュー画像なしにして、ビルドのときに知らせる。
+ * ドリルのページは、ビルドのあとに書き出す /og/<ID>.png（scripts/og-images.mjs）を使う。
  */
-import { existsSync } from 'node:fs';
 import { defineRouteMiddleware } from '@astrojs/starlight/route-data';
 
 export const onRequest = defineRouteMiddleware((context) => {
 	const route = context.locals.starlightRoute;
 	const drill = route.entry.data.drill;
 	if (!drill) return;
-	if (!existsSync(`public/og/${drill.id}.png`)) {
-		console.warn(`[og] ${drill.id}: プレビュー画像がありません。npm run og で作ってください`);
-		return;
-	}
 	const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 	const image = new URL(`${base}/og/${drill.id}.png`, context.site).href;
 	route.head.push(

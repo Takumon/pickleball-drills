@@ -347,3 +347,20 @@
 	text-align: center;
 	margin-top: 0.25rem;
 }
+
+/* 共有のプレビュー画像（止まった1枚の図）は、人を 1.5 倍で描く（Court.astro の FIG と合わせる） */
+.court.still .player text {
+	font-size: 1.65px;
+}
+.court.still .player .body {
+	stroke-width: 0.33;
+}
+.court.still .player .inner-ring {
+	stroke-width: 0.21;
+}
+.court.still .player .arm {
+	stroke-width: 0.45;
+}
+.court.still .player .paddle {
+	stroke-width: 0.68;
+}

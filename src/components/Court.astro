@@ -22,8 +22,12 @@ interface Props {
 }
 const { diagram, title = 'コート図', still = false } = Astro.props;
 
-/** 人・腕・パドルは見やすさ優先で、コートの縮尺より大きく描く（単位はフィート相当） */
-const PLAYER_R = 1.3;
+/**
+ * 人・腕・パドルは見やすさ優先で、コートの縮尺より大きく描く（単位はフィート相当）。
+ * 共有のプレビュー画像（still）は、LINE などで小さく出るので、さらに FIG 倍で描く（styles/court.css の .court.still と合わせる）
+ */
+const FIG = still ? 1.5 : 1;
+const PLAYER_R = 1.3 * FIG;
 const uid = `c${Math.random().toString(36).slice(2, 8)}`;
 const k1 = COURT.net - COURT.kitchen;
 const k2 = COURT.net + COURT.kitchen;
@@ -40,7 +44,7 @@ function figureOf(p: Player, pos: Point) {
 	const side = p.lefty ? -1 : 1;
 	// 本人から見た右（上向きなら +x、下向きなら -x）。左利きなら逆側
 	const r: Point = [-f[1] * side, f[0] * side];
-	const at = (dr: number, df: number): Point => [x + r[0] * dr + f[0] * df, y + r[1] * dr + f[1] * df];
+	const at = (dr: number, df: number): Point => [x + (r[0] * dr + f[0] * df) * FIG, y + (r[1] * dr + f[1] * df) * FIG];
 	// 構えごとの、肩・手・パドルの先の位置（体の中心からの「右」「前」の距離）
 	// 腕 = 肩→手の細線、パドル = 手→先の太線。体から斜め前へ開くように描く
 	const pose = {
@@ -58,7 +62,7 @@ function figureOf(p: Player, pos: Point) {
 type Figure = ReturnType<typeof figureOf>;
 
 /** 端を縮める量（体の円・パドルの太線と重ならないように） */
-const inset = { body: PLAYER_R + 0.3, paddle: 0.45, point: 0 } as const;
+const inset = { body: PLAYER_R + 0.3, paddle: 0.45 * FIG, point: 0 } as const;
 
 /**
  * 打球・動きの線を計算する。人を指す参照は、打球ならパドルの真ん中、人の動きなら体の中心へ。
@@ -272,7 +276,7 @@ const multi = !still && panels.length > 1;
 // 表示範囲: crop=auto なら、人と打球が入る縦の範囲だけを切り出す（横はコート全幅、ネットは必ず入れる）。
 // ただし、トランが関わる側（人や打球がキッチンラインより3ft以上後ろにある）は
 // 位置関係が分かるように必ずベースラインまで入れる。全コマで同じ範囲にそろえる。
-const padX = multi ? 1.5 : 3.5;
+const padX = multi ? 1.5 : still ? 2 : 3.5;
 const pad = 3.5;
 let top = -pad;
 let bottom = COURT.length + pad;

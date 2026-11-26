@@ -3,7 +3,8 @@
  * サイト共通の共有プレビュー画像（1200×630）のもとになるページ。トップページと練習メニューの URL で使う。
  * `npm run og` で public/og/site.png に書き出す（scripts/og-images.mjs）。
  * デザイン: Bento Grid（角の丸いタイルを並べる）。配色は深い緑（練馬ピックルのロゴの緑）×生成り×ライム。
- * 練馬ピックルの名前は、右下のタイルに小さく入れる（主張は控えめに）。
+ * 練馬ピックルの名前は、右下のタイルに小さく入れる（主張は控えめに）。タイルはボールのタイルと同じ濃い緑で、
+ * ライム（差し色）はボールとコートの点線だけに使う。
  */
 import { readFileSync } from 'node:fs';
 import { og } from '../../config/og';
@@ -91,8 +92,8 @@ const ball = readFileSync('public/favicon.svg', 'utf8');
 				width: 68%;
 			}
 			.brand {
-				background: var(--lime);
-				color: var(--ink);
+				background: var(--tile);
+				color: var(--paper);
 				display: flex;
 				flex-direction: column;
 				justify-content: flex-end;

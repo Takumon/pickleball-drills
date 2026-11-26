@@ -1,12 +1,14 @@
 ---
 /**
- * 共有のプレビュー画像（OGP、1200×630）のもとになるページ。ビルドのあとに、このページを画像にする。
- * 左にカテゴリ・ドリル名・練習の目的・サイト名、右に「決めの場面」のコート図（src/lib/og.ts）。
- * LINE や X はダークモードでも画像の色を変えないので、ライトの配色で固定する。
+ * ドリルごとの共有プレビュー画像（OGP、1200×630）のもとになるページ。`npm run og` で画像にする。
+ * デザインはサイト共通の画像（site.astro）と同じ Bento Grid と配色（config/og.ts）。
+ * 左のタイルにカテゴリ・ドリル名・練習の目的・サイト名、右のタイルに「決めの場面」のコート図（src/lib/og.ts）。
  */
 import { getCollection } from 'astro:content';
+import { readFileSync } from 'node:fs';
 import Court from '../../components/Court.astro';
 import { categories } from '../../config/categories';
+import { og } from '../../config/og';
 import { ogDiagram } from '../../lib/og';
 
 export async function getStaticPaths() {
@@ -15,6 +17,7 @@ export async function getStaticPaths() {
 }
 const { title, drill } = Astro.props;
 const category = categories.find((c) => c.code === drill.category)?.label ?? '';
+const ball = readFileSync('public/favicon.svg', 'utf8');
 ---
 
 <!doctype html>
@@ -23,75 +26,95 @@ const category = categories.find((c) => c.code === drill.category)?.label ?? '';
 		<meta charset="utf-8" />
 		<meta name="robots" content="noindex" />
 		<title>{title}</title>
-		<style is:global>
+		<style is:global define:vars={og}>
 			html,
 			body {
 				margin: 0;
-				background: #f6f7f4;
+			}
+			* {
+				box-sizing: border-box;
 			}
 			.og {
-				box-sizing: border-box;
 				width: 1200px;
 				height: 630px;
-				display: flex;
-				gap: 48px;
-				padding: 56px 64px;
+				overflow: hidden;
+				display: grid;
+				grid-template-columns: 1fr 400px;
+				gap: 16px;
+				padding: 28px;
+				background: var(--bg);
 				font-family: 'Hiragino Sans', 'Noto Sans CJK JP', 'Noto Sans JP', system-ui, sans-serif;
-				color: #111827;
+				color: var(--ink);
+			}
+			.og .tile {
+				border-radius: 28px;
+				overflow: hidden;
 			}
 			.og .text {
-				flex: 1;
+				background: var(--paper);
+				padding: 44px 48px 36px;
 				display: flex;
 				flex-direction: column;
 			}
 			.og .category {
-				font-size: 28px;
-				font-weight: 700;
-				color: #2f6b48;
+				font-size: 22px;
+				font-weight: 800;
+				letter-spacing: 0.08em;
+				color: var(--green);
 			}
 			.og h1 {
-				font-size: 56px;
-				line-height: 1.3;
-				/* 日本語を文節で折り返す（「スマッ／シュ」のような切れ方を避ける） */
+				font-size: 58px;
+				line-height: 1.22;
+				margin: 14px 0 22px;
+				font-weight: 800;
+				letter-spacing: -0.01em;
 				word-break: auto-phrase;
-				margin: 16px 0 28px;
 			}
 			.og .focus {
-				word-break: auto-phrase;
-				font-size: 30px;
+				font-size: 27px;
 				line-height: 1.6;
-				color: #374151;
+				color: #3b4a42;
 				margin: 0;
+				word-break: auto-phrase;
 			}
 			.og .site {
 				margin-top: auto;
 				display: flex;
 				align-items: center;
 				gap: 12px;
-				font-size: 26px;
-				font-weight: 700;
-				color: #4b5563;
+				font-size: 22px;
+				font-weight: 800;
 			}
-			.og .site .dot {
-				width: 26px;
-				height: 26px;
-				border-radius: 50%;
-				background: #facc15;
+			.og .site .ball {
+				width: 34px;
+				height: 34px;
+			}
+			.og .site .ball svg {
+				width: 100%;
+				height: 100%;
+				display: block;
+			}
+			.og .site .by {
+				margin-left: auto;
+				font-size: 18px;
+				font-weight: 700;
+				opacity: 0.6;
 			}
 			.og .diagram {
-				width: 360px;
+				background: var(--tile);
 				display: flex;
 				align-items: center;
 				justify-content: center;
+				padding: 20px;
 			}
 			.og .diagram .court {
 				margin: 0;
 				max-width: none;
 				width: 100%;
 			}
-			.og .diagram svg {
+			.og .diagram svg.court-svg {
 				display: block;
-				max-height: 518px;
+				max-height: 534px;
 				width: auto;
 				max-width: 100%;
 				margin: 0 auto;
@@ -100,13 +123,15 @@ const category = categories.find((c) => c.code === drill.category)?.label ?? '';
 	</head>
 	<body>
 		<div class="og">
-			<div class="text">
+			<div class="tile text">
 				<div class="category">{category}</div>
 				<h1>{title}</h1>
 				<p class="focus">{drill.focus}</p>
-				<div class="site"><span class="dot"></span>ピックルボール ドリル集</div>
+				<div class="site">
+					<span class="ball" set:html={ball} />ピックルボール ドリル集<span class="by">by 練馬ピックル</span>
+				</div>
 			</div>
-			<div class="diagram">
+			<div class="tile diagram">
 				{drill.diagram && <Court diagram={ogDiagram(drill.diagram)} title={title} still />}
 			</div>
 		</div>

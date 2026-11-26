@@ -1,13 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.08 -1.08 2.16 2.16">
-	<!-- ピックルボール（図で使う黄色い穴あきボールと同じ形） -->
-	<circle r="1" fill="#facc15" stroke="#a16207" stroke-width="0.07"/>
-	<g fill="#a16207">
-		<circle r="0.16"/>
-		<circle cx="0.502" cy="0.29" r="0.14"/>
-		<circle cy="0.58" r="0.14"/>
-		<circle cx="-0.502" cy="0.29" r="0.14"/>
-		<circle cx="-0.502" cy="-0.29" r="0.14"/>
-		<circle cy="-0.58" r="0.14"/>
-		<circle cx="0.502" cy="-0.29" r="0.14"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.04 -1.04 2.08 2.08">
+	<!-- ピックルボール。屋外用の40穴のボールを少し傾けて見た形（穴は球の表面にむらなく散らし、手前の面だけを描く）。
+	     サイトのアイコンと共有画像に使う。コートの図で動くボールとは別（図のボールは黄色のまま） -->
+	<defs>
+		<radialGradient id="pb" cx="38%" cy="32%" r="78%">
+			<stop offset="0" stop-color="#e3f37a"/>
+			<stop offset="1" stop-color="#b4d23a"/>
+		</radialGradient>
+	</defs>
+	<circle r="1" fill="url(#pb)"/>
+	<g fill="#7d9a1c">
+		<ellipse cx="0.035" cy="-0.861" rx="0.053" ry="0.105" transform="rotate(-87.7 0.035 -0.861)"/>
+		<ellipse cx="-0.507" cy="-0.696" rx="0.053" ry="0.105" transform="rotate(-126.1 -0.507 -0.696)"/>
+		<ellipse cx="0.025" cy="-0.518" rx="0.090" ry="0.105" transform="rotate(-87.2 0.025 -0.518)"/>
+		<ellipse cx="0.534" cy="-0.814" rx="0.024" ry="0.105" transform="rotate(-56.7 0.534 -0.814)"/>
+		<ellipse cx="-0.532" cy="-0.261" rx="0.085" ry="0.105" transform="rotate(-153.8 -0.532 -0.261)"/>
+		<ellipse cx="0.519" cy="-0.376" rx="0.081" ry="0.105" transform="rotate(-35.9 0.519 -0.376)"/>
+		<ellipse cx="-0.929" cy="-0.311" rx="0.021" ry="0.105" transform="rotate(-161.5 -0.929 -0.311)"/>
+		<ellipse cx="-0.109" cy="0.030" rx="0.104" ry="0.105" transform="rotate(164.5 -0.109 0.030)"/>
+		<ellipse cx="0.866" cy="-0.382" rx="0.034" ry="0.105" transform="rotate(-23.8 0.866 -0.382)"/>
+		<ellipse cx="-0.821" cy="0.126" rx="0.058" ry="0.105" transform="rotate(171.2 -0.821 0.126)"/>
+		<ellipse cx="0.457" cy="0.143" rx="0.092" ry="0.105" transform="rotate(17.4 0.457 0.143)"/>
+		<ellipse cx="-0.378" cy="0.447" rx="0.085" ry="0.105" transform="rotate(130.2 -0.378 0.447)"/>
+		<ellipse cx="0.886" cy="0.129" rx="0.047" ry="0.105" transform="rotate(8.3 0.886 0.129)"/>
+		<ellipse cx="0.209" cy="0.596" rx="0.081" ry="0.105" transform="rotate(70.7 0.209 0.596)"/>
+		<ellipse cx="-0.549" cy="0.733" rx="0.042" ry="0.105" transform="rotate(126.8 -0.549 0.733)"/>
+		<ellipse cx="0.670" cy="0.612" rx="0.044" ry="0.105" transform="rotate(42.4 0.670 0.612)"/>
+		<ellipse cx="-0.022" cy="0.913" rx="0.043" ry="0.105" transform="rotate(91.4 -0.022 0.913)"/>
 	</g>
+	<circle r="0.985" fill="none" stroke="#5d7212" stroke-opacity=".25" stroke-width="0.03"/>
 </svg>

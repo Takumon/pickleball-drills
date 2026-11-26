@@ -32,6 +32,8 @@ const RENDERER = [
 	'src/styles/court.css',
 	'src/config/court.ts',
 	'src/config/categories.ts',
+	'src/config/og.ts',
+	'public/favicon.svg',
 	'src/content.config.ts',
 ];
 
@@ -64,7 +66,7 @@ const drills = readdirSync(DRILLS, { withFileTypes: true })
 	})
 	.sort((a, b) => a.id.localeCompare(b.id));
 // サイト共通の画像（トップページと練習メニュー）。材料はそのページとボールの絵
-drills.push({ id: 'site', hash: sha(['src/pages/og/site.astro', 'public/favicon.svg'].map((f) => readFileSync(f, 'utf8')).join('\n')), path: '/og/site/' });
+drills.push({ id: 'site', hash: sha(['src/pages/og/site.astro', 'src/config/og.ts', 'public/favicon.svg'].map((f) => readFileSync(f, 'utf8')).join('\n')), path: '/og/site/' });
 
 const manifest = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {};
 const stale = drills.filter((d) => args.has('--all') || manifest[d.id] !== d.hash || !existsSync(join(OUT, `${d.id}.png`)));

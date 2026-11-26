@@ -1,9 +1,12 @@
 ---
 /**
  * サイト共通の共有プレビュー画像（1200×630）のもとになるページ。トップページと練習メニューの URL で使う。
- * `npm run og` で public/og/site.png に書き出す（scripts/og-images.mjs）。ライトの配色で固定する。
+ * `npm run og` で public/og/site.png に書き出す（scripts/og-images.mjs）。
+ * デザイン: Bento Grid（角の丸いタイルを並べる）。配色は深い緑（練馬ピックルのロゴの緑）×生成り×ライム。
+ * 練馬ピックルの名前は、右下のタイルに小さく入れる（主張は控えめに）。
  */
 import { readFileSync } from 'node:fs';
+import { og } from '../../config/og';
 const ball = readFileSync('public/favicon.svg', 'utf8');
 ---
 
@@ -13,53 +16,124 @@ const ball = readFileSync('public/favicon.svg', 'utf8');
 		<meta charset="utf-8" />
 		<meta name="robots" content="noindex" />
 		<title>ピックルボール ドリル集</title>
-		<style>
+		<style define:vars={og}>
 			html,
 			body {
 				margin: 0;
-				background: #f6f7f4;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			svg {
+				display: block;
 			}
 			.og {
-				box-sizing: border-box;
 				width: 1200px;
 				height: 630px;
-				display: flex;
-				align-items: center;
-				gap: 64px;
-				padding: 0 96px;
+				overflow: hidden;
 				font-family: 'Hiragino Sans', 'Noto Sans CJK JP', 'Noto Sans JP', system-ui, sans-serif;
-				color: #111827;
-				/* 下にコートの緑の帯を敷いて、ピックルボールのサイトだと分かるようにする */
-				background: linear-gradient(to bottom, #f6f7f4 0 78%, #2f6b48 78% 100%);
+				background: var(--bg);
+				padding: 28px;
+				display: grid;
+				grid-template-columns: 1.55fr 1fr 0.9fr;
+				grid-template-rows: 1fr 1fr;
+				gap: 16px;
 			}
-			.ball {
-				width: 240px;
-				height: 240px;
-				flex: none;
+			.tile {
+				border-radius: 28px;
+				overflow: hidden;
 			}
-			.ball :global(svg) {
-				width: 100%;
-				height: 100%;
+			.main {
+				grid-row: 1 / 3;
+				background: var(--paper);
+				color: var(--ink);
+				padding: 44px 48px;
+				display: flex;
+				flex-direction: column;
+			}
+			.eyebrow {
+				font-size: 18px;
+				font-weight: 800;
+				letter-spacing: 0.28em;
+				color: var(--green);
 			}
 			h1 {
-				font-size: 76px;
-				line-height: 1.2;
-				margin: 0 0 20px;
+				font-size: 84px;
+				line-height: 1.05;
+				margin: 20px 0 0;
+				font-weight: 800;
+				letter-spacing: -0.02em;
 			}
-			p {
-				font-size: 34px;
-				color: #374151;
-				margin: 0;
+			.sub {
+				margin-top: auto;
+				font-size: 22px;
+				opacity: 0.8;
+				white-space: nowrap;
+			}
+			.court {
+				grid-row: 1 / 3;
+				background: var(--tile);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 26px;
+			}
+			.court svg {
+				height: 100%;
+			}
+			.ball {
+				background: var(--tile);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			.ball :global(svg) {
+				width: 68%;
+			}
+			.brand {
+				background: var(--lime);
+				color: var(--ink);
+				display: flex;
+				flex-direction: column;
+				justify-content: flex-end;
+				padding: 22px 26px;
+			}
+			.brand small {
+				font-size: 15px;
+				letter-spacing: 0.2em;
+				opacity: 0.7;
+				font-weight: 700;
+			}
+			.brand b {
+				font-size: 28px;
+				margin-top: 6px;
 			}
 		</style>
 	</head>
 	<body>
 		<div class="og">
-			<div class="ball" set:html={ball} />
-			<div>
-				<h1>ピックルボール<br />ドリル集</h1>
-				<p>練習会で使うドリルと練習メニュー</p>
+			<div class="tile main">
+				<div class="eyebrow">PICKLEBALL DRILLS</div>
+				<h1>ピックル<br />ボール<br />ドリル集</h1>
+				<div class="sub">練習会で使うドリルと練習メニュー</div>
 			</div>
+			<div class="tile court">
+				<svg viewBox="0 0 20 44" aria-hidden="true">
+					<rect width="20" height="44" fill={og.green}></rect>
+					<rect y="15" width="20" height="14" fill={og.green2}></rect>
+					<g fill="none" stroke={og.paper} stroke-width="0.3">
+						<rect width="20" height="44"></rect>
+						<line x1="0" y1="15" x2="20" y2="15"></line>
+						<line x1="0" y1="29" x2="20" y2="29"></line>
+						<line x1="10" y1="0" x2="10" y2="15"></line>
+						<line x1="10" y1="29" x2="10" y2="44"></line>
+					</g>
+					<line x1="-1" y1="22" x2="21" y2="22" stroke={og.paper} stroke-width="0.4" stroke-dasharray="0.8 0.5"></line>
+					<line x1="5" y1="12" x2="15" y2="33" stroke={og.lime} stroke-width="0.5" stroke-dasharray="0.6 0.5"></line>
+				</svg>
+			</div>
+			<div class="tile ball" set:html={ball} />
+			<div class="tile brand"><small>BY</small><b>練馬ピックル</b></div>
 		</div>
 	</body>
 </html>

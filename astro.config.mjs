@@ -2,7 +2,15 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import preact from '@astrojs/preact';
+import { existsSync, readdirSync } from 'node:fs';
 import { categories } from './src/config/categories.ts';
+
+// サイドバーのカテゴリ名の後ろに、ドリルの数を小さく出す（custom.css の .drill-count）。
+// 設定を読むときに数えるので、ドリルを足したら開発サーバーを起動し直す
+const drillCount = (code) => {
+	const dir = `src/content/docs/drills/${code}`;
+	return existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith('.md')).length : 0;
+};
 
 // https://astro.build/config
 export default defineConfig({
@@ -37,6 +45,7 @@ export default defineConfig({
 				{ label: '大原則', slug: 'principles' },
 				...categories.map((c) => ({
 					label: c.label,
+					badge: { text: String(drillCount(c.code)), class: 'drill-count' },
 					collapsed: true,
 					items: [{ autogenerate: { directory: `drills/${c.code}` } }],
 				})),

@@ -31,3 +31,14 @@
 		padding-block: 0.75rem;
 	}
 }
+
+/* サイドバーのカテゴリ名の後ろのドリルの数。バッジの枠や色は付けず、小さな灰色の数字にする */
+.sidebar-content .drill-count {
+	background: none;
+	border: none;
+	padding: 0;
+	margin-inline-start: 0.35em;
+	font-size: 0.75em;
+	font-weight: 400;
+	color: var(--sl-color-gray-3);
+}

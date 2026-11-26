@@ -24,6 +24,8 @@ export default defineConfig({
 			// ページ下の「前へ」「次へ」は使わないので出さない
 			pagination: false,
 			customCss: ['./src/styles/custom.css'],
+			// 共有のプレビュー画像（og:image）をドリルのページに足す
+			routeMiddleware: './src/routeData.ts',
 			components: {
 				MarkdownContent: './src/components/MarkdownContent.astro',
 			},

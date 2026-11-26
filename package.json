@@ -6,6 +6,7 @@
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro build",
+    "og": "astro build && node scripts/og-images.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -15,5 +16,8 @@
     "astro": "^7.3.6",
     "preact": "^11.2.0",
     "sharp": "^0.35.3"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.49.1"
   }
 }

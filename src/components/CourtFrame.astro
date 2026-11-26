@@ -38,6 +38,8 @@ interface Line {
 	feed?: boolean;
 	/** 動き出すまでの遅れ（ミリ秒）。相手の打球を見てから動く人 */
 	delay?: number;
+	/** 新しいボール（前の球で点が決まったあと、または球出し） */
+	fresh?: boolean;
 	/** 人の動きで、体の中心が動く量（線の長さではなく、動く前と後の位置の差） */
 	shift?: Point;
 }
@@ -55,8 +57,10 @@ interface Props {
 	/** 横から見た高さの帯（x0: 地面の線の x、k: 高さ 1ft あたりの長さ） */
 	side?: { x0: number; k: number; width: number; top: number; bottom: number };
 	step?: number;
+	/** ゲーム形式の点: この手の前と後の点 */
+	score?: { before: number; after: number };
 }
-const { figures, lines, viewBox, zones, fences = [], uid, playerR, title, animated = false, side, step } = Astro.props;
+const { figures, lines, viewBox, zones, fences = [], uid, playerR, title, animated = false, side, step, score } = Astro.props;
 const NET_FT = 2.9;
 /** 横から見た図: ラインの位置で地面の線の色を変える長さ */
 const GROUND_MARK = 0.6;
@@ -91,6 +95,8 @@ const isSub = (t: string) => t === 'move';
 	aria-label={title}
 	class:list={['court-svg', { frame: animated }]}
 	data-step={step}
+	data-score-before={score?.before}
+	data-score-after={score?.after}
 	data-side-x0={side?.x0}
 	data-side-k={side?.k}
 	data-side-max={side ? side.width / side.k : undefined}
@@ -162,7 +168,7 @@ const isSub = (t: string) => t === 'move';
 						data-ms={animated ? l.ms : undefined}
 						data-pre={animated && l.pre ? `${l.pre[0]},${l.pre[1]}` : undefined}
 						data-pre-from-h={animated && l.preFromH !== undefined ? l.preFromH : undefined}
-						data-fresh={animated && l.type !== 'move' && (l.feed || (l.pre && l.preFromH === undefined)) ? '' : undefined}
+						data-fresh={animated && l.type !== 'move' && (l.feed || l.fresh || (l.pre && l.preFromH === undefined)) ? '' : undefined}
 						data-delay={animated && l.delay ? l.delay : undefined}
 						data-h={animated ? l.heights : undefined}
 					/>

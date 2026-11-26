@@ -278,6 +278,26 @@ const groups: { n?: number; shots: Shot[] }[] =
 		}
 	}
 }
+// ゲーム形式: 点が決まった球（point）の次の球は新しいボール。繰り返しの最初の球も、最後の球で点が決まっていれば新しいボール
+const freshShots = new Set<Shot>();
+{
+	const hits = groups.flatMap((g) => g.shots.filter((s) => s.type !== 'move'));
+	hits.forEach((s, k) => {
+		const prev = hits[(k - 1 + hits.length) % hits.length];
+		if (hits.length > 1 && prev.point) freshShots.add(s);
+	});
+}
+// ゲーム形式の点: 各手の前と後の点（打球の point で動く）
+const scores = (() => {
+	const sc = diagram.score;
+	if (!sc) return undefined;
+	let now = 0;
+	return groups.map((g) => {
+		const before = now;
+		for (const s of g.shots) if (s.point) now += s.point === sc.plus ? 1 : s.point === sc.minus ? -1 : 0;
+		return { before, after: now };
+	});
+})();
 const positions = new Map<string, Point>(diagram.players.map((p) => [p.id, [p.x, p.y]]));
 const panels = groups.map((g) => {
 	const figures = diagram.players.map((p) => figureOf(p, positions.get(p.id)!));
@@ -293,6 +313,7 @@ const panels = groups.map((g) => {
 	const seenLabels = new Set<string>();
 	const lines = g.shots.map((s) => ({
 		...lineOf(s, byId, groups.length > 1, byIdTo),
+		fresh: freshShots.has(s),
 		// 相手の打球を見て動く人は、反応する時間だけ遅れて動き出す（自分で打ちながら動くときは遅れない）
 		delay:
 			s.type === 'move' && g.shots.some((o) => o.type !== 'move' && o.from !== s.from) ? reactionMs : undefined,
@@ -434,9 +455,26 @@ if (stillPanel) {
 							animated
 							side={side}
 							step={i}
+							score={scores?.[i]}
 						/>
 					))}
 				</div>
+				{
+					diagram.score && (
+						<div class="score-track" data-score-track data-score-to={diagram.score.to} aria-label="点の目盛り">
+							<span class="score-end">{diagram.score.minus} の勝ち</span>
+							<div class="score-bar">
+								{Array.from({ length: diagram.score.to * 2 + 1 }, (_, k) => k - diagram.score!.to).map((v) => (
+									<span class:list={['score-tick', { zero: v === 0 }]} style={`--pos: ${(v + diagram.score!.to) / (diagram.score!.to * 2)}`}>
+										{v > 0 ? `+${v}` : v < 0 ? `−${-v}` : '0'}
+									</span>
+								))}
+								<span class="score-marker" style="--pos: 0.5" />
+							</div>
+							<span class="score-end">{diagram.score.plus} の勝ち</span>
+						</div>
+					)
+				}
 				<div class="anim-controls">
 					<button type="button" data-act="prev" aria-label="前の手">◀</button>
 					<button type="button" data-act="toggle" aria-label="一時停止">❚❚</button>

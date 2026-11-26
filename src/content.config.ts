@@ -76,6 +76,8 @@ const diagram = z.object({
 				peak: z.enum(keysOf<HeightLevel>(heightLevels)).optional(),
 				/** 投げ下ろすような弧: 打った高さから上がらずに、だんだん速く下がっていく（上から投げ下ろす球出しなど）。peak は使わない */
 				fall: z.boolean().default(false),
+				/** ゲーム形式: この球で決まり、書いた人（ID）が1点取る。図に score があれば点の目盛りが動く。次の球は新しいボールになる */
+				point: z.string().optional(),
 			}),
 		)
 		.default([]),
@@ -87,6 +89,11 @@ const diagram = z.object({
 	/** auto=使っている範囲だけ縦に切り出す / full=コート全体 */
 	crop: z.enum(['auto', 'full']).default('auto'),
 	caption: z.string().optional(),
+	/**
+	 * ゲーム形式の点の目盛り（綱引きのように、2人で1つの点を動かすゲーム）。to: 勝ちの点、plus: 点が増える人、minus: 点が減る人。
+	 * 打球の point で点が動き、図の下の目盛りの印が左右に動く
+	 */
+	score: z.object({ to: z.number().int().min(1), plus: z.string(), minus: z.string() }).optional(),
 	/** 共有のプレビュー画像に描く手（番号 n）。書かなければ決まりで選ぶ（src/lib/og.ts） */
 	ogSteps: z.array(z.number().int()).optional(),
 }).refine(

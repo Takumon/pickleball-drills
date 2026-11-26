@@ -38,6 +38,16 @@ const BALL_FADE_MS = 300;
 function setup(root: HTMLElement) {
 	const frames = [...root.querySelectorAll<SVGSVGElement>('svg.frame')];
 	const dots = [...root.querySelectorAll<HTMLElement>('[data-step-dot]')];
+	// ゲーム形式の点の目盛り: 手の始まりは「前の点」、手が終わったら「後の点」へ印を動かす
+	const track = root.querySelector<HTMLElement>('[data-score-track]');
+	const marker = track?.querySelector<HTMLElement>('.score-marker');
+	const scoreTo = Number(track?.dataset.scoreTo) || 1;
+	const setScore = (v: number | undefined, instant: boolean) => {
+		if (!marker || v === undefined || Number.isNaN(v)) return;
+		marker.classList.toggle('instant', instant);
+		marker.style.setProperty('--pos', String((v + scoreTo) / (scoreTo * 2)));
+	};
+	const scoreOf = (f: SVGSVGElement, k: 'scoreBefore' | 'scoreAfter') => (f.dataset[k] !== undefined ? Number(f.dataset[k]) : undefined);
 	const toggleBtn = root.querySelector<HTMLButtonElement>('[data-act="toggle"]')!;
 	let current = 0;
 	// 「視差効果を減らす」設定のときは自動再生せず、ボタンで1手ずつ切り替えて静止した図を見せる
@@ -92,6 +102,8 @@ function setup(root: HTMLElement) {
 		frames.forEach((f, k) => (f.style.display = k === i ? '' : 'none'));
 		dots.forEach((d, k) => d.classList.toggle('active', k === i));
 		const frame = frames[i];
+		// 点の目盛り: 動かす手は前の点から、止まった図は後の点を見せる
+		setScore(scoreOf(frames[i], animate ? 'scoreBefore' : 'scoreAfter'), true);
 		// ループで消したボールを、次に見せるときは元に戻す
 		frame.querySelectorAll<SVGElement>('.ball, .side-ball').forEach((b) => (b.style.opacity = ''));
 		const ball = frame.querySelector<SVGGElement>('.ball')!;
@@ -253,6 +265,7 @@ function setup(root: HTMLElement) {
 				if (balls[0]) {
 					drawBall(ballAt(balls[0], 1));
 				}
+				setScore(scoreOf(frame, 'scoreAfter'), false);
 				done?.();
 			}
 		};
@@ -306,6 +319,8 @@ function setup(root: HTMLElement) {
 		// 位置が同じでも、高さが違えば（例: 肩の高さで受けた球を、膝の高さのディンクで打ち始める）つながらないので出し直す
 		const fade = !!start && (fresh || !end || Math.hypot(start.x - end.x, start.y - end.y) > 0.5 || Math.abs(start.h - end.h) > 0.5);
 		const balls = [...frame.querySelectorAll<SVGElement>('.ball, .side-ball')];
+		// 点の目盛りも、最初の手の始まりの点（0）へ戻す
+		setScore(scoreOf(first, 'scoreBefore'), false);
 		const t0 = performance.now();
 		const tick = (now: number) => {
 			const t = Math.min(1, (now - t0) / REWIND_MS);

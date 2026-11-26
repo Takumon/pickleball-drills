@@ -369,3 +369,49 @@
 .court.still .player .paddle {
 	stroke-width: 0.68;
 }
+
+/* ゲーム形式の点の目盛り（綱引き）: 図の下に −N … 0 … +N を並べ、点が決まるたびに印が左右に動く */
+.court .score-track {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0.4rem auto 0;
+	max-width: 22rem;
+	font-size: var(--sl-text-xs, 0.8rem);
+}
+.court .score-end {
+	white-space: nowrap;
+	color: var(--sl-color-gray-3);
+}
+.court .score-bar {
+	position: relative;
+	flex: 1;
+	height: 1.9rem;
+	border-bottom: 2px solid var(--sl-color-gray-4);
+}
+.court .score-tick {
+	position: absolute;
+	left: calc(1rem + var(--pos) * (100% - 2rem));
+	bottom: 0.35rem;
+	transform: translateX(-50%);
+	color: var(--sl-color-gray-3);
+	font-variant-numeric: tabular-nums;
+}
+.court .score-tick.zero {
+	color: var(--sl-color-white);
+	font-weight: 700;
+}
+.court .score-marker {
+	position: absolute;
+	left: calc(1rem + var(--pos) * (100% - 2rem));
+	bottom: -0.45rem;
+	width: 0.8rem;
+	height: 0.8rem;
+	border-radius: 50%;
+	background: var(--sl-color-text-accent);
+	transform: translateX(-50%);
+	transition: left 0.45s ease-in-out;
+}
+.court .score-marker.instant {
+	transition: none;
+}

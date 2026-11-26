@@ -66,13 +66,21 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		padding: 0 0 40px;
 		align-items: start;
 	}
+	/* PC で使う画面なので、サイトの本文の幅の上限（1080px）を外し、画面の横幅いっぱいまで使う（このページだけ） */
+	.sl-container {
+		max-width: none;
+	}
 	/* プレビュー（メニュー表示をスマホの幅で映す）は、横に並べられる広い画面だけで出す */
 	.builder .preview {
 		display: none;
 	}
 	@media (min-width: 1200px) {
 		.builder {
-			grid-template-columns: minmax(260px, 320px) 1fr 400px;
+			grid-template-columns: minmax(260px, 340px) minmax(0, 1fr) 400px;
+		}
+		/* 真ん中の列が狭いときは、行の中身を折り返して列からはみ出さないようにする */
+		.builder .body {
+			flex-wrap: wrap;
 		}
 		.builder .preview {
 			display: flex;

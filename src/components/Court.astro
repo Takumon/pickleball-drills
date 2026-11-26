@@ -116,10 +116,10 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean, byIdTo: M
 	const netAt = (y1 - COURT.net) * (y2 - COURT.net) < 0 ? (COURT.net - y1) / (y2 - y1) : undefined;
 	// 飛ぶ時間は距離 ÷ 球の種類ごとの速さ（同じ種類の球は、距離によらず同じ速さに見える）
 	const ms = animMs(s.type, Math.hypot(x2 - x1, y2 - y1));
-	// 打つ前に手から一度弾ませる球: 体の前に落とした球が弾み、打点まで上がってから飛んでいく
+	// 打つ前に一度弾ませる球（手から落とす球出し、トラップして弾ませる球）: パドルの真下で弾み、打点まで上がってから飛んでいく。
+	// 弾む位置をパドルと同じ所にするので、上から見た図でボールが横に跳ばない
 	const hitter = typeof s.from === 'string' ? byId.get(s.from) : undefined;
-	const pre: Point | undefined =
-		s.afterBounce && hitter ? [hitter.x, hitter.y + (hitter.y < COURT.net ? 1 : -1) * PRE_BOUNCE_FT] : undefined;
+	const pre: Point | undefined = s.afterBounce && hitter ? [hitter.face[0], hitter.face[1]] : undefined;
 	// 人の動きで、体の中心がどれだけ動くか。線は丸と重ならないよう両端を縮めて描くので、線の長さとは違う
 	const shift: Point | undefined = s.type === 'move' ? [b.pt[0] - a.pt[0], b.pt[1] - a.pt[1]] : undefined;
 	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces, netAt), ms, pre, shift };
@@ -206,8 +206,6 @@ const DRIVE_CLEAR_FT = 0.8;
  * ベースラインの後ろで受ける球（サーブ・リターン・深い球出し）は深く弾み、キッチンやトランで受ける球は少し手前で弾む。
  */
 const BOUNCE_BEFORE = { baseline: 4.3, other: 2.1 } as const;
-/** 打つ前に手から弾ませる球（afterBounce）を、体の何 ft 前に落とすか */
-const PRE_BOUNCE_FT = 2;
 
 /**
  * バウンドの印の位置。at は線の長さに対する割合（アニメーションで、ボールがそこを通ったときに印を出す）。

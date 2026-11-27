@@ -14,6 +14,8 @@ import {
 	WAIST_FT,
 	TRAP_BASE,
 	TRAP_NO_BOUNCE,
+	SOFT_ARC,
+	baseShot,
 } from '../config/court';
 import CourtFrame from './CourtFrame.astro';
 import '../styles/court.css';
@@ -159,6 +161,8 @@ function receiveHeight(s: Shot) {
 	const next = rest.find((n) => n.type !== 'move' && n.from === s.to);
 	if (next && next.type !== 'move') return ft(next.hit ?? shotHeights[next.type].hit);
 	// 次に打つ球が図にないとき: 弾んでから受ける球は低い位置（膝の高さ）、ノーバウンドで受ける球は既定の高さ
+	// 柔らかく落とす弧（ディンクの仲間）は、受ける人のところでも低い（相手にノーバウンドで強く打たせない。書き手の指摘）
+	if ((SOFT_ARC.types as string[]).includes(baseShot(s.type))) return ft(s.bounce === 'front' ? 'knee' : 'belowWaist');
 	return ft(s.bounce === 'front' ? 'knee' : defaultReceiveHeight);
 }
 /**
@@ -206,6 +210,20 @@ function heightFn(s: Shot, bounces: { at: number }[], netAt?: number): ((t: numb
 		}
 		return (u: number) => (1 - u) ** 2 * ha + 2 * u * (1 - u) * c + u ** 2 * hb;
 	};
+	// 柔らかく落とす弧（ディンクの仲間）: 打つ人の側で山（p）になり、ネットの白帯より SOFT_ARC.netClearFt 上を通って、
+	// ネットを越えたら下がっていく（ネットぎりぎりは通さない。相手が打つところで低ければよい。書き手の指摘）。
+	// 山の前後は放物線の半分ずつで、山で傾きが0になる。山の位置 tp は、ネットの上でちょうど決めた高さになる所にする
+	const soft = !s.fall && (SOFT_ARC.types as string[]).includes(baseShot(s.type));
+	const arc = (ha: number, hb: number, p: number, netU?: number) => {
+		if (!soft || p <= Math.max(ha, hb)) return hop(ha, hb, p, netU, s.fall);
+		let tp = 0.45;
+		if (netU !== undefined && netU > 0 && netU < 1) {
+			const need = Math.min(p, ft('tape') + SOFT_ARC.netClearFt);
+			const r = Math.sqrt((p - need) / (p - hb));
+			tp = Math.min(netU, Math.max(0.15, (netU - r) / (1 - r)));
+		}
+		return (u: number) => (u <= tp ? p - (p - ha) * (1 - u / tp) ** 2 : p - (p - hb) * ((u - tp) / (1 - tp)) ** 2);
+	};
 	const b = bounces[0]?.at;
 	// ドライブ（ストローク）: 低く打ち出して少しだけ弧を描き、ネットの白帯を越える手前で山になり、
 	// トップスピンでネットを越えたあとにぐっと沈む（前半はゆるやかに上がり、後半は加速して下がる）
@@ -230,11 +248,11 @@ function heightFn(s: Shot, bounces: { at: number }[], netAt?: number): ((t: numb
 		height = hop(0, recv, recv);
 	} else if (b !== undefined && b < 0.999) {
 		// 途中で弾む: 着地まで1つ目の山、弾んでから受ける高さまで上がる
-		const first = hop(h0, 0, peak, netAt !== undefined && netAt < b ? netAt / b : undefined, s.fall);
+		const first = arc(h0, 0, peak, netAt !== undefined && netAt < b ? netAt / b : undefined);
 		const second = hop(0, recv, recv);
 		height = (t) => (t <= b ? first(t / b) : second((t - b) / (1 - b)));
 	} else {
-		height = hop(h0, b !== undefined ? 0 : recv, peak, netAt, s.fall);
+		height = arc(h0, b !== undefined ? 0 : recv, peak, netAt);
 	}
 	return height;
 }

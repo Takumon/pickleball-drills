@@ -5,6 +5,7 @@ description: ドリルページのコート図の読み方と、線・人の描�
 
 import DiagramLegend from '../../components/DiagramLegend.astro';
 import ConceptIndex from '../../components/ConceptIndex.astro';
+import LegendExample from '../../components/LegendExample.astro';
 
 コート図はコートを真上から見た図です。下側が自分たちの側です。
 
@@ -17,12 +18,16 @@ import ConceptIndex from '../../components/ConceptIndex.astro';
 - 支柱の付いた細い線は、コートに置く柵です。ドロップの練習では柵に当てずに内側へ落とします。
 - トランはキッチンラインとベースラインの中間の位置です。トランに人がいる図は、ベースラインまで描きます。
 
+<LegendExample id="drp003">白い二重丸のBが練習役、濃い丸のAが球出し役です。人から斜め前へ出る細い線が腕、太い線がパドルです。相手側のキッチンの角にある支柱の付いた線が柵で、Bは柵に当てずに内側へドロップを落とします。</LegendExample>
+
 ## 番号とアニメーション
 
 - 打つ順番に①②③と番号を付け、アニメーションで1手ずつ繰り返し再生します。
 - 相手の打球を見てから動く人（ロブを見て下がる人など）は、相手が打ってから少し遅れて動き出します。自分で打ちながら動くときは、打つのと同時に動き出します。
 - ◀ と ▶ で1手ずつ戻したり進めたりでき、❚❚ で一時停止します。①②③を押すと、その手を表示します。
 - 端末で「視差効果を減らす」を設定している場合は自動で再生せず、◀ ▶ や①②③で1手ずつ切り替えて見られます。
+
+<LegendExample id="dnk003">①②の番号の順に1手ずつ再生します。下の◀ ▶ ❚❚ と①②で、手を戻したり止めたりできます。</LegendExample>
 
 <DiagramLegend />
 

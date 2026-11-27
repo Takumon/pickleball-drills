@@ -2,14 +2,19 @@
 /**
  * 「図の見方」ページ用の凡例。打球の線・人の描き方を、実際の図と同じスタイル（styles/court.css）で描く。
  */
-import { heightLevels, roleLabels, shotHeights, shotLabels, shotSpeedKmh, shotSwing, type Role, type ShotType } from '../config/court';
+import { heightLevels, keyPoseOf, roleLabels, shotHeights, shotLabels, shotSpeedKmh, shotSwing, swingOf, type Role, type ShotType } from '../config/court';
 import { sideFigure } from '../lib/side-figure';
+import { fitPoses, mixPose } from '../lib/side-render';
+import { arcLerp } from '../lib/arm-ik';
+import { taper } from '../lib/arm-shape';
+import LegendExample from './LegendExample.astro';
 import '../styles/court.css';
 
-const order: ShotType[] = ['speedup', 'smash', 'punch', 'drive', 'roll', 'block', 'serve', 'return', 'reset', 'dink', 'drop', 'volleyDink', 'lob', 'move'];
+const order: ShotType[] = ['speedup', 'flick', 'smash', 'punch', 'drive', 'roll', 'block', 'serve', 'return', 'reset', 'dink', 'drop', 'volleyDink', 'lob', 'move'];
 /** 線の形と太さ（styles/court.css の .t-* と合わせる） */
 const style: Record<ShotType, string> = {
 	speedup: '実線',
+	flick: '実線',
 	smash: '実線',
 	punch: '実線',
 	roll: '実線',
@@ -26,6 +31,7 @@ const style: Record<ShotType, string> = {
 };
 const width: Record<ShotType, string> = {
 	speedup: '太い',
+	flick: '太い',
 	smash: '太い',
 	punch: '太い',
 	roll: 'ふつう',
@@ -52,14 +58,102 @@ const speed = (t: ShotType) => `時速 約${shotSpeedKmh[t]}km`;
  * 打つ動き（shotSwing）の向きを矢印で示す。図は人が立った向き（上が上）に回して描く
  */
 const strokeOrder = order.filter((t): t is Exclude<ShotType, 'move'> => t !== 'move');
-const strokes = strokeOrder.map((t) => {
-	const hitH = heightLevels[shotHeights[t].hit].ft;
-	const fig = sideFigure({ x0: 0, k: 1, y: 0, toNet: 1, hitH, faceY: 1.4 });
-	const sw = shotSwing[t];
-	// 矢印: 振りかぶった所から、打つ所を通って、振り抜いた所まで（立った向きの図では、右 = 前、上 = 上）
+// フォアとバックで形が違う打ち方（shotSwing の bh）は、カードを2枚にする
+// 打つ高さが腰より上か下かで形が違う打ち方（shotSwing の high）も、カードを2枚にする
+const strokeEntries = strokeOrder.flatMap((t): { t: typeof t; hand?: string; high?: boolean }[] =>
+	'bh' in shotSwing[t] && shotSwing[t].bh ? [{ t, hand: 'fh' }, { t, hand: 'bh' }] : 'high' in shotSwing[t] && shotSwing[t].high ? [{ t }, { t, high: true }] : [{ t }],
+);
+const strokes = strokeEntries.map(({ t, hand, high }) => {
+	const hitH = high ? heightLevels.waist.ft : heightLevels[shotHeights[t].hit].ft;
+	// 決めのポーズ（keyPoses）がある打ち方は、構えのポーズで描き、カードでもポーズのあいだを動かす（案A）
+	const kp0 = hand !== 'bh' ? keyPoseOf(t, hitH) : undefined;
+	const poseInput = { x0: 0, k: 1, y: 0, toNet: 1, hitH, faceY: 1.4, shot: t, hand };
+	// ポーズは打つ高さに合わせる（fitPoses）
+	const fitted = kp0 ? fitPoses(poseInput, kp0.poses) : undefined;
+	const kp = fitted ? { poses: fitted.poses } : undefined;
+	const bodyBack = fitted?.bodyBack;
+	const fig = sideFigure({ ...poseInput, angles: kp?.poses.ready, bodyBack });
+	const sw = swingOf(t, hand, hitH);
+	const name = hand ? `${shotLabels[t]}（${hand === 'bh' ? 'バック' : 'フォア'}）` : 'high' in shotSwing[t] && shotSwing[t].high ? `${shotLabels[t]}（${high ? '腰より上' : '腰より下'}）` : shotLabels[t];
+	const key = hand ? `${t}-${hand}` : high ? `${t}-high` : t;
+	// 矢印: 振りかぶった所から、途中の点と打つ所を通って、振り抜いた所まで（立った向きの図では、右 = 前、上 = 上）
 	const pt = ([up, fwd]: [number, number]) => `${1.4 + fwd},${-hitH - up}`;
-	const arrow = `${pt(sw.back)} ${pt([0, 0])} ${pt(sw.follow)}`;
-	return { t, hitH, fig, sw, arrow, level: heightLevels[shotHeights[t].hit].label };
+	// 点をなめらかな曲線（Catmull-Rom を3次ベジェにしたもの）でつなぐ。振りかぶり → 打つ所 → 振り抜きの区切りでも折れない
+	const curve = (pts: string[]) => {
+		const q = pts.map((p) => p.split(',').map(Number));
+		const f = (v: number) => +v.toFixed(3);
+		let d = `M${q[0].map(f).join(' ')}`;
+		for (let i = 0; i + 1 < q.length; i++) {
+			const p0 = q[Math.max(0, i - 1)];
+			const [p1, p2] = [q[i], q[i + 1]];
+			const p3 = q[Math.min(q.length - 1, i + 2)];
+			const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+			const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+			d += ` C${[...c1, ...c2, ...p2].map(f).join(' ')}`;
+		}
+		return d;
+	};
+	// 振りの道筋は、実際の動き（手が肩を中心にした弧で動く）と同じになめらかな曲線で描く（点を直線でつなぐとカクカクする）
+	const sh: [number, number] = [fig.upperArm[0], fig.upperArm[1]];
+	const way: [number, number][] = [sw.back, ...(sw.via ?? []).map(([u, f]) => [u, f] as [number, number]), [0, 0], sw.follow];
+	const toFig = ([u, f]: [number, number]): [number, number] => [hitH + u, 1.4 + f];
+	const smooth: string[] = [];
+	for (let i = 0; i + 1 < way.length; i++) {
+		// 区間ごとに真ん中の1点だけ弧の上に取り、あとは曲線でつなぐ（点が多いと、弧の半径が変わる所で曲線が波打つ）
+		for (let j = 0; j <= 2; j++) {
+			if (i > 0 && j === 0) continue;
+			const A = toFig(way[i]);
+			const B = toFig(way[i + 1]);
+			const [h, d] = sw.straight ? [A[0] + (B[0] - A[0]) * (j / 2), A[1] + (B[1] - A[1]) * (j / 2)] : arcLerp(sh[0], sh[1], A, B, j / 2);
+			smooth.push(pt([h - hitH, d - 1.4]));
+		}
+	}
+	let arrow = curve(smooth);
+	if (kp) {
+		// 決めのポーズの振り（引き切り → 打つ瞬間 → 振り抜き）で、面の真ん中が通る道
+		const faceAt = (a: typeof kp.poses.back) => {
+			const f = sideFigure({ ...poseInput, angles: a, bodyBack }).face;
+			return pt([(f[0] + f[2]) / 2 - hitH, (f[1] + f[3]) / 2 - 1.4]);
+		};
+		const seq: string[] = [];
+		for (let j = 0; j <= 6; j++) seq.push(faceAt(mixPose(kp.poses.back, kp.poses.contact, j / 6)));
+		for (let j = 1; j <= 6; j++) seq.push(faceAt(mixPose(kp.poses.contact, kp.poses.finish, j / 6)));
+		arrow = curve(seq);
+	}
+	// 関節を軸に回す振りは、面の真ん中がその関節のまわりに描く弧（振りかぶり → 振り抜き）
+	if (sw.pivot) {
+		const [px, py] = sw.pivot === 'elbow' ? [fig.upperArm[2], fig.upperArm[3]] : [fig.upperArm[0], fig.upperArm[1]];
+		// 図の座標は x = 高さ、y = 前後。面の真ん中は（高さ hitH、前 1.4）
+		const r = [hitH - px, 1.4 - py];
+		const at = (deg: number) => {
+			const a = (deg * Math.PI) / 180;
+			// 前から上へ回す（前後 → 高さの向き）
+			const up = r[0] * Math.cos(a) + r[1] * Math.sin(a);
+			const fw = -r[0] * Math.sin(a) + r[1] * Math.cos(a);
+			return pt([px + up - hitH, py + fw - 1.4]);
+		};
+		const [b, f] = sw.pivotTurn ?? sw.turn;
+		arrow = curve(Array.from({ length: 9 }, (_, i) => at(b + ((f - b) * i) / 8)));
+	}
+	// 飛び出す向き [上, 前]: 山が打つ高さより高い球は、前へ 6ft 進む間に山の高さまで上がる向き。山を作らない球（スマッシュ・
+	// パンチなど、打つ高さ ≧ 山）は、打った所から前へ 14ft 先の地面へ向かって下りる向き（書き手の指摘: スマッシュの球の向きが変）
+	const peakH = heightLevels[shotHeights[t].peak].ft;
+	const launch = peakH > hitH ? `${Math.min(7, peakH - hitH)},6` : `${-hitH},14`;
+	// 決めのポーズの打ち方は、ボールを打つ瞬間のパドルの面の真ん中に置く（図の座標: x = 前後、y = -高さ）
+	const ballAt = (() => {
+		if (!kp) return { cx: 1.4, cy: -hitH };
+		const f = sideFigure({ ...poseInput, angles: kp.poses.contact, bodyBack }).face;
+		return { cx: (f[1] + f[3]) / 2, cy: -(f[0] + f[2]) / 2 };
+	})();
+	// 矢印の先の大きさ: 振りが短い打ち方（ブロック・リセットなど）では小さくし、パドルや人を隠さない
+	const arrowLen = (() => {
+		const n = arrow.match(/-?[\d.]+/g)?.map(Number) ?? [];
+		let l = 0;
+		for (let i = 2; i + 1 < n.length; i += 2) l += Math.hypot(n[i] - n[i - 2], n[i + 1] - n[i - 1]);
+		return l;
+	})();
+	const head = Math.max(0.35, Math.min(0.8, arrowLen * 0.35));
+	return { t, key, name, hitH, fig, sw, arrow, launch, kp, poseInput, bodyBack, ballAt, head, level: high ? heightLevels.waist.label : heightLevels[shotHeights[t].hit].label, range: high ? '腰より上の球' : shotHeights[t].range && 'high' in shotSwing[t] && shotSwing[t].high ? '腰〜足首の高さ。ワンバウンドしてから打つこともある' : shotHeights[t].range };
 });
 ---
 
@@ -68,6 +162,7 @@ const strokes = strokeOrder.map((t) => {
 	<p>強く速い球は太い実線、柔らかく落とす球は細い点線、ロブは破線で描きます。人の移動は灰色の点線です。</p>
 	<p>球出しの線は出す球の種類で描き、「球出し（ディンク）」のように名前を付けます。</p>
 	<p>表の速さは実際の球速の目安です。アニメーションでは、同じ種類の球は距離によらず同じ速さで飛びます。目で追えるように、どの球も同じ割合でゆっくり再生しています。</p>
+	<LegendExample id="lob002">細い点線がディンク、破線がロブ、太い実線がスマッシュ、灰色の点線がBの下がる動きです。</LegendExample>
 	<table class="legend-table">
 		<thead>
 			<tr><th>見本</th><th>名前</th><th>線</th><th>太さ</th><th>速さ</th></tr>
@@ -102,8 +197,9 @@ const strokes = strokeOrder.map((t) => {
 	</table>
 
 	<h2>ボールの高さとバウンド</h2>
-	<p>アニメーションでは、ボールは打球の線の上を進み、打つ人と受ける人のパドルの位置を通ります。図の右の淡い帯「横から見た高さ」は、同じ場面を横から見た補助の図です。縦の線が地面、短い横線がネットの高さで、ボールが右にあるほど高い球です。人は地面から右へのびる線で描き、パドルはその人が打つ（受ける）高さに描きます。地面の線で色が薄くなっているところが、ベースラインとキッチンラインの位置です。</p>
+	<p>アニメーションでは、ボールは打球の線の上を進み、打つ人と受ける人のパドルの位置を通ります。図の右の淡い帯は、同じ場面を横から見た補助の図です。縦の線が地面、短い横線がネットの高さで、ボールが右にあるほど高い球です。人は横から見た姿で描き、パドルはその人が打つ（受ける）高さに描きます。地面の線で色が薄くなっているところが、ベースラインとキッチンラインの位置です。</p>
 	<p>帯のボールが地面の線に触れたところがバウンドです。そのとき、コートの図と帯の両方に、同じ黄色い輪が同時に出ます。輪のない球はノーバウンドで打ちます。手から一度弾ませてから打つ球出しは、手から落としたボールが体の前で弾み（輪が出ます）、打点まで上がってから飛んでいきます。</p>
+	<LegendExample id="drp005">右の淡い帯が横から見た図です。サーブとリターンは相手の手前で弾み、そのときコートの図と帯の両方に黄色い輪が出ます。</LegendExample>
 	<table class="legend-table">
 		<thead>
 			<tr><th>高さ</th><th>目安</th></tr>
@@ -155,34 +251,37 @@ const strokes = strokeOrder.map((t) => {
 	<p>パドルは、腰より下では腕の延長でヘッドが下がり、腰より上では高くなるほどヘッドが上を向きます。構えはひざを曲げて腰を落とし、胸はほぼ起こして、ひじを体の少し前に、手を体の前に出します。ロールボレーだけは、低い球に手を前へ伸ばして待ち構えるので、ひざを深く曲げ、上体も前に倒します。</p>
 	<div class="stroke-grid">
 		{
-			strokes.map(({ t, hitH, fig, sw, arrow, level }) => (
-				<figure class="stroke-card" data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn].join(',')}>
-					<svg class="court-svg stroke" viewBox="-2.3 -10 5.9 10.6" aria-hidden="true">
+			strokes.map(({ key, name, hitH, fig, sw, arrow, launch, kp, poseInput, bodyBack, ballAt, head, level, range }) => (
+				<figure class="stroke-card" data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ?? []).flat()].join(',')} data-setup={sw.setup ? '' : undefined} data-pivot={sw.pivot} data-straight={sw.straight ? '' : undefined} data-pivot-turn={sw.pivotTurn?.join(',')} data-launch={launch} data-keyposes={kp ? JSON.stringify(kp.poses) : undefined} data-pose-input={kp ? JSON.stringify(poseInput) : undefined} data-body-back={bodyBack}>
+					<svg class="court-svg stroke" viewBox="-2.9 -10 6.5 10.6" aria-hidden="true">
 						<defs>
-							<marker id={`sw-${t}`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="0.8" markerHeight="0.8" orient="auto">
+							<marker id={`sw-${key}`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth={head} markerHeight={head} orient="auto">
 								<path d="M0 0 L10 5 L0 10 z" class="swing-head" />
 							</marker>
 						</defs>
 						<line class="side-ground" x1="-1.4" y1="0" x2="3.6" y2="0" />
 						<g class="side-person" transform="matrix(0,-1,1,0,0,0)">
 							<polygon class="side-shoe" points={fig.shoe} />
-							<polyline class="side-leg" stroke-width={fig.widths.leg} points={fig.leg} />
+							<path class="side-lower" d={fig.lowerBody} />
 							<path class="side-torso" d={fig.torso} />
-							<circle class="side-hip" cx={fig.hip.cx} cy={fig.hip.cy} r={fig.hip.r} />
-							<line class="side-neck" stroke-width={fig.widths.neck} x1={fig.neck[0]} y1={fig.neck[1]} x2={fig.neck[2]} y2={fig.neck[3]} />
-							<ellipse class="side-head" cx={fig.head.cx} cy={fig.head.cy} rx={fig.head.rx} ry={fig.head.ry} transform={`rotate(${fig.head.rot} ${fig.head.cx} ${fig.head.cy})`} />
-							<line class="side-upperarm" stroke-width={fig.widths.upperArm} x1={fig.upperArm[0]} y1={fig.upperArm[1]} x2={fig.upperArm[2]} y2={fig.upperArm[3]} />
-							<line class="side-arm" stroke-width={fig.widths.forearm} x1={fig.forearm[0]} y1={fig.forearm[1]} x2={fig.forearm[2]} y2={fig.forearm[3]} />
+							<path class="side-neck-shape" d={fig.neckShape} />
+							<path class="side-head" d={fig.headShape} />
+							<path class="side-hair" d={fig.hair} />
+							<line class="side-upperarm" x1={fig.upperArm[0]} y1={fig.upperArm[1]} x2={fig.upperArm[2]} y2={fig.upperArm[3]} />
+							<line class="side-arm" x1={fig.forearm[0]} y1={fig.forearm[1]} x2={fig.forearm[2]} y2={fig.forearm[3]} />
+							<path class="side-upperarm-shape" data-w1={fig.widths.arm.shoulder} data-w2={fig.widths.arm.elbowUpper} d={taper(fig.upperArm[0], fig.upperArm[1], fig.upperArm[2], fig.upperArm[3], fig.widths.arm.shoulder, fig.widths.arm.elbowUpper)} />
+							<path class="side-forearm-shape" data-w1={fig.widths.arm.elbowFore} data-w2={fig.widths.arm.wrist} d={taper(fig.forearm[0], fig.forearm[1], fig.forearm[2], fig.forearm[3], fig.widths.arm.elbowFore, fig.widths.arm.wrist)} />
+							<circle class="side-elbow" cx={fig.upperArm[2]} cy={fig.upperArm[3]} r={fig.widths.arm.elbowFore / 2} />
 							<line class="side-grip" stroke-width={fig.widths.grip} x1={fig.grip[0]} y1={fig.grip[1]} x2={fig.grip[2]} y2={fig.grip[3]} />
 							<line class="side-paddle" stroke-width={fig.widths.face} x1={fig.face[0]} y1={fig.face[1]} x2={fig.face[2]} y2={fig.face[3]} />
 							<circle class="side-hand" cx={fig.hand.cx} cy={fig.hand.cy} r={fig.hand.r} />
 						</g>
-						<circle class="stroke-ball" cx="1.4" cy={-hitH} r="0.22" data-cx="1.4" data-cy={-hitH} />
-						<polyline class="swing-arrow" points={arrow} marker-end={`url(#sw-${t})`} />
+						<circle class="stroke-ball" cx={ballAt.cx} cy={ballAt.cy} r="0.22" data-cx={ballAt.cx} data-cy={ballAt.cy} />
+						<path class="swing-arrow" d={arrow} marker-end={`url(#sw-${key})`} />
 					</svg>
 					<figcaption>
-						<b>{shotLabels[t]}</b>
-						<span>{level}（{hitH}ft）</span>
+						<b>{name}</b>
+						<span>{range ?? level}</span>
 						<span>{sw.note}</span>
 					</figcaption>
 				</figure>
@@ -192,12 +291,18 @@ const strokes = strokeOrder.map((t) => {
 </div>
 
 <script>
-	import { arcLerp, bendSide, clampReach, solveElbow } from '../lib/arm-ik';
+	import { swingPath } from '../lib/swing-path';
+	import { arcLerp, bendSide, clampReach, limitShoulder, solveElbow } from '../lib/arm-ik';
+	import { syncArm } from '../lib/arm-shape';
+	import { sideFigure, type PoseAngles, type SideFigureInput } from '../lib/side-figure';
+	import { mixPose, renderSide } from '../lib/side-render';
 	/**
 	 * 打ち方の一覧を動かす: 振りかぶった所から、打つ所を通って振り抜き、元の構えに戻る。パドルが打つ所を通る瞬間に、
 	 * ボールが振り抜く向きへ飛んでいく。値は実際のアニメーションと同じ shotSwing（data-swing）。「視差効果を減らす」設定では動かさない
 	 */
 	const PREP_MS = 450;
+	/** 決めのポーズの振りで、打つ瞬間が来る割合（引き切り → 打つ瞬間 → 振り抜き） */
+	const POSE_CONTACT = 0.4;
 	const SWING_MS = 300;
 	const HOLD_MS = 220;
 	const RETURN_MS = 450;
@@ -206,12 +311,37 @@ const strokes = strokeOrder.map((t) => {
 	const ease = (u: number) => (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2);
 	const easeInv = (c: number) => (c < 0.5 ? Math.sqrt(c / 2) : 1 - Math.sqrt((1 - c) / 2));
 	const lerp = (p: number[], q: number[], t: number) => p.map((v, i) => v + (q[i] - v) * t);
-	if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+	// ?still を付けると動かさない（打つ所の形を確かめるため）
+	if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && !new URLSearchParams(location.search).has('still')) {
 		const cards = [...document.querySelectorAll<HTMLElement>('[data-stroke]')].map((card) => {
 			const v = (card.dataset.swing ?? '0,0,0,0').split(',').map(Number);
 			// [上へ, 前へ, パドルの回り（度。前から上へが +）]
 			const back = [v[0], v[1], v[4] ?? 0];
 			const follow = [v[2], v[3], v[5] ?? 0];
+			// 関節を軸に回す振り（ロールボレーは肩、フリックはひじ）: 腕とパドルを1つのかたまりとして回す。この図ではパドルの
+			// 回り φ（前から上へが +）は rotate(-φ) なので、手も同じだけ軸のまわりに回す
+			const pivot = card.dataset.pivot;
+			const up0 = card.querySelector<SVGLineElement>('.side-upperarm')!;
+			const fa0 = card.querySelector<SVGLineElement>('.side-arm')!;
+			const g0 = (el: Element, a: string) => Number(el.getAttribute(a));
+			const pc = pivot === 'elbow' ? [g0(up0, 'x2'), g0(up0, 'y2')] : [g0(up0, 'x1'), g0(up0, 'y1')];
+			if (pivot) {
+				const r0 = [g0(fa0, 'x2'), g0(fa0, 'y2')];
+				const arm = (card.dataset.pivotTurn ?? '').split(',').map(Number);
+				const turned = (deg: number, armDeg: number) => {
+					const a = (-armDeg * Math.PI) / 180;
+					const x = pc[0] + (r0[0] - pc[0]) * Math.cos(a) - (r0[1] - pc[1]) * Math.sin(a);
+					const y = pc[1] + (r0[0] - pc[0]) * Math.sin(a) + (r0[1] - pc[1]) * Math.cos(a);
+					return [x - r0[0], y - r0[1], deg];
+				};
+				// 腕を回す角度は、振りかぶり・振り抜きのそれぞれに渡す（data-pivot-turn。なければパドルと同じ）
+				const b = turned(v[4] ?? 0, arm.length === 2 ? arm[0] : (v[4] ?? 0));
+				const f = turned(v[5] ?? 0, arm.length === 2 ? arm[1] : (v[5] ?? 0));
+				[back[0], back[1], follow[0], follow[1]] = [b[0], b[1], f[0], f[1]];
+			}
+			// 途中の点（7つ目から3つずつ）
+			const via: [number, number, number][] = [];
+			for (let i = 6; i + 2 < v.length; i += 3) via.push([v[i], v[i + 1], v[i + 2]]);
 			const lb = Math.hypot(back[0], back[1]);
 			const lf = Math.hypot(follow[0], follow[1]);
 			const forearm = card.querySelector<SVGLineElement>('.side-arm')!;
@@ -225,29 +355,63 @@ const strokes = strokeOrder.map((t) => {
 				upper,
 				f: [num(forearm, 'x1'), num(forearm, 'y1'), num(forearm, 'x2'), num(forearm, 'y2')],
 				s0: [num(upper, 'x1'), num(upper, 'y1')],
+				// 手の弧の中心（関節を軸に回す振りはその関節、ほかは肩）
+				pc,
+				straight: card.dataset.straight !== undefined,
 				side: bendSide(num(upper, 'x1'), num(upper, 'y1'), num(upper, 'x2'), num(upper, 'y2'), num(forearm, 'x2'), num(forearm, 'y2')),
 				len: [Math.hypot(num(upper, 'x2') - num(upper, 'x1'), num(upper, 'y2') - num(upper, 'y1')), Math.hypot(num(forearm, 'x2') - num(forearm, 'x1'), num(forearm, 'y2') - num(forearm, 'y1'))],
 				ball,
 				b: [Number(ball.dataset.cx), Number(ball.dataset.cy)],
 				back,
 				follow,
-				contact: lb + lf > 0 ? lb / (lb + lf) : 0,
-				dir: lf > 0 ? [follow[0] / lf, follow[1] / lf] : [0, 1],
+				// ほかの球と同じ構えから打つ打ち方は、振りかぶった形が構え（止まっている間もその形）
+				home: card.dataset.setup !== undefined ? back : [0, 0, 0],
+				path: swingPath(back as [number, number, number], follow as [number, number, number], via),
+				contact: swingPath(back as [number, number, number], follow as [number, number, number], via).contact,
+				// ボールの飛ぶ向き: 打球の高さの変化（打つ高さ → 山の高さ）から。振り抜く向きではない（ロールは振りが上向きでも、球は前へ飛ぶ）
+				// 決めのポーズで動かすカード
+				pose: card.dataset.keyposes
+					? {
+							poses: JSON.parse(card.dataset.keyposes) as Record<'ready' | 'back' | 'contact' | 'finish', PoseAngles>,
+							input: JSON.parse(card.dataset.poseInput!) as SideFigureInput,
+							bodyBack: Number(card.dataset.bodyBack),
+						}
+					: undefined,
+				dir: (() => {
+					const [u, f] = (card.dataset.launch ?? '0,1').split(',').map(Number);
+					const l = Math.hypot(u, f) || 1;
+					return [u / l, f / l];
+				})(),
 			};
 		});
 		const tick = (now: number) => {
 			const t = now % PERIOD_MS;
 			for (const c of cards) {
 				// 振りかぶる → 打つ所 → 振り抜く → 止める → 戻る。区間ごとに、ずれ p → q の途中 tt で表す
-				const rest = [0, 0, 0];
+				const rest = c.home;
 				const s1 = PREP_MS;
+				if (c.pose) {
+					// 決めのポーズ: 構え → 引き切り → 打つ瞬間 → 振り抜き → 止める → 構え
+					const P = c.pose.poses;
+					const s2p = s1 + SWING_MS;
+					const s3p = s2p + HOLD_MS;
+					let ang = P.ready;
+					if (t < s1) ang = mixPose(P.ready, P.back, ease(t / s1));
+					else if (t < s2p) {
+						const u = ease((t - s1) / SWING_MS);
+						ang = u < POSE_CONTACT ? mixPose(P.back, P.contact, u / POSE_CONTACT) : mixPose(P.contact, P.finish, (u - POSE_CONTACT) / (1 - POSE_CONTACT));
+					} else if (t < s3p) ang = P.finish;
+					else if (t < s3p + RETURN_MS) ang = mixPose(P.finish, P.ready, ease((t - s3p) / RETURN_MS));
+					renderSide(c.upper.parentElement!, sideFigure({ ...c.pose.input, angles: ang, bodyBack: c.pose.bodyBack }));
+				}
+				if (!c.pose) {
 				const s2 = s1 + SWING_MS;
 				const s3 = s2 + HOLD_MS;
 				let seg: [number[], number[], number] = [rest, rest, 0];
 				if (t < s1) seg = [rest, c.back, ease(t / s1)];
 				else if (t < s2) {
 					const u = ease((t - s1) / SWING_MS);
-					seg = u < c.contact ? [c.back, rest, c.contact > 0 ? u / c.contact : 1] : [rest, c.follow, c.contact < 1 ? (u - c.contact) / (1 - c.contact) : 1];
+					seg = c.path.at(u);
 				} else if (t < s3) seg = [c.follow, c.follow, 0];
 				else if (t < s3 + RETURN_MS) seg = [c.follow, rest, ease((t - s3) / RETURN_MS)];
 				const [p, q, tt] = seg;
@@ -256,7 +420,10 @@ const strokes = strokeOrder.map((t) => {
 				// 手を伸ばせる所: ひじが少し曲がった所まで（court-anim.ts の REACH_RATIO と同じ）。構えのほうが遠ければ構えの所まで
 				const reach = Math.max((c.len[0] + c.len[1]) * 0.93, Math.hypot(c.f[2] - c.s0[0], c.f[3] - c.s0[1]) + 1e-6);
 				const handAt = (o: number[]): [number, number] => clampReach(c.s0[0], c.s0[1], c.f[2] + o[0], c.f[3] + o[1], reach);
-				const [cx, cy] = clampReach(c.s0[0], c.s0[1], ...arcLerp(c.s0[0], c.s0[1], handAt(p), handAt(q), tt), reach);
+				const ha = handAt(p);
+				const hb = handAt(q);
+				const way = c.straight ? [ha[0] + (hb[0] - ha[0]) * tt, ha[1] + (hb[1] - ha[1]) * tt] : arcLerp(c.pc[0], c.pc[1], ha, hb, tt);
+				const [cx, cy] = limitShoulder(c.s0[0], c.s0[1], ...clampReach(c.s0[0], c.s0[1], way[0], way[1], reach), 1);
 				const dx = cx - c.f[2];
 				const dy = cy - c.f[3];
 				const turn = p[2] + (q[2] - p[2]) * tt;
@@ -274,9 +441,11 @@ const strokes = strokeOrder.map((t) => {
 				c.forearm.setAttribute('y2', String(hy2));
 				c.upper.setAttribute('x2', String(ex));
 				c.upper.setAttribute('y2', String(ey));
+				syncArm(c.upper.parentElement);
+				}
 				// ボール: パドルが打つ所を通る瞬間から、振り抜く向きへ飛び、消える。次の振りかぶりの前に打つ所へ戻る
 				// easeInOut で動かしているので、パドルが打つ所を通る時刻は ease の逆で求める
-				const hit = PREP_MS + SWING_MS * easeInv(c.contact);
+				const hit = PREP_MS + SWING_MS * easeInv(c.pose ? POSE_CONTACT : c.contact);
 				const fly = (t - hit) / BALL_MS;
 				if (fly >= 0 && fly <= 1) {
 					c.ball.setAttribute('cx', String(c.b[0] + c.dir[1] * 2.4 * fly));

@@ -1,0 +1,40 @@
+---
+/**
+ * 「図の見方」に差し込む見本の図: 実際のドリルのコート図（アニメーション）を、説明の文と並べて出す。
+ * 図の決まりを文章だけで説明しても分かりにくいので、見本で見せる（書き手の希望）
+ */
+import { getCollection } from 'astro:content';
+import Court from './Court.astro';
+
+interface Props {
+	/** 見本にするドリルの ID（例: dnk003） */
+	id: string;
+}
+const { id } = Astro.props;
+const [entry] = await getCollection('docs', (e) => e.data.drill?.id === id);
+const drill = entry?.data.drill;
+if (!drill?.diagram) throw new Error(`図の見方の見本: ${id} の図がない`);
+---
+
+<figure class="legend-example">
+	<Court diagram={drill.diagram} title={`見本: ${drill.id}`} />
+	<figcaption>
+		<span class="src">見本: <a href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/drills/${drill.category}/${drill.id}/`}>{entry.data.title}</a></span>
+		<slot />
+	</figcaption>
+</figure>
+
+<style>
+	.legend-example {
+		margin: 1rem 0 1.5rem;
+	}
+	.legend-example .src {
+		display: block;
+		margin-bottom: 0.2rem;
+	}
+	.legend-example figcaption {
+		font-size: 0.85rem;
+		color: var(--sl-color-gray-3);
+		margin-top: 0.4rem;
+	}
+</style>

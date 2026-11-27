@@ -5,7 +5,7 @@
  * ページを分けるかどうかは、あとで決める。
  */
 import { categories } from '../config/categories';
-import { DEPTHS, LANES, heightLevels, roleLabels, shotLabels, type Role } from '../config/court';
+import { DEPTHS, LANES, heightLevels, metric, roleLabels, shotLabels, type Role } from '../config/court';
 import { detailGroups, fieldLabels, visibleFields } from '../config/drill-display';
 
 type Row = { name: string; meaning: string; who: '利用者' | '作り手' | '両方'; data?: string };
@@ -62,7 +62,7 @@ sections.push({
 	intro: 'コートは縦向きで、下側が自分たちの側。立ち位置は「手前／奥-レーン-深さ」の名前で書き、座標はコードが決める（例: near-right-kitchen）。',
 	rows: [
 		{ name: '手前・奥', meaning: '手前（near）が自分たちの側、奥（far）が相手の側', who: '作り手', data: 'near / far' },
-		...Object.keys(LANES).map((k): Row => ({ name: `レーン: ${k}`, meaning: laneNote[k] ?? '', who: '作り手', data: `x = ${LANES[k as keyof typeof LANES]}ft` })),
+		...Object.keys(LANES).map((k): Row => ({ name: `レーン: ${k}`, meaning: laneNote[k] ?? '', who: '作り手', data: `x = ${LANES[k as keyof typeof LANES]}（${metric(LANES[k as keyof typeof LANES])}）` })),
 		...Object.keys(DEPTHS.near).map((k): Row => ({ name: `深さ: ${k}`, meaning: depthNote[k] ?? '', who: '作り手' })),
 		{ name: '半面', meaning: 'コートの縦半分。半面の練習では使う側を塗る', who: '両方', data: 'zones: [left]' },
 		{ name: '柵', meaning: 'ドロップの的。相手のキッチンに L 字に置き、内側に落とす', who: '両方', data: 'fence: far-left、to: fence.inside / fence.corner' },
@@ -102,7 +102,7 @@ sections.push({
 		name: heightLevels[h].label,
 		meaning: heightLevels[h].note,
 		who: '作り手',
-		data: `${h}（${heightLevels[h].ft}ft）`,
+		data: `${h}（${metric(heightLevels[h].ft)}）`,
 	})),
 });
 

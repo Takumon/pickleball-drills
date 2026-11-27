@@ -9,7 +9,9 @@ import {
 	shotHeights,
 	defaultReceiveHeight,
 	type HeightLevel,
+	type ShotType,
 	reactionMs,
+	WAIST_FT,
 } from '../config/court';
 import CourtFrame from './CourtFrame.astro';
 import '../styles/court.css';
@@ -133,6 +135,12 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean, byIdTo: M
  * 線の長さに沿って区切った高さ（ft）の列にする。script 側で、影を線の上に、ボールを高さの分だけ浮かせて大きく描く。高さの段階と既定値は config/court.ts の heightLevels・shotHeights。
  */
 const ft = (l: HeightLevel) => heightLevels[l].ft;
+// ブロックボレーはパドルを立てて取るので、腰より低い球には使わない（書き手と決めた規則）。
+// 低い球にパドルを立てると、手を球より下に置くため、深くしゃがみ込んだ形になる。低い球はリセットなど、ヘッドを下げて取る打ち方にする
+for (const s of diagram.shots) {
+	if (s.type === 'block' && ft(s.hit ?? shotHeights.block.hit) < WAIST_FT)
+		throw new Error(`コート図: ブロックボレーは腰より低い球（hit: ${s.hit}）には使わない。高さを上げるか、リセットなどにする`);
+}
 /** 受ける高さ: 受けた人が次に打つ球の打点。次がなければ既定の高さ */
 function receiveHeight(s: Shot) {
 	if (typeof s.to !== 'string') return ft(defaultReceiveHeight);
@@ -359,8 +367,17 @@ const panels = groups.map((g) => {
 	});
 	// 横から見た図で描くパドルの高さ: この手で打つ人は打つ高さ、受ける人は受ける高さ、ほかは既定の高さ。
 	// 同じ手で2つ以上打つときも、それぞれの打球から決める
+	// この手で打ちも受けもしない人（動くだけ、待つだけ）は、次に打つか受ける手の構えで待つ。
+	// あとの手になければ、ループで次に来る最初のほうの手から探す
+	// （書き手の指摘: 決めの高さ（約1.2m）の構えで待つと、振り終わりのように腕を上げたまま走って見えた）
+	const nextGroup = (id: string) => {
+		const involved = (x: { shots: Shot[] }) => x.shots.some((s) => s.type !== 'move' && (s.from === id || s.to === id));
+		if (involved(g)) return g;
+		const i = groups.indexOf(g);
+		return groups.slice(i + 1).find(involved) ?? groups.slice(0, i).find(involved) ?? g;
+	};
 	const sideH = (id: string) => {
-		for (const s of g.shots) {
+		for (const s of nextGroup(id).shots) {
 			if (s.type === 'move') continue;
 			if (s.from === id) return ft(s.hit ?? shotHeights[s.type].hit);
 			if (s.to === id) return receiveHeight(s);
@@ -369,9 +386,10 @@ const panels = groups.map((g) => {
 	};
 	// 横から見た図の構えに使う打ち方: この手で打つならその球、受けるなら次に打つ球（構えは打ち方で変わる。例: ロールは前に倒れて手を前へ）
 	const sideType = (id: string): string | undefined => {
-		for (const s of g.shots) if (s.type !== 'move' && s.from === id) return s.type;
-		const later = diagram.shots.filter((s) => s.type !== 'move' && (s.n ?? 0) > (g.n ?? 0) && s.from === id);
-		return g.shots.some((s) => s.to === id) ? later[0]?.type : undefined;
+		const ng = nextGroup(id);
+		for (const s of ng.shots) if (s.type !== 'move' && s.from === id) return s.type;
+		const later = diagram.shots.filter((s) => s.type !== 'move' && (s.n ?? 0) > (ng.n ?? 0) && s.from === id);
+		return ng.shots.some((s) => s.to === id) ? later[0]?.type : undefined;
 	};
 	for (const f of figures) Object.assign(f, { sideH: sideH(f.id), sideType: sideType(f.id) });
 	for (const s of g.shots) {
@@ -424,7 +442,16 @@ const figureYs = panels.flatMap((pn) => pn.figures.map((p) => p.y));
 top = Math.min(top, Math.min(...figureYs) - PLAYER_R - 0.4);
 bottom = Math.max(bottom, Math.max(...figureYs) + PLAYER_R + 0.4);
 // アニメーションの図は、コートの右に「横から見た高さ」の帯を付ける（縦の位置はコートと同じ、横の位置が高さ）
-const SIDE = { gap: 1.2, width: 8, unitPerFt: 0.8 };
+// 高さはコートと同じ縮尺（1ft = 1）。人・ネット・球の高さが、コートの長さと同じ大きさで見える（書き手と決めた）。
+// 帯の幅は、そのドリルでいちばん高い所（打つ高さ・山の高さ）まで入る長さ。人の背（約 5.6ft）とパドルが入るよう、最低 SIDE_MIN_FT
+const SIDE_MIN_FT = 7.5;
+const highest = Math.max(
+	...diagram.shots.filter((s) => s.type !== 'move').flatMap((s) => [ft(s.hit ?? shotHeights[s.type as Exclude<ShotType, 'move'>].hit), ft(s.peak ?? shotHeights[s.type as Exclude<ShotType, 'move'>].peak)]),
+	0,
+);
+// 帯の幅は最大 SIDE_MAX_FT。ロブの頂点（約4.3m）まで入れると、スマホでコートが小さくなりすぎるので、それより高い所は帯の端で止める
+const SIDE_MAX_FT = 10;
+const SIDE = { gap: 1.2, width: Math.min(SIDE_MAX_FT, Math.max(SIDE_MIN_FT, highest + 0.5)), unitPerFt: 1 };
 const side = multi ? { x0: COURT.width + padX + SIDE.gap, k: SIDE.unitPerFt, width: SIDE.width, top, bottom } : undefined;
 const viewBox = `${-padX} ${top} ${COURT.width + padX * 2 + (side ? SIDE.gap + SIDE.width : 0)} ${bottom - top}`;
 

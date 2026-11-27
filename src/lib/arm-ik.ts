@@ -46,3 +46,24 @@ export function arcLerp(sx: number, sy: number, p: [number, number], q: [number,
 	const r = rp + (rq - rp) * t;
 	return [sx + r * Math.cos(a), sy + r * Math.sin(a)];
 }
+
+/**
+ * 肩の動く範囲: 腕を体の後ろへ回せるのは、真下から後ろへ約 45° まで（書き手の指摘: ドライブの引きで肩が外れそうな向きに
+ * 曲がっていた。横から見た図では体のひねりを描けないので、手を後ろの高い所へ回すと肩が逆に曲がって見える）。
+ * 手がそれより後ろ（上）にあるときは、肩からの距離はそのままで、近いほうの境目（45° か、頭の上の -150°）まで戻す。
+ * 座標は図の座標（x が高さ、y が前後）。front は前（ネットの側）が y の + なら 1、- なら -1
+ */
+export function limitShoulder(sx: number, sy: number, hx: number, hy: number, front: number, maxBackDeg = 45): [number, number] {
+	const up = hx - sx;
+	const fwd = (hy - sy) * front;
+	const r = Math.hypot(up, fwd);
+	// 真下からの角度（前が +）
+	const a = Math.atan2(fwd, -up);
+	// 動かせないのは、真下から後ろへ maxBackDeg〜頭の上の少し後ろ（-150°）までの間。頭の上へ前から回す腕（スマッシュの
+	// 振りかぶりなど、-150° より後ろ = 頭の真上近く）はそのまま
+	const min = (-maxBackDeg * Math.PI) / 180;
+	const over = (-150 * Math.PI) / 180;
+	if (a >= min || a <= over) return [hx, hy];
+	const to = a - over < min - a ? over : min;
+	return [sx - r * Math.cos(to), sy + front * r * Math.sin(to)];
+}

@@ -30,6 +30,10 @@
 	--side-ink: #6b7280;
 	/* 横から見た図の腕と手（肌の色）。パドルの大きさと見比べられるように、体とは別の色にする */
 	--side-skin: #c68655;
+	/* 横から見た図の髪（体より濃く） */
+	--side-hair: #3f4652;
+	/* 横から見た図のパドルのグリップ（グリップテープの色） */
+	--side-grip: #1f2937;
 	--side-panel: #eef1f4;
 	--side-mark: #a7aeb8;
 	/* 横から見た図の地面の線は、人（--side-ink）より薄く細くして、足や靴と見分けられるようにする */
@@ -53,6 +57,8 @@
 	--fence: #9aa1ab;
 	--side-ink: #9ca3af;
 	--side-skin: #e3ad84;
+	--side-hair: #4b5563;
+	--side-grip: #4b5563;
 	--side-panel: #1f2a24;
 	--side-mark: #5f6873;
 	--side-ground: #34403a;
@@ -175,6 +181,7 @@
 }
 /* 線の質: 速い球は太い実線、柔らかく落とす球は細い点線、ロブは破線（山なりの曲線） */
 .court .shot.t-speedup,
+.court .shot.t-flick,
 .court .shot.t-smash,
 .court .shot.t-drive,
 .court .shot.t-punch {
@@ -242,22 +249,31 @@
 	stroke-width: 0.08;
 	stroke-linejoin: round;
 }
-.court .side-neck {
-	stroke: var(--side-ink);
-	stroke-linecap: round;
+.court .side-neck-shape {
+	fill: var(--side-ink);
 }
-.court .side-upperarm {
-	stroke: var(--side-skin);
-	stroke-linecap: round;
+.court .side-upperarm,
+.court .side-arm {
+	/* 位置のデータだけを持つ線。見える腕は .side-upperarm-shape・.side-forearm-shape */
+	stroke: none;
+}
+.court .side-upperarm-shape,
+.court .side-forearm-shape,
+.court .side-elbow {
+	fill: var(--side-skin);
 }
 .court .side-hand {
 	fill: var(--side-skin);
 }
-.court .side-hip {
+.court .side-lower {
 	fill: var(--side-ink);
+	stroke: var(--side-ink);
+	stroke-width: 0.02;
+	stroke-linejoin: round;
 }
 .court .side-grip {
-	stroke: var(--side-paddle);
+	/* グリップは面（ピンク）と見分けられるよう、グリップテープの色 */
+	stroke: var(--side-grip);
 	stroke-linecap: round;
 }
 .court .side-leg {
@@ -274,10 +290,12 @@
 }
 .court .side-head {
 	fill: var(--side-ink);
+	stroke: var(--side-ink);
+	stroke-width: 0.02;
+	stroke-linejoin: round;
 }
-.court .side-arm {
-	stroke: var(--side-skin);
-	stroke-linecap: round;
+.court .side-hair {
+	fill: var(--side-hair);
 }
 .court .side-paddle {
 	stroke: var(--side-paddle);

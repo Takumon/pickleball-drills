@@ -4,8 +4,10 @@
  * Court.astro から、コマ割りの各コマとアニメーションの各場面の両方で使う。
  * スタイルは Court.astro の .court 配下（is:global）で当てる。
  */
-import { COURT, shotSwing, zoneRects, type ZoneName } from '../config/court';
+import { COURT, keyPoseOf, WAIST_FT, shotSwing, swingOf, zoneRects, type ZoneName } from '../config/court';
 import { sideFigure } from '../lib/side-figure';
+import { taper } from '../lib/arm-shape';
+import { fitPoses } from '../lib/side-render';
 
 type Point = [number, number];
 interface Figure {
@@ -21,6 +23,8 @@ interface Figure {
 	sideH?: number;
 	/** 横から見た図の構えに使う打ち方（打つ球、受けるなら次に打つ球） */
 	sideType?: string;
+	/** パドルの構え（ready / fh / bh） */
+	paddle?: string;
 }
 interface Line {
 	type: string;
@@ -67,6 +71,10 @@ interface Props {
 	/** ゲーム形式: この手で勝ちの点に届いた人（「〇 の勝ち」を出す） */
 	win?: string;
 }
+/** 打つ高さ（ft。線の高さの列の最初） */
+const hitOf = (l: { heights?: string }) => (l.heights ? Number(l.heights.split(',')[0]) : undefined);
+/** 打つ人のパドルの構え（フォア・バックで打つ動きの形を選ぶ） */
+const handOf = (from: string | Point) => (typeof from === 'string' ? Astro.props.figures.find((f) => f.id === from)?.paddle : undefined);
 const { figures, lines, viewBox, zones, fences = [], uid, playerR, title, animated = false, side, step, score, win } = Astro.props;
 const NET_FT = 2.9;
 /** 横から見た図: ラインの位置で地面の線の色を変える長さ */
@@ -170,7 +178,13 @@ const isSub = (t: string) => t === 'move';
 						data-kind={animated ? (l.type === 'move' ? 'move' : 'ball') : undefined}
 						data-player={animated && l.type === 'move' && typeof l.from === 'string' ? l.from : undefined}
 						data-hitter={animated && l.type !== 'move' && typeof l.from === 'string' ? l.from : undefined}
-						data-swing={animated && l.type !== 'move' && l.type in shotSwing ? (({ back, follow, turn }) => [...back, ...follow, ...turn].join(','))(shotSwing[l.type as keyof typeof shotSwing]) : undefined}
+						data-type={animated && l.type !== 'move' ? l.type : undefined}
+						data-swing={animated && l.type !== 'move' && l.type in shotSwing ? ((sw) => [...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ? sw.via.flat() : [])].join(','))(swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l))) : undefined}
+						data-setup={animated && l.type !== 'move' && l.type in shotSwing && swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).setup ? '' : undefined}
+						data-pivot={animated && l.type !== 'move' && l.type in shotSwing ? swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).pivot : undefined}
+						data-straight={animated && l.type !== 'move' && l.type in shotSwing && swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).straight ? '' : undefined}
+						data-keyposes={animated && l.type !== 'move' && (handOf(l.from) !== 'bh' || (hitOf(l) ?? 0) > WAIST_FT) && keyPoseOf(l.type, hitOf(l)) ? JSON.stringify(keyPoseOf(l.type, hitOf(l))!.poses) : undefined}
+						data-pivot-turn={animated && l.type !== 'move' && l.type in shotSwing ? swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).pivotTurn?.join(',') : undefined}
 						data-shift={animated && l.shift ? l.shift.join(',') : undefined}
 						data-ms={animated ? l.ms : undefined}
 						data-pre={animated && l.pre ? `${l.pre[0]},${l.pre[1]}` : undefined}
@@ -253,7 +267,6 @@ const isSub = (t: string) => t === 'move';
 		side && (
 			<g class="side">
 				<rect class="side-panel" x={side.x0 - 0.7} y={side.top + 0.3} width={side.width + 1} height={side.bottom - side.top - 0.6} rx="0.6" />
-				<text class="side-title" x={side.x0 + side.width / 2 - 0.3} y={side.top + 1.4}>横から見た高さ</text>
 				{/* 地面の線（補助の図なので1色）。ベースラインとキッチンラインの位置だけ、同じ太さのまま色を変える */}
 				<line class="side-ground" x1={side.x0} y1={side.top + 2.2} x2={side.x0} y2={side.bottom - 0.6} />
 				{[0, k1, k2, COURT.length]
@@ -263,32 +276,63 @@ const isSub = (t: string) => t === 'move';
 					))}
 				<line class="side-net" x1={side.x0} y1={COURT.net} x2={side.x0 + NET_FT * side.k} y2={COURT.net} />
 				{figures.map((p) => {
-					const fig = sideFigure({
+					// 決めのポーズ（keyPoses）がある打ち方は、決めのポーズで描く。アニメーションでは、この入力でポーズを組み立て直す
+					// この手で打つ球の飛び出す向き（横から見た図の上下の角度。度、上が +）: 高さの列の最初の2つと、線の奥行きの長さから
+					const own = lines.find((l) => l.type !== 'move' && l.from === p.id && l.type === p.sideType && l.heights);
+					const launch = (() => {
+						if (!own?.heights) return undefined;
+						const hs = own.heights.split(',').map(Number);
+						const ns = own.d.match(/-?\d*\.?\d+/g)?.map(Number) ?? [];
+						if (hs.length < 2 || ns.length < 4) return undefined;
+						const dy = Math.abs(ns[ns.length - 1] - ns[1]) / (hs.length - 1);
+						return (Math.atan2(hs[1] - hs[0], dy || 1e-6) * 180) / Math.PI;
+					})();
+					const poseInput = {
+						launch,
 						x0: side.x0,
 						k: side.k,
 						y: p.y,
 						toNet: p.y < COURT.net ? 1 : -1,
 						hitH: p.sideH ?? 4,
 						shot: p.sideType,
+						hand: p.paddle,
 						faceY: (p.hand[1] + p.tip[1]) / 2,
-					});
+					};
+					const kp = p.sideType && (p.paddle !== 'bh' || (p.sideH ?? 0) > WAIST_FT) ? keyPoseOf(p.sideType, p.sideH) : undefined;
+					// 止まった形は構え（ready）。体の前後の位置は打つ瞬間のポーズに合わせる（動き出しで体が滑らないように）
+					// ポーズは打つ高さに合わせる（fitPoses）。体の前後の位置は打つ瞬間に合わせる
+					const fit = kp ? fitPoses(poseInput, kp.poses) : undefined;
+					const bodyBack = fit?.bodyBack;
+					const fig = sideFigure({ ...poseInput, angles: fit?.poses.ready, bodyBack });
+					// 決まりの確かめ（ドリルごとに見なくてよいように、全部の図を作るときに測る）: 打つ瞬間のパドルの面の真ん中が球に届いているか。
+					// 届かないとき（体を前に置けない、腕が届かないなど）は、ビルドの出力で知らせる
+					if (p.sideType) {
+						const hitFig = fit ? sideFigure({ ...poseInput, angles: fit.poses.contact, bodyBack }) : fig;
+						const [cx1, cy1, cx2, cy2] = hitFig.face;
+						const miss = Math.hypot((cx1 + cx2) / 2 - (side.x0 + poseInput.hitH * side.k), (cy1 + cy2) / 2 - poseInput.faceY) / side.k;
+						if (miss > 0.5) console.warn(`[図の確かめ] ${Astro.url.pathname} ${p.id}（${p.sideType}）: 打つ瞬間の面が球から ${miss.toFixed(1)}ft 離れている`);
+					}
 					const [ax1, ay1, ax2, ay2] = fig.upperArm;
 					const [fx1, fy1, fx2, fy2] = fig.forearm;
 					const [nx1, ny1, nx2, ny2] = fig.neck;
 					const [gx1, gy1, gx2, gy2] = fig.grip;
 					const [px1, py1, px2, py2] = fig.face;
 					return (
-						<g class={`side-person role-${p.role}`} data-side-player={animated ? p.id : undefined}>
+						<g class={`side-person role-${p.role}`} data-side-player={animated ? p.id : undefined} data-pose-input={animated ? JSON.stringify(poseInput) : undefined} data-pose-static={animated && fit ? JSON.stringify(fit.poses.ready) : undefined} data-pose-body-back={animated && kp ? bodyBack : undefined}>
 							{/* スニーカー、足（足首〜ひざ〜股関節）、胴、首、頭、腕（肩〜ひじ〜手）、パドル */}
 							<polygon class="side-shoe" points={fig.shoe} />
-							<polyline class="side-leg" stroke-width={fig.widths.leg} points={fig.leg} />
+							<path class="side-lower" d={fig.lowerBody} />
 							<path class="side-torso" d={fig.torso} />
 							{/* 股関節のまわりを丸く埋めて、胴と足のつなぎめに切れ目ができないようにする */}
-							<circle class="side-hip" cx={fig.hip.cx} cy={fig.hip.cy} r={fig.hip.r} />
-							<line class="side-neck" stroke-width={fig.widths.neck} x1={nx1} y1={ny1} x2={nx2} y2={ny2} />
-							<ellipse class="side-head" cx={fig.head.cx} cy={fig.head.cy} rx={fig.head.rx} ry={fig.head.ry} transform={`rotate(${fig.head.rot} ${fig.head.cx} ${fig.head.cy})`} />
-							<line class="side-upperarm" stroke-width={fig.widths.upperArm} x1={ax1} y1={ay1} x2={ax2} y2={ay2} />
-							<line class="side-arm" stroke-width={fig.widths.forearm} x1={fx1} y1={fy1} x2={fx2} y2={fy2} />
+							<path class="side-neck-shape" d={fig.neckShape} />
+							<path class="side-head" d={fig.headShape} />
+							<path class="side-hair" d={fig.hair} />
+							{/* 腕: 線（.side-upperarm・.side-arm）は位置のデータだけ持ち、見える形は太さが変わる台形（lib/arm-shape.ts） */}
+							<line class="side-upperarm" x1={ax1} y1={ay1} x2={ax2} y2={ay2} />
+							<line class="side-arm" x1={fx1} y1={fy1} x2={fx2} y2={fy2} />
+							<path class="side-upperarm-shape" data-w1={fig.widths.arm.shoulder} data-w2={fig.widths.arm.elbowUpper} d={taper(ax1, ay1, ax2, ay2, fig.widths.arm.shoulder, fig.widths.arm.elbowUpper)} />
+							<path class="side-forearm-shape" data-w1={fig.widths.arm.elbowFore} data-w2={fig.widths.arm.wrist} d={taper(fx1, fy1, fx2, fy2, fig.widths.arm.elbowFore, fig.widths.arm.wrist)} />
+							<circle class="side-elbow" cx={ax2} cy={ay2} r={fig.widths.arm.elbowFore / 2} />
 							{/* 腕と手は色を付けて、パドルの大きさと見比べられるようにする */}
 							<line class="side-grip" stroke-width={fig.widths.grip} x1={gx1} y1={gy1} x2={gx2} y2={gy2} />
 							<line class="side-paddle" stroke-width={fig.widths.face} x1={px1} y1={py1} x2={px2} y2={py2} />

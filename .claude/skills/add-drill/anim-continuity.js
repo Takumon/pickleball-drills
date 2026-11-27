@@ -35,13 +35,17 @@
 				}
 				last[k] = p;
 			};
-			const ball = frame?.querySelector('.ball');
-			const hidden = !ball || ball.style.opacity === '0' || /translate\(-10 -10\)/.test(ball.getAttribute('transform') ?? '');
-			if (hidden) delete last['ボール'];
-			else put('ボール', tr(ball), fresh);
-			const side = frame?.querySelector('.side-ball');
-			if (!side || hidden || Number(side.getAttribute('cx')) < -5) delete last['横から見た図のボール'];
-			else put('横から見た図のボール', [Number(side.getAttribute('cx')), Number(side.getAttribute('cy'))], fresh);
+			// 球を2つ以上同時に使う手では、2つ目からのボールに data-k が付く。球ごとに測る
+			for (const ball of frame?.querySelectorAll('.ball') ?? []) {
+				const k = ball.dataset.k ?? '0';
+				const name = k === '0' ? 'ボール' : `ボール${Number(k) + 1}`;
+				const hidden = ball.style.opacity === '0' || /translate\(-10 -10\)/.test(ball.getAttribute('transform') ?? '');
+				if (hidden) delete last[name];
+				else put(name, tr(ball), fresh);
+				const side = frame.querySelector(k === '0' ? '.side-ball:not([data-k])' : `.side-ball[data-k="${k}"]`);
+				if (!side || hidden || Number(side.getAttribute('cx')) < -5) delete last[`横から見た図の${name}`];
+				else put(`横から見た図の${name}`, [Number(side.getAttribute('cx')), Number(side.getAttribute('cy'))], fresh);
+			}
 			for (const g of frame?.querySelectorAll('[data-player-id]') ?? []) {
 				const c = g.querySelector('circle.body');
 				const [dx, dy] = tr(g);

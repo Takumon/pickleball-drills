@@ -300,6 +300,28 @@ const scores = (() => {
 		return { before, after: now };
 	});
 })();
+/** 重なる線をずらす量（ft）と、ずらし始める・終える位置（線の長さの割合） */
+const BOW_OFFSET = 0.6;
+const BOW_RAMP = 0.18;
+/** 線の真ん中を、進む向きの右へ BOW_OFFSET だけずらす（両端は動かさない）。名前とバウンドの印も同じだけずらす */
+function bowLine<L extends { d: string; mid: Point; bounces?: { pt: Point; at: number }[] }>(l: L): L {
+	const m = l.d.match(/^M([-\d.]+) ([-\d.]+) L([-\d.]+) ([-\d.]+)$/);
+	if (!m) return l;
+	const [x1, y1, x2, y2] = m.slice(1).map(Number);
+	const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+	const nx = (-(y2 - y1) / len) * BOW_OFFSET;
+	const ny = ((x2 - x1) / len) * BOW_OFFSET;
+	const at = (t: number): Point => [x1 + (x2 - x1) * t + nx, y1 + (y2 - y1) * t + ny];
+	const [ax, ay] = at(BOW_RAMP);
+	const [bx, by] = at(1 - BOW_RAMP);
+	const ramp = (t: number) => Math.max(0, Math.min(1, t / BOW_RAMP, (1 - t) / BOW_RAMP));
+	return {
+		...l,
+		d: `M${x1} ${y1} L${ax} ${ay} L${bx} ${by} L${x2} ${y2}`,
+		mid: [l.mid[0] + nx, l.mid[1] + ny],
+		bounces: l.bounces?.map((b) => ({ ...b, pt: [b.pt[0] + nx * ramp(b.at), b.pt[1] + ny * ramp(b.at)] as Point })),
+	};
+}
 const positions = new Map<string, Point>(diagram.players.map((p) => [p.id, [p.x, p.y]]));
 const panels = groups.map((g) => {
 	const figures = diagram.players.map((p) => figureOf(p, positions.get(p.id)!));
@@ -349,6 +371,23 @@ const panels = groups.map((g) => {
 	for (const s of g.shots) {
 		if (s.type === 'move' && typeof s.from === 'string' && typeof s.to !== 'string') positions.set(s.from, s.to);
 	}
+	// 同じ手で2本の線がほぼ同じ所を通るとき（球を2つ使うストレートの往復など）は、重なって読めないので、
+	// どちらの線も進む向きの右へ少しずらす（両端はパドルのまま。真ん中だけをずらす）
+	const hitsIdx = lines.flatMap((l, k) => (l.type === 'move' ? [] : [k]));
+	const ends = (l: (typeof lines)[number]) => l.d.match(/^M([-\d.]+) ([-\d.]+) L([-\d.]+) ([-\d.]+)$/)?.slice(1).map(Number);
+	const overlapping = new Set<number>();
+	for (const i of hitsIdx)
+		for (const j of hitsIdx) {
+			if (i >= j) continue;
+			const a = ends(lines[i]);
+			const b = ends(lines[j]);
+			if (!a || !b) continue;
+			const near = (x1: number, y1: number, x2: number, y2: number) => Math.hypot(x1 - x2, y1 - y2) < 1.5;
+			const same = near(a[0], a[1], b[0], b[1]) && near(a[2], a[3], b[2], b[3]);
+			const reverse = near(a[0], a[1], b[2], b[3]) && near(a[2], a[3], b[0], b[1]);
+			if (same || reverse) overlapping.add(i).add(j);
+		}
+	for (const k of overlapping) lines[k] = bowLine(lines[k]);
 	return { n: g.n, figures, lines };
 });
 const multi = !still && panels.length > 1;

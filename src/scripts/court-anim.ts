@@ -112,18 +112,48 @@ function setup(root: HTMLElement) {
 		const ball = frame.querySelector<SVGGElement>('.ball')!;
 		const balls = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="ball"]')];
 		const sideBall = frame.querySelector<SVGCircleElement>('.side-ball');
+		// 球を2つ以上同時に使う手: 2つ目からのボールは、1つ目のボールの絵を写して足す（どの球も同時に飛ぶ）
+		const ballEls = balls.map((_, k) => {
+			if (k === 0) return { b: ball, s: sideBall };
+			let b = frame.querySelector<SVGGElement>(`.ball[data-k="${k}"]`);
+			let sb = frame.querySelector<SVGCircleElement>(`.side-ball[data-k="${k}"]`);
+			if (!b) {
+				b = ball.cloneNode(true) as SVGGElement;
+				b.dataset.k = String(k);
+				ball.after(b);
+			}
+			if (!sb && sideBall) {
+				sb = sideBall.cloneNode(true) as SVGCircleElement;
+				sb.dataset.k = String(k);
+				sideBall.after(sb);
+			}
+			return { b, s: sb };
+		});
 		const sideTrace = frame.querySelector<SVGPathElement>('.side-trace');
 		const sideX0 = Number(frame.dataset.sideX0);
 		const sideK = Number(frame.dataset.sideK);
 		const sideMax = Number(frame.dataset.sideMax);
 		const sideX = (h: number) => sideX0 + Math.min(h, sideMax) * sideK;
 		// 横から見た高さの帯に描く、ボールの通り道（打つ手の線を細かく区切った点）
-		const tracePts = balls[0] ? Array.from({ length: 41 }, (_, j) => ballAt(balls[0], j / 40)) : [];
+		// 球ごとに通り道を描く（球を2つ以上同時に使う手では、2つ目からの通り道の線を写して足す）
+		const traces = balls.map((b, k) => {
+			let el = sideTrace;
+			if (k > 0 && sideTrace) {
+				el = frame.querySelector<SVGPathElement>(`.side-trace[data-k="${k}"]`);
+				if (!el) {
+					el = sideTrace.cloneNode(true) as SVGPathElement;
+					el.dataset.k = String(k);
+					sideTrace.after(el);
+				}
+			}
+			return { el, pts: Array.from({ length: 41 }, (_, j) => ballAt(b, j / 40)) };
+		});
 		const drawTrace = (ratio: number) => {
-			if (!sideTrace) return;
 			const n = Math.round(ratio * 40);
-			const pts = tracePts.slice(0, n + 1);
-			sideTrace.setAttribute('d', pts.length > 1 ? 'M' + pts.map((p) => `${sideX(p.h)} ${p.y}`).join(' L') : '');
+			for (const t of traces) {
+				const pts = t.pts.slice(0, n + 1);
+				t.el?.setAttribute('d', pts.length > 1 ? 'M' + pts.map((p) => `${sideX(p.h)} ${p.y}`).join(' L') : '');
+			}
 		};
 		const moves = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="move"]')];
 		const movers = moves.map((m) => {
@@ -173,16 +203,30 @@ function setup(root: HTMLElement) {
 			});
 		// ボールを描く: コートの図ではボールを線の上（打つ人・受ける人のパドルの位置）に置き、高いほど少し大きく描く。
 		// 高さは右の帯（横から見た図）で見せる。pos がなければ隠す
-		const drawBall = (pos?: BallPos) => {
+		const drawBall = (pos?: BallPos, k = 0) => {
+			const el = ballEls[k] ?? { b: ball, s: sideBall };
 			if (!pos) {
-				ball.setAttribute('transform', 'translate(-10 -10) scale(0.55)');
-				sideBall?.setAttribute('cx', '-10');
+				el.b.setAttribute('transform', 'translate(-10 -10) scale(0.55)');
+				el.s?.setAttribute('cx', '-10');
 				return;
 			}
 			const r = Math.min(BALL_R_MAX, BALL_R_GROUND + pos.h * BALL_R_PER_FT);
-			ball.setAttribute('transform', `translate(${pos.x} ${pos.y}) scale(${r})`);
-			sideBall?.setAttribute('cx', `${sideX(pos.h)}`);
-			sideBall?.setAttribute('cy', `${pos.y}`);
+			el.b.setAttribute('transform', `translate(${pos.x} ${pos.y}) scale(${r})`);
+			el.s?.setAttribute('cx', `${sideX(pos.h)}`);
+			el.s?.setAttribute('cy', `${pos.y}`);
+		};
+		/** 球 k の打つ前（手から落とす・トラップ）の位置と、地面までの落ち方 */
+		const preOf = (k: number) => {
+			const p = balls[k]?.dataset.pre?.split(',').map(Number);
+			if (!p) return undefined;
+			const th = balls[k].dataset.preFromH !== undefined ? Number(balls[k].dataset.preFromH) : undefined;
+			return {
+				x: p[0],
+				y: p[1],
+				h0: th ?? HAND_FT,
+				dropMs: th !== undefined ? TRAP_DROP_MS : PRE_DROP_MS,
+				fall: th !== undefined ? popArc(th, TRAP_POP_FT) : (u: number) => HAND_FT * (1 - u * u),
+			};
 		};
 		const reset = () => {
 			showMarks(animate ? -1 : 1);
@@ -190,16 +234,12 @@ function setup(root: HTMLElement) {
 			// 動く人だけでなく、ループで最初の立ち位置へ戻した人（rewind）の移動も消す
 			frame.querySelectorAll('[data-player-id], [data-side-player]').forEach((g) => g.setAttribute('transform', ''));
 			// 打つ手なら打つ人のパドルから、人が動くだけの手なら前の手の終わりの位置にボールを置く
-			const pre = balls[0]?.dataset.pre?.split(',').map(Number);
-			const preFromH = balls[0]?.dataset.preFromH;
-			setPreRings(!animate && !!pre);
-			drawBall(
-				balls[0]
-					? animate && pre
-						? { x: pre[0], y: pre[1], h: preFromH !== undefined ? Number(preFromH) : HAND_FT }
-						: ballAt(balls[0], animate ? 0 : 1)
-					: startBall[i],
-			);
+			setPreRings(!animate && !!preOf(0));
+			if (!balls.length) drawBall(startBall[i]);
+			balls.forEach((b, k) => {
+				const pr = preOf(k);
+				drawBall(animate && pr ? { x: pr.x, y: pr.y, h: pr.h0 } : ballAt(b, animate ? 0 : 1), k);
+			});
 			drawTrace(animate ? 0 : 1);
 		};
 		reset();
@@ -215,42 +255,44 @@ function setup(root: HTMLElement) {
 		const durations = [...balls, ...moves].map((p) => (Number(p.dataset.ms) || SHOT_MS) + (Number(p.dataset.delay) || 0));
 		const duration = durations.length ? Math.max(...durations) : SHOT_MS;
 		// 打つ前に一度弾ませる球: 手前で弾んだボールが打点まで上がってから、打球が始まる
-		const preAttr = balls[0]?.dataset.pre?.split(',').map(Number);
 		// トラップなら、受けた高さから少し上がって落ちる。手から落とす球出しなら、手の高さから落ちる
-		const trapH = balls[0]?.dataset.preFromH !== undefined ? Number(balls[0].dataset.preFromH) : undefined;
-		const dropMs = trapH !== undefined ? TRAP_DROP_MS : PRE_DROP_MS;
-		const fall = trapH !== undefined ? popArc(trapH, TRAP_POP_FT) : (u: number) => HAND_FT * (1 - u * u);
-		const preMs = preAttr ? dropMs + PRE_RISE_MS : 0;
+		// 打つ前に弾ませる球が1つでもあれば、その球が地面まで落ちて打点まで上がる時間だけ、打球を待つ
+		const pres = balls.map((_, k) => preOf(k));
+		const drops = pres.flatMap((pr) => (pr ? [pr.dropMs] : []));
+		const dropMs = drops.length ? Math.min(...drops) : 0;
+		const preMs = drops.length ? Math.max(...drops) + PRE_RISE_MS : 0;
 		const t0 = performance.now();
 		const tick = (now: number) => {
 			const elapsed = now - t0;
-			if (preAttr && elapsed < preMs) {
-				const start = ballAt(balls[0], 0);
-				if (elapsed < dropMs) {
-					// 地面まで: 手から落とす球はだんだん速く、トラップした球はポンと少し上がってから落ちる
-					const u = elapsed / dropMs;
-					setPreRings(false);
-					drawBall({ x: preAttr[0], y: preAttr[1], h: fall(u) });
-				} else {
-					// 弾んで打点まで上がる（上がるにつれてゆるむ）
-					const u = (elapsed - dropMs) / (preMs - dropMs);
-					setPreRings(true);
-					const up = Math.sin((u * Math.PI) / 2);
-					drawBall({ x: preAttr[0] + (start.x - preAttr[0]) * u, y: preAttr[1] + (start.y - preAttr[1]) * u, h: start.h * up });
-				}
+			if (preMs > 0 && elapsed < preMs) {
+				setPreRings(elapsed >= dropMs);
+				// 打つ前に弾ませる球（手から落とす・トラップ）は、球ごとに地面まで落ちて弾み、打点まで上がる
+				pres.forEach((pr, k) => {
+					const start = ballAt(balls[k], 0);
+					if (!pr) return drawBall(start, k);
+					const rise = preMs - pr.dropMs;
+					if (elapsed < pr.dropMs) {
+						// 地面まで: 手から落とす球はだんだん速く、トラップした球はポンと少し上がってから落ちる
+						drawBall({ x: pr.x, y: pr.y, h: pr.fall(elapsed / pr.dropMs) }, k);
+					} else {
+						// 弾んで打点まで上がる（上がるにつれてゆるむ）
+						const u = Math.min(1, (elapsed - pr.dropMs) / rise);
+						const up = Math.sin((u * Math.PI) / 2);
+						drawBall({ x: pr.x + (start.x - pr.x) * u, y: pr.y + (start.y - pr.y) * u, h: start.h * up }, k);
+					}
+				});
 				raf = requestAnimationFrame(tick);
 				return;
 			}
-			setPreRings(!!preAttr);
+			setPreRings(preMs > 0);
 			const t = Math.min(1, (elapsed - preMs) / duration);
 			const eb = Math.sin((t * Math.PI) / 2); // ボール: 打った瞬間が速く、少しずつ減速する
 			showMarks(eb);
+			drawTrace(eb);
 			balls.forEach((b, k) => {
 				setReveal(k, eb);
-				if (k === 0) {
-					drawBall(ballAt(b, eb));
-					drawTrace(eb);
-				}
+				drawBall(ballAt(b, eb), k);
+
 			});
 			movers.forEach(({ g, sg, dx, dy, delay }) => {
 				// 動き出しが遅れる人は、遅れたぶん短い時間で同じ終わりの時刻に着く
@@ -265,9 +307,7 @@ function setup(root: HTMLElement) {
 				showMarks(1);
 				drawTrace(1);
 				// ボールは消さずに、届いた位置に残す（次の手はそこから始まる）
-				if (balls[0]) {
-					drawBall(ballAt(balls[0], 1));
-				}
+				balls.forEach((b, k) => drawBall(ballAt(b, 1), k));
 				setScore(scoreOf(frame, 'scoreAfter'), false);
 				frame.querySelectorAll('[data-lost], [data-win]').forEach((t) => t.classList.add('on'));
 				// 「〇 の勝ち」を出すときは、線の名前を薄くして重ならないようにする

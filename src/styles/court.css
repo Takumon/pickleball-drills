@@ -32,6 +32,8 @@
 	--side-skin: #c68655;
 	--side-panel: #eef1f4;
 	--side-mark: #a7aeb8;
+	/* 横から見た図の地面の線は、人（--side-ink）より薄く細くして、足や靴と見分けられるようにする */
+	--side-ground: #cfd4da;
 	margin: 1rem auto;
 	max-width: 340px;
 }
@@ -53,6 +55,7 @@
 	--side-skin: #e3ad84;
 	--side-panel: #1f2a24;
 	--side-mark: #5f6873;
+	--side-ground: #3f4a45;
 }
 .court .anim {
 	max-width: 340px;
@@ -211,8 +214,8 @@
 	font-family: system-ui, sans-serif;
 }
 .court .side-ground {
-	stroke: var(--side-ink);
-	stroke-width: 0.2;
+	stroke: var(--side-ground);
+	stroke-width: 0.14;
 }
 .court .side-ground.side-mark {
 	stroke: var(--side-mark);
@@ -222,7 +225,7 @@
 	stroke-width: 0.3;
 }
 .court .side-person {
-	opacity: 0.7;
+	opacity: 0.9;
 }
 .court .side-body {
 	fill: none;

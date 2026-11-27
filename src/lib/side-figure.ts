@@ -52,8 +52,14 @@ const SHOULDER_JOINT_DROP = 0.024;
 /** 首のつけ根（第7頸椎の高さの目安） */
 const NECK_BASE = 0.835;
 
-/** パドル（ft）: 長さ約16インチ。握る手から面の真ん中まで約7.5インチ、手から先まで約13インチ、手からグリップの端まで約3インチ */
-const PADDLE = { toFace: 7.5 / 12, toTip: 13 / 12, toButt: 3 / 12 };
+/**
+ * パドル（ft）: 長さ約16インチ（グリップ約5インチ＋面約11インチ）。握る手から面の真ん中まで約7.5インチ、手から先まで約13インチ、
+ * 手からグリップの端まで約3インチ。横から見ると面は縁から見えるので薄く描く。ただし本当の厚み（約1.5cm）ではスマホで見えないので、
+ * 面は前腕より少し細い約5cm、グリップは約3.5cm にする
+ */
+const PADDLE = { toFace: 7.5 / 12, toTip: 13 / 12, toButt: 3 / 12, faceLen: 11 / 12, faceThick: 0.17, gripThick: 0.12 };
+/** 手（こぶし）の大きさ（前後の幅。身長に対する割合）。約9cm */
+const FIST = 0.055;
 
 /** 構え: ひざの曲げ（度）と上体の前傾（度）の、ふつうと最大 */
 const STANCE = { kneeReady: 22, kneeMax: 42, leanReady: 6, leanMax: 15 };
@@ -80,8 +86,13 @@ export interface SideFigure {
 	head: { cx: number; cy: number; rx: number; ry: number; rot: number };
 	upperArm: [number, number, number, number];
 	forearm: [number, number, number, number]; // ひじ → 手（パドルを握る所）
-	paddle: [number, number, number, number];
-	widths: { leg: number; neck: number; upperArm: number; forearm: number };
+	/** パドル: グリップ（端〜面の始まり）と面（面の始まり〜先） */
+	grip: [number, number, number, number];
+	face: [number, number, number, number];
+	/** 手（こぶし）と、股関節のまわり（胴と足のつなぎめ） */
+	hand: { cx: number; cy: number; r: number };
+	hip: { cx: number; cy: number; r: number };
+	widths: { leg: number; neck: number; upperArm: number; forearm: number; grip: number; face: number };
 }
 
 export function sideFigure(o: SideFigureInput): SideFigure {
@@ -155,6 +166,7 @@ export function sideFigure(o: SideFigureInput): SideFigure {
 	const hand: P = { h: elbow.h + lower * Math.cos(toGrip), d: elbow.d + lower * Math.sin(toGrip) };
 	const butt: P = { h: hand.h - u.h * PADDLE.toButt, d: hand.d - u.d * PADDLE.toButt };
 	const tip: P = { h: hand.h + u.h * PADDLE.toTip, d: hand.d + u.d * PADDLE.toTip };
+	const faceStart: P = { h: tip.h - u.h * PADDLE.faceLen, d: tip.d - u.d * PADDLE.faceLen };
 
 	// 胴の横から見た形: 背中側と胸側の線を、腰（股関節の少し下）から肩のいちばん上まで。上体の傾きに合わせて回す
 	const trunkAt = (frac: number, side: number): P => {
@@ -196,8 +208,13 @@ export function sideFigure(o: SideFigureInput): SideFigure {
 		head: { cx: hcx, cy: hcy, rx: (LEN.head * H * k) / 2, ry: (DEPTH.head * H * k) / 2, rot: (toNet * p.t * 180) / Math.PI },
 		upperArm: line(sj, elbow),
 		forearm: line(elbow, hand),
-		paddle: [...at(butt), ...at(tip)],
+		grip: line(butt, faceStart),
+		face: line(faceStart, tip),
+		hand: { cx: at(hand)[0], cy: at(hand)[1], r: (FIST * H * k) / 2 },
+		hip: { cx: at(p.hip)[0], cy: at(p.hip)[1], r: DEPTH.pelvis * H * k * 0.42 },
 		widths: {
+			grip: PADDLE.gripThick * k,
+			face: PADDLE.faceThick * k,
 			leg: ((DEPTH.thigh + DEPTH.shank) / 2) * H * k,
 			neck: DEPTH.neck * H * k,
 			upperArm: DEPTH.upperArm * H * k,

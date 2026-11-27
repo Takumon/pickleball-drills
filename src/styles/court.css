@@ -22,6 +22,8 @@
 	--fence: #b8bec7;
 	/* コートの外（横から見た高さの帯）に描く線と文字。ページの背景の上で見えるように、ライトとダークで変える */
 	--side-ink: #6b7280;
+	/* 横から見た図の腕と手（肌の色）。パドルの大きさと見比べられるように、体とは別の色にする */
+	--side-skin: #c68655;
 	--side-panel: #eef1f4;
 	--side-mark: #a7aeb8;
 	margin: 1rem auto;
@@ -41,6 +43,7 @@
 	--paddle: #e5e7eb;
 	--fence: #9aa1ab;
 	--side-ink: #9ca3af;
+	--side-skin: #e3ad84;
 	--side-panel: #1f2a24;
 	--side-mark: #5f6873;
 }
@@ -228,8 +231,21 @@
 	stroke-width: 0.08;
 	stroke-linejoin: round;
 }
-.court .side-neck,
+.court .side-neck {
+	stroke: var(--side-ink);
+	stroke-linecap: round;
+}
 .court .side-upperarm {
+	stroke: var(--side-skin);
+	stroke-linecap: round;
+}
+.court .side-hand {
+	fill: var(--side-skin);
+}
+.court .side-hip {
+	fill: var(--side-ink);
+}
+.court .side-grip {
 	stroke: var(--side-ink);
 	stroke-linecap: round;
 }
@@ -249,13 +265,12 @@
 	fill: var(--side-ink);
 }
 .court .side-arm {
-	stroke: var(--side-ink);
+	stroke: var(--side-skin);
 	stroke-linecap: round;
 }
 .court .side-paddle {
 	stroke: var(--side-ink);
-	stroke-width: 0.3;
-	stroke-linecap: round;
+	stroke-linecap: butt;
 }
 .court .side-trace {
 	fill: none;

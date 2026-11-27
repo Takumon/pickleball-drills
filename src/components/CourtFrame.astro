@@ -271,18 +271,24 @@ const isSub = (t: string) => t === 'move';
 					const [ax1, ay1, ax2, ay2] = fig.upperArm;
 					const [fx1, fy1, fx2, fy2] = fig.forearm;
 					const [nx1, ny1, nx2, ny2] = fig.neck;
-					const [px1, py1, px2, py2] = fig.paddle;
+					const [gx1, gy1, gx2, gy2] = fig.grip;
+					const [px1, py1, px2, py2] = fig.face;
 					return (
 						<g class={`side-person role-${p.role}`} data-side-player={animated ? p.id : undefined}>
 							{/* スニーカー、足（足首〜ひざ〜股関節）、胴、首、頭、腕（肩〜ひじ〜手）、パドル */}
 							<polygon class="side-shoe" points={fig.shoe} />
 							<polyline class="side-leg" stroke-width={fig.widths.leg} points={fig.leg} />
 							<path class="side-torso" d={fig.torso} />
+							{/* 股関節のまわりを丸く埋めて、胴と足のつなぎめに切れ目ができないようにする */}
+							<circle class="side-hip" cx={fig.hip.cx} cy={fig.hip.cy} r={fig.hip.r} />
 							<line class="side-neck" stroke-width={fig.widths.neck} x1={nx1} y1={ny1} x2={nx2} y2={ny2} />
 							<ellipse class="side-head" cx={fig.head.cx} cy={fig.head.cy} rx={fig.head.rx} ry={fig.head.ry} transform={`rotate(${fig.head.rot} ${fig.head.cx} ${fig.head.cy})`} />
 							<line class="side-upperarm" stroke-width={fig.widths.upperArm} x1={ax1} y1={ay1} x2={ax2} y2={ay2} />
 							<line class="side-arm" stroke-width={fig.widths.forearm} x1={fx1} y1={fy1} x2={fx2} y2={fy2} />
-							<line class="side-paddle" x1={px1} y1={py1} x2={px2} y2={py2} />
+							{/* 腕と手は色を付けて、パドルの大きさと見比べられるようにする */}
+							<line class="side-grip" stroke-width={fig.widths.grip} x1={gx1} y1={gy1} x2={gx2} y2={gy2} />
+							<line class="side-paddle" stroke-width={fig.widths.face} x1={px1} y1={py1} x2={px2} y2={py2} />
+							<circle class="side-hand" cx={fig.hand.cx} cy={fig.hand.cy} r={fig.hand.r} />
 						</g>
 					);
 				})}

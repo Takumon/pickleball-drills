@@ -339,12 +339,19 @@ function setup(root: HTMLElement) {
 		raf = requestAnimationFrame(tick);
 	}
 
+	/**
+	 * 手 i の前の間。ふつうは PAUSE_MS（1手ずつ区切ると、誰が何を打ったかを読み取りやすい）。
+	 * 手 i がトラップ（受けた球を面でポンと上げてから打つ）で始まるときは、受けた球の続きの動きなので、間を入れずに続ける
+	 */
+	const pauseBefore = (i: number) =>
+		frames[i]?.querySelector<SVGPathElement>('path[data-kind="ball"]')?.dataset.preFromH !== undefined ? 0 : PAUSE_MS;
+
 	function playFrom(i: number) {
 		show(i, true, () => {
 			if (!playing) return;
 			const last = i === frames.length - 1;
 			if (!last) {
-				timer = window.setTimeout(() => playFrom(i + 1), PAUSE_MS);
+				timer = window.setTimeout(() => playFrom(i + 1), pauseBefore(i + 1));
 				return;
 			}
 			// 最後の手: 少し止めて見せてから、最初の立ち位置へ戻し、最初の手へ

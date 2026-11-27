@@ -377,11 +377,12 @@
 	gap: 0.5rem;
 	margin: 0.4rem auto 0;
 	max-width: 22rem;
-	font-size: var(--sl-text-xs, 0.8rem);
+	font-size: var(--sl-text-sm, 0.9rem);
 }
 .court .score-end {
 	white-space: nowrap;
-	color: var(--sl-color-gray-3);
+	font-weight: 700;
+	color: var(--sl-color-white);
 }
 .court .score-bar {
 	position: relative;
@@ -394,7 +395,7 @@
 	left: calc(1rem + var(--pos) * (100% - 2rem));
 	bottom: 0.35rem;
 	transform: translateX(-50%);
-	color: var(--sl-color-gray-3);
+	color: var(--sl-color-gray-2);
 	font-variant-numeric: tabular-nums;
 }
 .court .score-tick.zero {

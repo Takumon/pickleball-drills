@@ -317,7 +317,8 @@ const panels = groups.map((g) => {
 		if (!s.point || !sc) return undefined;
 		const id = s.point === sc.plus ? sc.minus : s.point === sc.minus ? sc.plus : undefined;
 		const f = id ? byIdTo.get(id) : undefined;
-		return f ? ([f.x, f.y - PLAYER_R - 1.2] as Point) : undefined;
+		// 人のネット側に出す（奥の人の上に出すと、図の上の端で切れるため）
+		return f ? ([f.x, f.y + (f.y < COURT.net ? 1 : -1) * (PLAYER_R + 1.2)] as Point) : undefined;
 	};
 	const lines = g.shots.map((s) => ({
 		...lineOf(s, byId, groups.length > 1, byIdTo),

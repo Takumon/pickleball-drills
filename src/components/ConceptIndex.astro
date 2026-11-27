@@ -1,0 +1,225 @@
+---
+/**
+ * 「図の見方」ページの、このサイトで使う考え方（概念）の一覧。利用者向けと作り手向けを混ぜて、まず全部を書き出す（書き手の希望）。
+ * 種類・高さ・役割・カテゴリ・項目名など、コードに一覧があるものは、そこから作る（コードを変えれば一覧も変わる）。
+ * ページを分けるかどうかは、あとで決める。
+ */
+import { categories } from '../config/categories';
+import { DEPTHS, LANES, heightLevels, roleLabels, shotLabels, type Role } from '../config/court';
+import { detailGroups, fieldLabels, visibleFields } from '../config/drill-display';
+
+type Row = { name: string; meaning: string; who: '利用者' | '作り手' | '両方'; data?: string };
+const sections: { title: string; intro?: string; rows: Row[] }[] = [];
+
+sections.push({
+	title: '練習とメニュー',
+	rows: [
+		{ name: 'ドリル', meaning: '練習1つ分。1つのページで、図と説明を見せる', who: '両方', data: 'src/content/docs/drills/<カテゴリ>/<ID>.md' },
+		{ name: 'ID', meaning: 'ドリルの名前の代わりの記号（例: dnk001）。カテゴリ3文字＋作った順の番号。ページには出さない', who: '作り手', data: 'drill.id' },
+		{ name: '表示順', meaning: 'サイドバーやドリル一覧で並ぶ順。ID とは別に持つ', who: '作り手', data: 'sidebar.order' },
+		...categories.map((c): Row => ({ name: `カテゴリ: ${c.label}`, meaning: `ドリルの分類（${c.en}）`, who: '両方', data: c.code })),
+		{ name: '派生形', meaning: '打ち方だけが違う、同じドリルの変化（フォア／バックなど）。図で描いている派生形を1つ決める', who: '両方', data: 'drill.variants（default: true）' },
+		{ name: '別名', meaning: 'ドリルの別の呼び方。探すときに使う。ページには出さない', who: '作り手', data: 'drill.aliases' },
+		{ name: '練習メニュー', meaning: 'その日にやるドリルと時間を並べたもの。URL だけで表す', who: '両方', data: '/?v=1&m=…（src/lib/menu.ts）' },
+		{ name: '見出し・休憩・自由記述', meaning: '練習メニューの中の、ドリル以外の行', who: '両方', data: 'h: / b: / x:' },
+		{ name: '分×セット', meaning: '1セットの時間とセット数。メニューに書く', who: '両方', data: 'drp001:2x5' },
+		{ name: 'ビルダーの初期値', meaning: 'ビルダーでドリルを足したときの、最初の分×セット。ページには出さない', who: '作り手', data: 'drill.builderDefault' },
+		{ name: 'ビルダー', meaning: '練習メニューを組む画面（PC 向け）。右にスマホの幅のプレビューを出す', who: '作り手', data: '/builder/' },
+	],
+});
+
+sections.push({
+	title: 'ドリルのページの項目',
+	intro: '最初から見せる項目と、折りたたむ項目を分けている。',
+	rows: [
+		...visibleFields.map((f): Row => ({ name: fieldLabels[f], meaning: '最初から見せる', who: '両方', data: `drill.${f}` })),
+		...detailGroups.flatMap((g) => g.fields.map((f): Row => ({ name: fieldLabels[f], meaning: `「${g.label}」のトグルの中`, who: '両方', data: `drill.${f}` }))),
+	],
+});
+
+const laneNote: Record<string, string> = {
+	leftSide: '左のサイドライン寄り（ほぼ端）',
+	leftOuter: '左のレーンの真ん中とサイドラインの間',
+	left: '左のレーンの真ん中',
+	leftInner: '左のレーンの真ん中から少しセンターライン寄り',
+	leftCenter: '左のセンターライン寄り',
+	rightCenter: '右のセンターライン寄り',
+	rightInner: '右のレーンの真ん中から少しセンターライン寄り',
+	right: '右のレーンの真ん中',
+	rightOuter: '右のレーンの真ん中とサイドラインの間',
+	rightSide: '右のサイドライン寄り（ほぼ端）',
+};
+const depthNote: Record<string, string> = {
+	kitchen: 'キッチンライン付近',
+	inKitchen: 'キッチンの中（ボールを落とす所）',
+	kitchenBack: 'キッチンラインから少し下がった所',
+	kitchenTran: 'キッチンラインとトランの間',
+	tran: 'トラン（キッチンラインとベースラインの中間）',
+	baseline: 'ベースラインの後ろ',
+};
+sections.push({
+	title: 'コートと立ち位置',
+	intro: 'コートは縦向きで、下側が自分たちの側。立ち位置は「手前／奥-レーン-深さ」の名前で書き、座標はコードが決める（例: near-right-kitchen）。',
+	rows: [
+		{ name: '手前・奥', meaning: '手前（near）が自分たちの側、奥（far）が相手の側', who: '作り手', data: 'near / far' },
+		...Object.keys(LANES).map((k): Row => ({ name: `レーン: ${k}`, meaning: laneNote[k] ?? '', who: '作り手', data: `x = ${LANES[k as keyof typeof LANES]}ft` })),
+		...Object.keys(DEPTHS.near).map((k): Row => ({ name: `深さ: ${k}`, meaning: depthNote[k] ?? '', who: '作り手' })),
+		{ name: '半面', meaning: 'コートの縦半分。半面の練習では使う側を塗る', who: '両方', data: 'zones: [left]' },
+		{ name: '柵', meaning: 'ドロップの的。相手のキッチンに L 字に置き、内側に落とす', who: '両方', data: 'fence: far-left、to: fence.inside / fence.corner' },
+		{ name: '受ける人の手前', meaning: '受ける人の手前のキッチン側に落とす着地点', who: '作り手', data: 'to: A.front' },
+	],
+});
+
+sections.push({
+	title: '人',
+	rows: [
+		...(Object.keys(roleLabels) as Role[]).map((r): Row => ({ name: roleLabels[r], meaning: r === 'practice' ? '練習する人。白い二重丸' : '濃い丸', who: '両方', data: `role: ${r}` })),
+		{ name: '右利き', meaning: 'すべての人は右利きとして描く。パドルは本人から見て右斜め前', who: '両方' },
+		{ name: '基本の位置と受ける位置', meaning: '基本の位置で待ち、相手が打ったら受ける位置へ横（や斜め後ろ）に動き、打ちながら戻る。動きはコードが足す', who: '両方', data: 'players の sidestep' },
+		{ name: '反応の遅れ', meaning: '相手の打球を見て動く人は少し遅れて動き出す', who: '両方' },
+		{ name: '人の動き', meaning: 'ロブで下がる、前に詰めるなど。矢印だけで、名前は付けない', who: '作り手', data: 'type: move' },
+	],
+});
+
+sections.push({
+	title: '打球',
+	intro: '線の形・速さ・打つ高さ・打つ動きの一覧は、このページの上の表とカードにある。',
+	rows: [
+		...(Object.keys(shotLabels) as (keyof typeof shotLabels)[]).filter((t) => t !== 'move').map((t): Row => ({ name: shotLabels[t], meaning: '打球の種類', who: '両方', data: `type: ${t}` })),
+		{ name: '球出し', meaning: '練習を始めるために出す球。出す球の種類で描き、「球出し（ディンク）」と名前を付ける。新しいボール', who: '両方', data: 'feed: true' },
+		{ name: '打つ前に弾ませる', meaning: '手元で落として弾ませてから打つ球出し。パドルの真下で弾む', who: '両方', data: 'afterBounce: true' },
+		{ name: 'トラップ', meaning: '来た球を面で吸収してポンと上げる。ディンクとストロークでは弾ませてから、ボレーでは弾ませずに打つ', who: '両方', data: 'afterBounce: true（相手から来た球）' },
+		{ name: 'バウンド', meaning: 'ボールが弾む位置。黄色い輪が出る。コートに落とす球は着地点で弾み、受ける人の手前で弾む球もある', who: '両方', data: 'bounce: front / false' },
+		{ name: '投げ下ろす弧', meaning: '上から投げ下ろす球。打った高さから上がらずに落ちる', who: '作り手', data: 'fall: true' },
+		{ name: 'ネットを越える高さ', meaning: 'ドライブ以外の球はネットの白帯より少し上を必ず通る', who: '作り手' },
+		{ name: '打つ高さ・山の高さ', meaning: '打球の種類ごとに決まる。違う高さで打つ球だけ書く', who: '作り手', data: 'hit / peak' },
+	],
+});
+
+sections.push({
+	title: 'ボールの高さの段階',
+	rows: (Object.keys(heightLevels) as (keyof typeof heightLevels)[]).map((h): Row => ({
+		name: heightLevels[h].label,
+		meaning: heightLevels[h].note,
+		who: '作り手',
+		data: `${h}（${heightLevels[h].ft}ft）`,
+	})),
+});
+
+sections.push({
+	title: 'アニメーション',
+	rows: [
+		{ name: '手', meaning: '打つ順の1つ分。①②③の番号ごとに1コマで再生する', who: '両方', data: 'n' },
+		{ name: '手と手の間', meaning: 'ふつうは0.7秒止まる。次の手がトラップで始まるときは止まらずに続ける', who: '両方' },
+		{ name: '1周の終わり', meaning: '最後の手のあと1.6秒止まり、人は最初の立ち位置へ歩いて戻ってから繰り返す', who: '両方' },
+		{ name: 'ラリー', meaning: 'ラリーを続けるドリルは球出しから2往復を描く。往復の手はコードが作る', who: '両方', data: 'rally: 2' },
+		{ name: '新しいボール', meaning: '球出しや、点が決まったあとの球。前の球の続きにならないので、出し直して見せる', who: '作り手' },
+		{ name: 'つながり（連続性）', meaning: '手の切れ目やループで、人・ボールの位置や高さが跳ばない。作るたびに測って確かめる', who: '作り手', data: '.claude/skills/add-drill/anim-continuity.js' },
+		{ name: '打つ動き', meaning: '打った瞬間に、パドルが打ち方ごとの向きへ出て戻る', who: '両方', data: 'config/court.ts の shotSwing' },
+		{ name: '同じ手の重なる線', meaning: '同じ手で2本の線が重なるときは、真ん中を右へずらす', who: '作り手' },
+	],
+});
+
+sections.push({
+	title: 'ゲーム形式',
+	rows: [
+		{ name: '点の目盛り', meaning: '2人で1つの点を動かすゲームで、図の下に −N … 0 … +N を出す。右（+）が手前の人', who: '両方', data: 'score: { to, plus, minus }' },
+		{ name: '決まる球', meaning: '点が決まる球。目盛りの印が動き、次の球は新しいボールになる。ディンクのゲームでは攻めのディンクで描く', who: '両方', data: 'point: 取った人' },
+		{ name: '失点', meaning: '点を失った人のネット側に、手が終わったときに出す文字', who: '利用者' },
+		{ name: '〇 の勝ち', meaning: '勝ちの点に届いた手で、コートの真ん中に出す文字', who: '利用者' },
+	],
+});
+
+sections.push({
+	title: '横から見た図',
+	rows: [
+		{ name: '横から見た高さ', meaning: 'コート図の右の帯。ボールの高さと人の構えを見せる補助の図。控えめに描く', who: '利用者' },
+		{ name: '人の形', meaning: '関節の点をつないだ骨組みに、部分ごとの太さを付けて描く。身長170cm の比率', who: '作り手', data: 'src/lib/side-figure.ts' },
+		{ name: '構え', meaning: '上体はほぼ起こし、ひざを少し曲げる。低い球ほどひざを少し深く曲げる', who: '両方' },
+		{ name: 'パドルの向き', meaning: '腰より下ではヘッドが下がり、腰より上では高いほどヘッドが上を向く', who: '両方' },
+		{ name: 'ボールの大きさ', meaning: '見やすさのために実物より大きく描く（ほかは実物の比率）', who: '両方' },
+	],
+});
+
+sections.push({
+	title: '色の決まり',
+	rows: [
+		{ name: 'ボール', meaning: '黄色（固定）', who: '両方' },
+		{ name: '打球', meaning: '水色', who: '両方' },
+		{ name: 'パドル', meaning: 'ローズ（上から見た図と横から見た図で同じ）', who: '両方' },
+		{ name: '腕と手（横から見た図）', meaning: '肌の色', who: '両方' },
+		{ name: '人', meaning: '色を付けない。練習役は白い二重丸、ほかは濃い丸。人の外側には暗い縁', who: '両方' },
+	],
+});
+
+sections.push({
+	title: '共有画像（LINE や X に貼ったときの画像）',
+	rows: [
+		{ name: '決めの場面', meaning: '練習役の最後の1球と、そのきっかけの球と、その間の動きを1枚に描く。球を2つ以上使う手はその手だけ', who: '作り手', data: 'src/lib/og.ts' },
+		{ name: '描く手の指定', meaning: '決まりで選んだ場面が合わないときだけ、描く手を指定する', who: '作り手', data: 'ogSteps' },
+		{ name: '画像を作る', meaning: '手元で古い画像だけを作り直す。CI では作らない', who: '作り手', data: 'npm run og' },
+	],
+});
+
+const whoClass = (w: Row['who']) => (w === '利用者' ? 'who-user' : w === '作り手' ? 'who-dev' : 'who-both');
+---
+
+<div class="concept-index">
+	<h2>このサイトで使う考え方の一覧</h2>
+	<p>このサイト（図や練習メニューの仕組み）で決めている考え方を、すべて書き出しました。「対象」は、練習する人（利用者）が知っておくとよいものか、ドリルを作る人（作り手）だけが使うものかを示します。今はまとめて載せていて、ページを分けるかどうかはあとで決めます。</p>
+	{
+		sections.map((s) => (
+			<section>
+				<h3>{s.title}</h3>
+				{s.intro && <p>{s.intro}</p>}
+				<table>
+					<thead>
+						<tr>
+							<th>名前</th>
+							<th>意味</th>
+							<th>対象</th>
+							<th>データでの書き方</th>
+						</tr>
+					</thead>
+					<tbody>
+						{s.rows.map((r) => (
+							<tr>
+								<td>{r.name}</td>
+								<td>{r.meaning}</td>
+								<td>
+									<span class={`who ${whoClass(r.who)}`}>{r.who}</span>
+								</td>
+								<td>{r.data && <code>{r.data}</code>}</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</section>
+		))
+	}
+</div>
+
+<style>
+	.concept-index table {
+		font-size: 0.8rem;
+	}
+	.concept-index th,
+	.concept-index td {
+		padding: 0.4rem 0.35rem;
+		vertical-align: top;
+	}
+	.concept-index code {
+		font-size: 0.75rem;
+		word-break: break-all;
+	}
+	.concept-index .who {
+		white-space: nowrap;
+		font-size: 0.75rem;
+		padding: 0 0.35rem;
+		border-radius: 999px;
+		border: 1px solid var(--sl-color-gray-4);
+	}
+	.concept-index .who-dev {
+		color: var(--sl-color-gray-3);
+	}
+</style>

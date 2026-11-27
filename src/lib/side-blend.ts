@@ -6,6 +6,8 @@
 const PARTS: [string, string[]][] = [
 	['.side-shoe', ['points']],
 	['.side-lower', ['d']],
+	['.side-shoe2', ['points']],
+	['.side-lower2', ['d']],
 	['.side-torso', ['d']],
 	['.side-neck-shape', ['d']],
 	['.side-head', ['d']],

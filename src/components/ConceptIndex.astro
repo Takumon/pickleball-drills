@@ -88,7 +88,7 @@ sections.push({
 		...(Object.keys(shotLabels) as (keyof typeof shotLabels)[]).filter((t) => t !== 'move').map((t): Row => ({ name: shotLabels[t], meaning: '打球の種類', who: '両方', data: `type: ${t}` })),
 		{ name: '球出し', meaning: '練習を始めるために出す球。出す球の種類で描き、「球出し（ディンク）」と名前を付ける。新しいボール', who: '両方', data: 'feed: true' },
 		{ name: '打つ前に弾ませる', meaning: '手元で落として弾ませてから打つ球出し。パドルの真下で弾む', who: '両方', data: 'afterBounce: true' },
-		{ name: 'トラップ', meaning: '来た球を面で吸収してポンと上げる。ディンクとストロークでは弾ませてから、ボレーでは弾ませずに打つ', who: '両方', data: 'afterBounce: true（相手から来た球）' },
+		{ name: 'トラップ', meaning: '来た球を面で吸収してポンと上げる。ディンクは足元でワンバウンドさせてから、リセットとボレーは弾ませずに落ちてきた球を打つ（ボレーはボレーディンクで打つ）', who: '両方', data: 'type: dinkTrap / resetTrap / volleyTrap（afterBounce: true でも書ける）' },
 		{ name: 'バウンド', meaning: 'ボールが弾む位置。黄色い輪が出る。コートに落とす球は着地点で弾み、受ける人の手前で弾む球もある', who: '両方', data: 'bounce: front / false' },
 		{ name: '投げ下ろす弧', meaning: '上から投げ下ろす球。打った高さから上がらずに落ちる', who: '作り手', data: 'fall: true' },
 		{ name: 'ネットを越える高さ', meaning: 'ドライブ以外の球はネットの白帯より少し上を必ず通る', who: '作り手' },

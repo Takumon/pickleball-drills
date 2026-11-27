@@ -12,6 +12,8 @@ import {
 	type ShotType,
 	reactionMs,
 	WAIST_FT,
+	TRAP_BASE,
+	TRAP_NO_BOUNCE,
 } from '../config/court';
 import CourtFrame from './CourtFrame.astro';
 import '../styles/court.css';
@@ -121,13 +123,17 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean, byIdTo: M
 	// 打つ前に一度弾ませる球（手から落とす球出し、トラップして弾ませる球）: パドルの真下で弾み、打点まで上がってから飛んでいく。
 	// 弾む位置をパドルと同じ所にするので、上から見た図でボールが横に跳ばない
 	const hitter = typeof s.from === 'string' ? byId.get(s.from) : undefined;
-	const pre: Point | undefined = s.afterBounce && hitter ? [hitter.face[0], hitter.face[1]] : undefined;
+	// トラップしてから打つ打ち方（dinkTrap など）は、書かなくても打つ前にトラップする
+	const trapType = s.type in TRAP_BASE;
+	const pre: Point | undefined = (s.afterBounce || trapType) && hitter ? [hitter.face[0], hitter.face[1]] : undefined;
 	// トラップ: この人に向かってくる球（ループで前にある球も含む）があれば、その球を受けた高さから始め、
 	// 面でポンと少し上げてから落とす。なければ手から落とす球出し
 	const preFromH = pre ? trapFromHeight(s) : undefined;
+	// リセットとボレーのトラップは、弾ませずに、ポンと上げた球が打つ高さまで落ちてきたところを打つ
+	const prePop = TRAP_NO_BOUNCE.has(s.type) && preFromH !== undefined;
 	// 人の動きで、体の中心がどれだけ動くか。線は丸と重ならないよう両端を縮めて描くので、線の長さとは違う
 	const shift: Point | undefined = s.type === 'move' ? [b.pt[0] - a.pt[0], b.pt[1] - a.pt[1]] : undefined;
-	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces, netAt), ms, pre, preFromH, shift };
+	return { ...s, d, mid, label, ys: [y1, y2, curve ? cy : y1], bounces, heights: heightsOf(s, bounces, netAt), ms, pre: TRAP_NO_BOUNCE.has(s.type) && !prePop ? undefined : pre, preFromH, prePop, shift };
 }
 
 /**
@@ -137,9 +143,12 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean, byIdTo: M
 const ft = (l: HeightLevel) => heightLevels[l].ft;
 // ブロックボレーはパドルを立てて取るので、腰より低い球には使わない（書き手と決めた規則）。
 // 低い球にパドルを立てると、手を球より下に置くため、深くしゃがみ込んだ形になる。低い球はリセットなど、ヘッドを下げて取る打ち方にする
+// ドロップは腰より下の球を下から上へ運ぶ打ち方なので、腰より上の球には使わない（書き手と決めた規則: 腰より上のドロップはない）
 for (const s of diagram.shots) {
 	if (s.type === 'block' && ft(s.hit ?? shotHeights.block.hit) < WAIST_FT)
 		throw new Error(`コート図: ブロックボレーは腰より低い球（hit: ${s.hit}）には使わない。高さを上げるか、リセットなどにする`);
+	if (s.type === 'drop' && ft(s.hit ?? shotHeights.drop.hit) > WAIST_FT)
+		throw new Error(`コート図: ドロップは腰より上の球（hit: ${s.hit}）には使わない。ブロックボレーなどにする`);
 }
 /** 受ける高さ: 受けた人が次に打つ球の打点。次がなければ既定の高さ */
 function receiveHeight(s: Shot) {
@@ -359,6 +368,9 @@ const panels = groups.map((g) => {
 		// 相手の打球を見て動く人は、反応する時間だけ遅れて動き出す（自分で打ちながら動くときは遅れない）
 		delay:
 			s.type === 'move' && g.shots.some((o) => o.type !== 'move' && o.from !== s.from) ? reactionMs : undefined,
+		// ロブに下がって、弾んでから打つ人は、後ろを向いて走り、弾んだら前足を踏み込んで前を向き直る（横から見た図。書き手と決めた）。
+		// 弾む前に打つ（スマッシュ・ボレー）ときは、ボールのほうを向いたまま下がる
+		run: s.type === 'move' && g.shots.some((o) => o.type === 'lob' && o.to === s.from && o.bounce === 'front'),
 	})).map((l) => {
 		if (l.type === 'move' || !l.label) return l;
 		if (seenLabels.has(l.label)) return { ...l, label: undefined };

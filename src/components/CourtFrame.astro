@@ -41,6 +41,8 @@ interface Line {
 	pre?: Point;
 	/** トラップして弾ませる球: 受けた高さ（ft）。ここから少し上がってから落ちる */
 	preFromH?: number;
+	/** ボレーのトラップ: 弾ませずに、ポンと上げた球を打つ高さで打つ（弾む印を出さない） */
+	prePop?: boolean;
 	/** 球出しの球（新しいボールを出す）。アニメーションの連続性を測るときに、ここでボールが跳ぶのは正しい */
 	feed?: boolean;
 	/** 動き出すまでの遅れ（ミリ秒）。相手の打球を見てから動く人 */
@@ -51,6 +53,8 @@ interface Line {
 	lostAt?: Point;
 	/** 人の動きで、体の中心が動く量（線の長さではなく、動く前と後の位置の差） */
 	shift?: Point;
+	/** ロブに下がる人: 後ろを向いて走り、最後に前足を踏み込んで前を向き直る（横から見た図） */
+	run?: boolean;
 }
 interface Props {
 	figures: Figure[];
@@ -189,6 +193,8 @@ const isSub = (t: string) => t === 'move';
 						data-ms={animated ? l.ms : undefined}
 						data-pre={animated && l.pre ? `${l.pre[0]},${l.pre[1]}` : undefined}
 						data-pre-from-h={animated && l.preFromH !== undefined ? l.preFromH : undefined}
+						data-pre-pop={animated && l.prePop ? '' : undefined}
+						data-run={animated && l.run ? '' : undefined}
 						data-fresh={animated && l.type !== 'move' && (l.feed || l.fresh || (l.pre && l.preFromH === undefined)) ? '' : undefined}
 						data-delay={animated && l.delay ? l.delay : undefined}
 						data-h={animated ? l.heights : undefined}
@@ -201,7 +207,7 @@ const isSub = (t: string) => t === 'move';
 	{
 		lines.flatMap((l) => [
 			// 打つ前に弾む位置（その手の始まりに出す）
-			...(l.pre
+			...(l.pre && !l.prePop
 				? [
 						<g class:list={['bounce', { on: !animated }]} data-pre-ring>
 							<circle cx={l.pre[0]} cy={l.pre[1]} r={MARK} />
@@ -320,6 +326,9 @@ const isSub = (t: string) => t === 'move';
 					return (
 						<g class={`side-person role-${p.role}`} data-side-player={animated ? p.id : undefined} data-pose-input={animated ? JSON.stringify(poseInput) : undefined} data-pose-static={animated && fit ? JSON.stringify(fit.poses.ready) : undefined} data-pose-body-back={animated && kp ? bodyBack : undefined}>
 							{/* スニーカー、足（足首〜ひざ〜股関節）、胴、首、頭、腕（肩〜ひじ〜手）、パドル */}
+							{/* 奥の足（走る・踏み込むときだけ手前の足と離れて見える） */}
+							<polygon class="side-shoe2" points={fig.shoe2} />
+							<path class="side-lower2" d={fig.lowerBody2} />
 							<polygon class="side-shoe" points={fig.shoe} />
 							<path class="side-lower" d={fig.lowerBody} />
 							<path class="side-torso" d={fig.torso} />
@@ -343,7 +352,7 @@ const isSub = (t: string) => t === 'move';
 				<path class="side-trace" d="" />
 				{/* 横から見た図でも、ボールが地面に触れた位置に、コートの図と同じ黄色い輪を同じタイミングで出す */}
 				{lines.flatMap((l) =>
-					[...(l.pre ? [{ pt: l.pre, at: -1 }] : []), ...(l.bounces ?? [])].map((b) => (
+					[...(l.pre && !l.prePop ? [{ pt: l.pre, at: -1 }] : []), ...(l.bounces ?? [])].map((b) => (
 						<g class:list={['bounce', 'side-bounce', { on: !animated }]} data-at={b.at < 0 ? undefined : b.at} data-pre-ring={b.at < 0 ? '' : undefined}>
 							<circle cx={side.x0} cy={b.pt[1]} r={MARK} />
 						</g>

@@ -13,6 +13,8 @@ export function renderSide(g: Element, fig: SideFigure) {
 		el.removeAttribute('transform');
 	};
 	const line = ([x1, y1, x2, y2]: number[]) => ({ x1, y1, x2, y2 });
+	set('.side-shoe2', { points: fig.shoe2 });
+	set('.side-lower2', { d: fig.lowerBody2 });
 	set('.side-shoe', { points: fig.shoe });
 	set('.side-lower', { d: fig.lowerBody });
 	set('.side-torso', { d: fig.torso });

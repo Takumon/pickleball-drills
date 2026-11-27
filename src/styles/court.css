@@ -190,7 +190,10 @@
 .court .shot.t-dink,
 .court .shot.t-drop,
 .court .shot.t-reset,
-.court .shot.t-volleyDink {
+.court .shot.t-volleyDink,
+.court .shot.t-volleyTrap,
+.court .shot.t-dinkTrap,
+.court .shot.t-resetTrap {
 	stroke-width: 0.35;
 	stroke-dasharray: 0.05 0.55;
 }
@@ -264,6 +267,15 @@
 }
 .court .side-hand {
 	fill: var(--side-skin);
+}
+.court .side-lower2,
+.court .side-shoe2 {
+	/* 奥の足: 手前の足と見分けられるよう、少し薄く */
+	fill: var(--side-ink);
+	stroke: var(--side-ink);
+	stroke-width: 0.02;
+	stroke-linejoin: round;
+	opacity: 0.6;
 }
 .court .side-lower {
 	fill: var(--side-ink);

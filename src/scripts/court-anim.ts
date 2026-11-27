@@ -23,6 +23,12 @@ const TRAP_DROP_MS = 620;
 /** 弾んでから打点まで上がる時間 */
 const PRE_RISE_MS = PRE_MS - PRE_DROP_MS;
 /** 受けた高さ h0 から pop だけ上がって地面（0）に落ちる放物線（u: 0〜1） */
+/** ボレーのトラップ: 受けた高さ h0 から pop だけ上がって、打つ高さ h1 まで落ちる放物線（弾ませない） */
+const popTo = (h0: number, pop: number, h1: number) => {
+	const a = 2 * pop + Math.sqrt(Math.max(0, 4 * pop * pop + 4 * pop * (h0 - h1)));
+	const b = h0 + a - h1;
+	return (u: number) => h0 + a * u - b * u * u;
+};
 const popArc = (h0: number, pop: number) => {
 	const a = 2 * pop + Math.sqrt(4 * pop * pop + 4 * pop * h0);
 	const b = h0 + a;
@@ -225,6 +231,51 @@ function poseRig(ball: SVGPathElement, paddle: SVGLineElement, arm: SVGLineEleme
 	return { apply, back, follow, contact: path.contact, at: path.at, home: [3, 0, 0] as Vec3, prepFrom: [3, 0, 0] as Vec3, setup: false };
 }
 type Rig = NonNullable<ReturnType<typeof hitterRig>>;
+/** 走るときの1歩の時間（ミリ秒） */
+const RUN_STEP_MS = 260;
+/**
+ * ロブに下がって、弾んでから打つ人（data-run の動き）の横から見た形（書き手と決めた）:
+ * 相手がロブを打ったら後ろ（ベースラインの側）へ向きを変え、まっすぐ走る（足を交互に出し、腕を振る。パドルは持ったまま）。
+ * 着く少し前に、前足を一歩踏み込んで止まり、体をネットのほうへ向け直す（両足が前後に開き、前足に体重が乗る。オープンスタンスで前を向く）。
+ * tm は動きの進み（0〜1）、ms は動き出してからの時間
+ */
+function runnerRig(side: SVGGElement) {
+	const input = JSON.parse(side.dataset.poseInput!) as SideFigureInput;
+	// 後ろを向いた形は、ネットの向きを逆にして描く（立つ位置を軸に左右が入れ替わる）
+	const away: SideFigureInput = { ...input, toNet: -input.toNet };
+	// 足: [ももの向き, ひざの曲げ]。前へ出す足はひざを伸ばし、後ろへ蹴った足はひざを曲げる
+	// （後ろへ蹴った足のすねは、ほぼ水平まで。それより上げると、かかとがお尻に付くような形になる）
+	const leg = (u: number): [number, number] => [30 * u, 20 + 30 * (0.5 - 0.5 * u)];
+	const runFig = (ms: number) => {
+		const sw = Math.sin((ms / RUN_STEP_MS) * Math.PI);
+		return sideFigure({ ...away, bodyBack: 0, angles: { knee: 25, lean: 18, shoulder: 25 - 40 * sw, elbow: 85, paddle: 20 }, legs: { near: leg(sw), far: leg(-sw) } });
+	};
+	// 踏み込んだ形の腕は、次に打つ球（ドロップ）の引いた形に近づける（腕を下ろしてパドルを体の横で低く引く）。
+	// 構えの形（パドルを前に立てる）で止めると、次の手で振りかぶるときにパドルが一気に動いて跳ぶ
+	const stepFig = sideFigure({ ...input, bodyBack: 0, angles: { knee: 35, lean: 20, shoulder: -5, elbow: 20, paddle: -25 }, legs: { near: [28, 25], far: [-18, 12] } });
+	// 向きを変える割合（はじめ）と、踏み込んで前を向き直り始める割合（おわり）
+	const TURN = 0.15;
+	const STEP = 0.8;
+	let fromShape: Map<string, string> | undefined;
+	let runShape: Map<string, string> | undefined;
+	return (tm: number, ms: number) => {
+		if (tm <= 0) return;
+		side.dataset.posed = '1';
+		if (tm < TURN) {
+			fromShape ??= snapshotGroup(side);
+			renderSide(side, runFig(ms));
+			blendGroup(side, fromShape, easeInOut(tm / TURN));
+		} else if (tm < STEP) renderSide(side, runFig(ms));
+		else if (tm < 1) {
+			if (!runShape) {
+				renderSide(side, runFig(ms));
+				runShape = snapshotGroup(side);
+			}
+			renderSide(side, stepFig);
+			blendGroup(side, runShape, easeInOut((tm - STEP) / (1 - STEP)));
+		} else renderSide(side, stepFig);
+	};
+}
 /**
  * 打つ手の中の時刻 s（ミリ秒）での形を、r.apply で作る: 振りかぶり → 打つ所 → 振り抜き → 止める → 構えへ戻る。
  * 振りは打つ所で2つに分け、どちらも弧で動かす（打つ瞬間にパドルが必ず打つ所を通る）
@@ -386,7 +437,7 @@ function setup(root: HTMLElement) {
 			const start = m.getPointAtLength(0);
 			const end = m.getPointAtLength(len);
 			const [dx, dy] = shift ?? [end.x - start.x, end.y - start.y];
-			return { g, sg, dx, dy, delay: Number(m.dataset.delay) || 0 };
+			return { g, sg, dx, dy, delay: Number(m.dataset.delay) || 0, run: m.dataset.run !== undefined && sg ? runnerRig(sg) : undefined };
 		});
 		const lens = balls.map((b) => b.getTotalLength());
 		// 線はマスク側の線（.reveal）を伸ばして見せる。本体の線は点線・破線のまま描ける
@@ -439,12 +490,15 @@ function setup(root: HTMLElement) {
 			const p = balls[k]?.dataset.pre?.split(',').map(Number);
 			if (!p) return undefined;
 			const th = balls[k].dataset.preFromH !== undefined ? Number(balls[k].dataset.preFromH) : undefined;
+			// ボレーのトラップ（data-pre-pop）: 弾ませずに、打つ高さまで落ちてきたところで打つ（弾んで上がる時間はない）
+			const pop = balls[k].dataset.prePop !== undefined && th !== undefined;
 			return {
 				x: p[0],
 				y: p[1],
 				h0: th ?? HAND_FT,
 				dropMs: th !== undefined ? TRAP_DROP_MS : PRE_DROP_MS,
-				fall: th !== undefined ? popArc(th, TRAP_POP_FT) : (u: number) => HAND_FT * (1 - u * u),
+				pop,
+				fall: pop ? popTo(th, TRAP_POP_FT, ballAt(balls[k], 0).h) : th !== undefined ? popArc(th, TRAP_POP_FT) : (u: number) => HAND_FT * (1 - u * u),
 			};
 		};
 		const reset = () => {
@@ -498,8 +552,11 @@ function setup(root: HTMLElement) {
 		// 打つ動き: この手で打つ人の道具（rigs）と、次の手で打つ人の道具（preps。この手の後半で振りかぶる）
 		const rigs = balls.flatMap((b) => hitterRig(frame, b) ?? []);
 		const next = frames[i + 1];
+		// 走って下がる人（data-run）は、走る形のまま次の手へつなぐので、この手の後半で振りかぶらない
+		const runners = new Set(moves.filter((m) => m.dataset.run !== undefined).map((m) => m.dataset.player));
 		const preps = next
 			? [...next.querySelectorAll<SVGPathElement>('path[data-kind="ball"]')].flatMap((nb) => {
+					if (runners.has(nb.dataset.hitter)) return [];
 					const r = hitterRig(frame, nb);
 					return r ? [r] : [];
 				})
@@ -510,17 +567,28 @@ function setup(root: HTMLElement) {
 		const hitDelay = rigs.length ? SWING_MS * easeInv(rigs[0].contact) : 0;
 		const drops = pres.flatMap((pr) => (pr ? [pr.dropMs] : []));
 		const dropMs = drops.length ? Math.min(...drops) : 0;
-		const preMs = drops.length ? Math.max(...drops) + PRE_RISE_MS : 0;
+		// 弾ませる球は、弾んで打点まで上がる時間（PRE_RISE_MS）も待つ。ボレーのトラップは落ちてきたところで打つので、上がる時間はない
+		const preMs = drops.length ? Math.max(...pres.flatMap((pr) => (pr ? [pr.dropMs + (pr.pop ? 0 : PRE_RISE_MS)] : []))) : 0;
+		// 打つ前に弾ませる球・トラップした球は、ボールが打点に来た瞬間に打つ（書き手の指摘: 打点に来てから打つまで間が空いていた）。
+		// そのため振りは、打点に来る hitDelay 前から始める（弾んでいる間・落ちてくる間に振る）
+		const swingStart = Math.max(0, preMs - hitDelay);
+		const hitAt = swingStart + hitDelay;
 		const t0 = performance.now();
 		const tick = (now: number) => {
 			const elapsed = now - t0;
 			if (preMs > 0 && elapsed < preMs) {
-				setPreRings(elapsed >= dropMs);
+				rigs.forEach((r) => swingAt(r, elapsed - swingStart));
+				setPreRings(elapsed >= dropMs && pres.some((pr) => pr && !pr.pop));
 				// 打つ前に弾ませる球（手から落とす・トラップ）は、球ごとに地面まで落ちて弾み、打点まで上がる
 				pres.forEach((pr, k) => {
 					const start = ballAt(balls[k], 0);
 					if (!pr) return drawBall(start, k);
 					const rise = preMs - pr.dropMs;
+					if (pr.pop) {
+						// ボレーのトラップ: ポンと上げて、打つ高さまで落ちる（弾ませない）
+						const u = Math.min(1, elapsed / pr.dropMs);
+						return drawBall({ x: pr.x + (start.x - pr.x) * u, y: pr.y + (start.y - pr.y) * u, h: pr.fall(u) }, k);
+					}
 					if (elapsed < pr.dropMs) {
 						// 地面まで: 手から落とす球はだんだん速く、トラップした球はポンと少し上がってから落ちる
 						drawBall({ x: pr.x, y: pr.y, h: pr.fall(elapsed / pr.dropMs) }, k);
@@ -534,11 +602,11 @@ function setup(root: HTMLElement) {
 				raf = requestAnimationFrame(tick);
 				return;
 			}
-			setPreRings(preMs > 0);
-			// 振り: 打つ手の始まり（preMs）から振り、パドルが打つ所を通る瞬間（hitDelay）にボールが飛び出す
-			const s = elapsed - preMs;
+			setPreRings(preMs > 0 && pres.some((pr) => pr && !pr.pop));
+			// 振り: swingStart から振り、パドルが打つ所を通る瞬間（hitAt）にボールが飛び出す
+			const s = elapsed - swingStart;
 			rigs.forEach((r) => swingAt(r, s));
-			const flight = Math.max(0, s - hitDelay);
+			const flight = Math.max(0, elapsed - hitAt);
 			const t = Math.min(1, flight / duration);
 			// 次の手で打つ人は、この手の後半で振りかぶる
 			// ほかの球と同じ構えから打つ打ち方（setup）は、手の初めのうちに構えへ移る
@@ -555,7 +623,7 @@ function setup(root: HTMLElement) {
 				drawBall(ballAt(b, eb), k);
 
 			});
-			movers.forEach(({ g, sg, dx, dy, delay }) => {
+			movers.forEach(({ g, sg, dx, dy, delay, run }) => {
 				// 動き出しが遅れる人は、遅れたぶん短い時間で同じ終わりの時刻に着く
 				const tm = Math.min(1, Math.max(0, (flight - delay) / (duration - delay)));
 				const em = tm < 0.5 ? 2 * tm * tm : 1 - (-2 * tm + 2) ** 2 / 2;
@@ -566,6 +634,7 @@ function setup(root: HTMLElement) {
 					sg.dataset.moveTy = String(dy * em);
 					sg.setAttribute('transform', `translate(0 ${dy * em + Number(sg.dataset.blendTy ?? 0)})`);
 				}
+				run?.(tm, flight - delay);
 			});
 			// 振り抜いて元の構えに戻るまでは、手を終えない（途中で次の手に切り替わると、パドルが跳ぶため）
 			if (t < 1 || (rigs.length > 0 && s < SWING_MS + HOLD_MS + RETURN_MS)) raf = requestAnimationFrame(tick);
@@ -586,8 +655,8 @@ function setup(root: HTMLElement) {
 		raf = requestAnimationFrame(tick);
 		// 横から見た人: 前の手の終わりの形から、この手の形へ BLEND_MS でつなぐ（打つ動きのあとに混ぜるので、tick より後に呼ぶ）
 		if (prevSnap) {
-			// この手で打つ人は、打つ瞬間（preMs + hitDelay）の 8 割までに混ぜ終える
-			const quick = new Map(balls.flatMap((b) => (b.dataset.hitter ? [[b.dataset.hitter, (preMs + hitDelay) * 0.8] as [string, number]] : [])));
+			// この手で打つ人は、打つ瞬間（hitAt）の 8 割までに混ぜ終える
+			const quick = new Map(balls.flatMap((b) => (b.dataset.hitter ? [[b.dataset.hitter, hitAt * 0.8] as [string, number]] : [])));
 			const step = sideBlender(frame, prevSnap, new Set(moves.map((m) => m.dataset.player ?? '')), quick);
 			// 切り替えた瞬間から前の形で見せる（次の描画を待つと、一瞬だけ次の手の形が見えるため）
 			step(0);

@@ -1,4 +1,4 @@
-import { COURT, heightLevels, WAIST_FT } from '../config/court';
+import { baseShot, COURT, heightLevels, WAIST_FT } from '../config/court';
 /**
  * 横から見た高さの図に描く人（棒人間）を組み立てる。
  *
@@ -106,10 +106,6 @@ const STANCE_BY_SHOT: Record<string, Partial<typeof STANCE>> = {
 	reset: { paddleTip: -40, kneeMax: 80, leanMax: 34 },
 	// 腰より上のリセット: パドルを上へ斜めに（先を前上 50°）、ブロックボレーのように体の前で構える
 	'reset:high': { paddleTip: 50 },
-	// 頭より上の球のドロップ（下がって高い打点のボレーで弧を描いて落とす）: パドルを立て、先を少し後ろへ倒して面を前上へ開く
-	// （先は真上から後ろへ 30°、120°。面は前上 30° を向く。弧を描く球は前上へ約 40° で飛び出すので、これより立てると面の向きが合わない）。
-	// 下から上へ振るドロップの形（ヘッドを下げる）は、頭より上では取れない
-	'drop:high': { paddleTip: 120 },
 	// スピードアップ: 浮き気味のディンク（白帯のちょい上）を、ディンクと同じ構えから打つ。少し前のめりで、ひじは体の前に置いたまま、
 	// 手を体の前（前腕1本ぶん）に出す。打つときのパドルはほぼ水平（記事:「ヘッドを下げて構え、打つ所でほぼ水平、振り抜きで少し上」）
 	// setupH: 構えを決める高さ（ft）。スピードアップはディンクと同じ構え（ひざの高さの球を打つ構え）から打つので、
@@ -137,7 +133,7 @@ const STANCE_BY_SHOT: Record<string, Partial<typeof STANCE>> = {
 };
 
 /** ボレー（弾む前に打つ）打ち方。キッチンの中から打てない */
-const VOLLEYS = new Set(['punch', 'block', 'roll', 'volleyDink', 'smash']);
+const VOLLEYS = new Set(['punch', 'block', 'roll', 'volleyDink', 'volleyTrap', 'smash']);
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -161,6 +157,11 @@ export interface SideFigureInput {
 	angles?: PoseAngles;
 	/** 体を後ろに置く量（ft）を決めて渡す（決めのポーズのあいだで動かすとき、体が前後に滑らないように打つ瞬間の値を使う） */
 	bodyBack?: number;
+	/**
+	 * 2本の足を別々に描くとき（走る・踏み込む）: [ももの向き（度。真下から前へ +）, ひざの曲げ（度）]。near は手前の足、far は奥の足。
+	 * 書かなければ、2本の足は重なって1本に見える（ふつうの構え）
+	 */
+	legs?: { near: [number, number]; far: [number, number] };
 }
 
 /**
@@ -189,6 +190,9 @@ export interface SideFigure {
 	leg: string; // polyline の points（足首・ひざ・股関節）
 	/** 腰から足首までの形（path） */
 	lowerBody: string;
+	/** 奥の足（腰から足首までの形と、靴）。ふつうの構えでは手前の足と同じ形で、重なって見えない */
+	lowerBody2: string;
+	shoe2: string;
 	torso: string; // path の d（胴の横から見た形）
 	neck: [number, number, number, number];
 	/** 首の形（台形の path） */
@@ -229,7 +233,9 @@ function smoothClosed(q: [number, number][]): string {
 export function sideFigure(o: SideFigureInput): SideFigure {
 	const { x0, k, y, toNet, hitH, faceY } = o;
 	// 打つ高さが腰より上で、形の違う打ち方（「打ち方:high」）はその形
-	const byShot = o.shot ? (o.hitH > WAIST_FT && STANCE_BY_SHOT[`${o.shot}:high`]) || (o.hand === 'bh' && STANCE_BY_SHOT[`${o.shot}:bh`]) || STANCE_BY_SHOT[o.shot] : undefined;
+	// トラップしてから打つ打ち方は、元の打ち方の構え
+	const shot = o.shot && baseShot(o.shot);
+	const byShot = shot ? (o.hitH > WAIST_FT && STANCE_BY_SHOT[`${shot}:high`]) || (o.hand === 'bh' && STANCE_BY_SHOT[`${shot}:bh`]) || STANCE_BY_SHOT[shot] : undefined;
 	const stance = { ...STANCE, ...byShot };
 	// 図の座標へ: 高さ h（ft）→ x、前後 d（ft、ネットの側が +）→ y。前後も k 倍にして形をゆがめない
 	const X = (h: number) => x0 + h * k;
@@ -408,29 +414,43 @@ export function sideFigure(o: SideFigureInput): SideFigure {
 		if (nd < 0) [nh, nd] = [-nh, -nd];
 		return { h: from.h + dh * t + nh * off, d: from.d + dd * t + nd * off };
 	};
+	// 足1本の形（ひざ kn・足首 an）
+	const legShape = (kn: P, an: P) => {
 	const legFront: P[] = [
 		trunkAt(0.35, DEPTH.waist * H * 0.55), // 腰の前（くびれ）
 		trunkAt(0.02, DEPTH.pelvis * H * 0.4), // 下腹
-		along(p.hip, p.knee, 0.2, 0.05 * H), // ももの前
-		along(p.hip, p.knee, 0.6, 0.042 * H),
-		along(p.hip, p.knee, 0.95, 0.034 * H), // ひざの上
-		along(p.knee, ankle, 0.05, 0.03 * H), // ひざ（お皿）
-		along(p.knee, ankle, 0.4, 0.022 * H), // すね
-		along(p.knee, ankle, 0.85, 0.017 * H),
-		along(p.knee, ankle, 1.0, 0.017 * H), // 足首の前
+		along(p.hip, kn, 0.2, 0.05 * H), // ももの前
+		along(p.hip, kn, 0.6, 0.042 * H),
+		along(p.hip, kn, 0.95, 0.034 * H), // ひざの上
+		along(kn, an, 0.05, 0.03 * H), // ひざ（お皿）
+		along(kn, an, 0.4, 0.022 * H), // すね
+		along(kn, an, 0.85, 0.017 * H),
+		along(kn, an, 1.0, 0.017 * H), // 足首の前
 	];
 	const legBack: P[] = [
-		along(p.knee, ankle, 1.0, -0.017 * H), // 足首の後ろ（アキレス腱）
-		along(p.knee, ankle, 0.75, -0.02 * H),
-		along(p.knee, ankle, 0.3, -0.04 * H), // ふくらはぎ
-		along(p.knee, ankle, 0.05, -0.03 * H), // ひざの裏
-		along(p.hip, p.knee, 0.85, -0.03 * H),
-		along(p.hip, p.knee, 0.45, -0.042 * H), // ももの裏
-		along(p.hip, p.knee, 0.12, -0.055 * H), // お尻の下
+		along(kn, an, 1.0, -0.017 * H), // 足首の後ろ（アキレス腱）
+		along(kn, an, 0.75, -0.02 * H),
+		along(kn, an, 0.3, -0.04 * H), // ふくらはぎ
+		along(kn, an, 0.05, -0.03 * H), // ひざの裏
+		along(p.hip, kn, 0.85, -0.03 * H),
+		along(p.hip, kn, 0.45, -0.042 * H), // ももの裏
+		along(p.hip, kn, 0.12, -0.055 * H), // お尻の下
 		trunkAt(-0.05, -DEPTH.pelvis * H * 0.62), // お尻
 		trunkAt(0.35, -DEPTH.waist * H * 0.45), // 腰の後ろ（くびれ）
 	];
-	const lowerBody = smoothClosed([...legFront, ...legBack].map(at));
+	return smoothClosed([...legFront, ...legBack].map(at));
+	};
+	// 2本の足（legs）: 股関節から、ももの向きとひざの曲げで、ひざと足首を決める。書かなければ、構えの足が2本重なる
+	const legDir = (deg: number): P => ({ h: -Math.cos(rad(deg)), d: Math.sin(rad(deg)) });
+	const legAt = ([thighDeg, kneeDeg]: [number, number]) => {
+		const kn: P = { h: p.hip.h + thigh * legDir(thighDeg).h, d: p.hip.d + thigh * legDir(thighDeg).d };
+		const an: P = { h: kn.h + shank * legDir(thighDeg - kneeDeg).h, d: kn.d + shank * legDir(thighDeg - kneeDeg).d };
+		return { kn, an };
+	};
+	const nearLeg = o.legs ? legAt(o.legs.near) : { kn: p.knee, an: ankle };
+	const farLeg = o.legs ? legAt(o.legs.far) : { kn: p.knee, an: ankle };
+	const lowerBody = legShape(nearLeg.kn, nearLeg.an);
+	const lowerBody2 = legShape(farLeg.kn, farLeg.an);
 	const back = profile.map(([f, b]) => at(trunkAt(f, b)));
 	const front = profile.map(([f, , fr]) => at(trunkAt(f, fr))).reverse();
 	const torso = `M${back.map((q) => q.join(' ')).join(' L')} L${front.map((q) => q.join(' ')).join(' L')} Z`;
@@ -520,7 +540,10 @@ export function sideFigure(o: SideFigureInput): SideFigure {
 
 	const line = (a: P, b: P): [number, number, number, number] => [...at(a), ...at(b)];
 	return {
-		shoe: sneaker.map(([d, h]) => at({ h, d }).join(',')).join(' '),
+		// 靴は足首の下に置く（足首が上がれば靴も上がる）
+		shoe: sneaker.map(([d, h]) => at({ h: h + nearLeg.an.h - ankle.h, d: d + nearLeg.an.d }).join(',')).join(' '),
+		shoe2: sneaker.map(([d, h]) => at({ h: h + farLeg.an.h - ankle.h, d: d + farLeg.an.d }).join(',')).join(' '),
+		lowerBody2,
 		leg: [ankle, p.knee, p.hip].map((q) => at(q).join(',')).join(' '),
 		torso,
 		lowerBody,

@@ -2,7 +2,7 @@
 /**
  * 「図の見方」ページ用の凡例。打球の線・人の描き方を、実際の図と同じスタイル（styles/court.css）で描く。
  */
-import { heightLevels, keyPoseOf, roleLabels, shotHeights, shotLabels, shotSpeedKmh, shotSwing, swingOf, type Role, type ShotType } from '../config/court';
+import { heightLevels, keyPoseOf, roleLabels, TRAP_BASE, TRAP_NO_BOUNCE, shotHeights, shotLabels, shotSpeedKmh, shotSwing, swingOf, type Role, type ShotType } from '../config/court';
 import { sideFigure } from '../lib/side-figure';
 import { fitPoses, mixPose } from '../lib/side-render';
 import { arcLerp } from '../lib/arm-ik';
@@ -10,7 +10,7 @@ import { taper } from '../lib/arm-shape';
 import LegendExample from './LegendExample.astro';
 import '../styles/court.css';
 
-const order: ShotType[] = ['speedup', 'flick', 'smash', 'punch', 'drive', 'roll', 'block', 'serve', 'return', 'reset', 'dink', 'drop', 'volleyDink', 'lob', 'move'];
+const order: ShotType[] = ['speedup', 'flick', 'smash', 'punch', 'drive', 'roll', 'block', 'serve', 'return', 'reset', 'resetTrap', 'dink', 'dinkTrap', 'drop', 'volleyDink', 'volleyTrap', 'lob', 'move'];
 /** 線の形と太さ（styles/court.css の .t-* と合わせる） */
 const style: Record<ShotType, string> = {
 	speedup: '実線',
@@ -20,6 +20,9 @@ const style: Record<ShotType, string> = {
 	roll: '実線',
 	block: '実線',
 	volleyDink: '点線',
+	volleyTrap: '点線',
+	dinkTrap: '点線',
+	resetTrap: '点線',
 	drive: '実線',
 	serve: '実線',
 	return: '実線',
@@ -37,6 +40,9 @@ const width: Record<ShotType, string> = {
 	roll: 'ふつう',
 	block: 'ふつう',
 	volleyDink: '細い',
+	volleyTrap: '細い',
+	dinkTrap: '細い',
+	resetTrap: '細い',
 	drive: '太い',
 	serve: 'ふつう',
 	return: 'ふつう',
@@ -251,8 +257,8 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 	<p>パドルは、腰より下では腕の延長でヘッドが下がり、腰より上では高くなるほどヘッドが上を向きます。構えはひざを曲げて腰を落とし、胸はほぼ起こして、ひじを体の少し前に、手を体の前に出します。ロールボレーだけは、低い球に手を前へ伸ばして待ち構えるので、ひざを深く曲げ、上体も前に倒します。</p>
 	<div class="stroke-grid">
 		{
-			strokes.map(({ key, name, hitH, fig, sw, arrow, launch, kp, poseInput, bodyBack, ballAt, head, level, range }) => (
-				<figure class="stroke-card" data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ?? []).flat()].join(',')} data-setup={sw.setup ? '' : undefined} data-pivot={sw.pivot} data-straight={sw.straight ? '' : undefined} data-pivot-turn={sw.pivotTurn?.join(',')} data-launch={launch} data-keyposes={kp ? JSON.stringify(kp.poses) : undefined} data-pose-input={kp ? JSON.stringify(poseInput) : undefined} data-body-back={bodyBack}>
+			strokes.map(({ t, key, name, hitH, fig, sw, arrow, launch, kp, poseInput, bodyBack, ballAt, head, level, range }) => (
+				<figure class="stroke-card" data-trap={t in TRAP_BASE ? (TRAP_NO_BOUNCE.has(t) ? 'pop' : 'bounce') : undefined} data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ?? []).flat()].join(',')} data-setup={sw.setup ? '' : undefined} data-pivot={sw.pivot} data-straight={sw.straight ? '' : undefined} data-pivot-turn={sw.pivotTurn?.join(',')} data-launch={launch} data-keyposes={kp ? JSON.stringify(kp.poses) : undefined} data-pose-input={kp ? JSON.stringify(poseInput) : undefined} data-body-back={bodyBack}>
 					<svg class="court-svg stroke" viewBox="-2.9 -10 6.5 10.6" aria-hidden="true">
 						<defs>
 							<marker id={`sw-${key}`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth={head} markerHeight={head} orient="auto">
@@ -261,6 +267,8 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 						</defs>
 						<line class="side-ground" x1="-1.4" y1="0" x2="3.6" y2="0" />
 						<g class="side-person" transform="matrix(0,-1,1,0,0,0)">
+							<polygon class="side-shoe2" points={fig.shoe2} />
+							<path class="side-lower2" d={fig.lowerBody2} />
 							<polygon class="side-shoe" points={fig.shoe} />
 							<path class="side-lower" d={fig.lowerBody} />
 							<path class="side-torso" d={fig.torso} />
@@ -307,6 +315,12 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 	const HOLD_MS = 220;
 	const RETURN_MS = 450;
 	const PERIOD_MS = 2400;
+	/**
+	 * トラップしてから打つ打ち方（data-trap）: 振る前に、来た球を面でポンと上げる（court-anim.ts のトラップと同じ高さ）。
+	 * bounce は足元で弾んで打つ高さまで上がる（ディンク）、pop は弾ませずに打つ高さまで落ちてくる（リセット・ボレー）
+	 */
+	const TRAP_MS = 900;
+	const TRAP_POP_FT = 0.8;
 	const BALL_MS = 650;
 	const ease = (u: number) => (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2);
 	const easeInv = (c: number) => (c < 0.5 ? Math.sqrt(c / 2) : 1 - Math.sqrt((1 - c) / 2));
@@ -377,6 +391,7 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 							bodyBack: Number(card.dataset.bodyBack),
 						}
 					: undefined,
+				trap: card.dataset.trap,
 				dir: (() => {
 					const [u, f] = (card.dataset.launch ?? '0,1').split(',').map(Number);
 					const l = Math.hypot(u, f) || 1;
@@ -385,8 +400,13 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 			};
 		});
 		const tick = (now: number) => {
-			const t = now % PERIOD_MS;
+			const t0 = now % PERIOD_MS;
 			for (const c of cards) {
+				// トラップの間は構えたまま、ボールだけ動かす。そのあとは、ふつうの打ち方と同じ動きを TRAP_MS 遅らせて動かす
+				// 振りは、ボールが打点に戻る瞬間（TRAP_MS）に打つ所を通るように早めて始める（打点に来てから打つまで間を空けない。書き手の指摘）
+				const hitT = PREP_MS + SWING_MS * easeInv(c.pose ? POSE_CONTACT : c.contact);
+				const t = c.trap ? Math.max(0, t0 - (TRAP_MS - hitT)) : t0;
+				const trapping = !!c.trap && t0 < TRAP_MS;
 				// 振りかぶる → 打つ所 → 振り抜く → 止める → 戻る。区間ごとに、ずれ p → q の途中 tt で表す
 				const rest = c.home;
 				const s1 = PREP_MS;
@@ -447,7 +467,23 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 				// easeInOut で動かしているので、パドルが打つ所を通る時刻は ease の逆で求める
 				const hit = PREP_MS + SWING_MS * easeInv(c.pose ? POSE_CONTACT : c.contact);
 				const fly = (t - hit) / BALL_MS;
-				if (fly >= 0 && fly <= 1) {
+				if (trapping) {
+					// 打つ高さ h0 から TRAP_POP_FT 上がる。bounce は地面（0）まで落ちて弾み、打つ高さまで上がる。pop は打つ高さまで落ちる
+					const h0 = -c.b[1];
+					const u = t0 / TRAP_MS;
+					let h = h0;
+					if (c.trap === 'pop') {
+						const a = 2 * TRAP_POP_FT + 2 * TRAP_POP_FT;
+						h = h0 + a * u - a * u * u;
+					} else if (u < 0.65) {
+						const v = u / 0.65;
+						const a = 2 * TRAP_POP_FT + Math.sqrt(4 * TRAP_POP_FT * TRAP_POP_FT + 4 * TRAP_POP_FT * h0);
+						h = Math.max(0, h0 + a * v - (h0 + a) * v * v);
+					} else h = h0 * Math.sin((((u - 0.65) / 0.35) * Math.PI) / 2);
+					c.ball.setAttribute('cx', String(c.b[0]));
+					c.ball.setAttribute('cy', String(-h));
+					c.ball.style.opacity = '1';
+				} else if (fly >= 0 && fly <= 1) {
 					c.ball.setAttribute('cx', String(c.b[0] + c.dir[1] * 2.4 * fly));
 					c.ball.setAttribute('cy', String(c.b[1] - c.dir[0] * 2.4 * fly));
 					c.ball.style.opacity = String(1 - fly * 0.85);

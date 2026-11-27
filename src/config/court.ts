@@ -107,6 +107,9 @@ export const shotLabels = {
 	punch: 'パンチボレー',
 	speedup: 'スピードアップ',
 	flick: 'フリック',
+	dinkTrap: 'ディンク（トラップ）',
+	resetTrap: 'リセット（トラップ）',
+	volleyTrap: 'ボレー（トラップ）',
 	lob: 'ロブ',
 	smash: 'スマッシュ',
 	serve: 'サーブ',
@@ -114,6 +117,17 @@ export const shotLabels = {
 	move: '人の動き',
 } as const;
 export type ShotType = keyof typeof shotLabels;
+/**
+ * トラップしてから打つ打ち方と、そのあとに打つ元の打ち方（書き手と決めた）。来た球をパドルで受けて勢いを殺し、ポンと少し上げる。
+ * ディンクは、足元でワンバウンドさせてから打つ。リセットとボレーは弾ませずに、落ちてきた球を打つ（ボレーはボレーディンクで打つ）。
+ * 打つ形・高さ・速さは元の打ち方と同じ
+ */
+export const TRAP_BASE = { dinkTrap: 'dink', resetTrap: 'reset', volleyTrap: 'volleyDink' } as const;
+export type TrapShot = keyof typeof TRAP_BASE;
+/** 弾ませずに打つトラップ（ポンと上げて、落ちてきた球を打つ。書き手の指摘: リセットのトラップはワンバウンドしない） */
+export const TRAP_NO_BOUNCE = new Set<string>(['resetTrap', 'volleyTrap']);
+/** 打つ形を決めるときの打ち方（トラップは元の打ち方） */
+export const baseShot = (t: string): string => (TRAP_BASE as Record<string, string>)[t] ?? t;
 
 /**
  * 打球の線の曲げ具合。上から見た図ではボールの通り道はほぼまっすぐなので、すべて 0（まっすぐ）。
@@ -128,6 +142,9 @@ export const shotCurve: Record<ShotType, number> = {
 	return: 0,
 	speedup: 0,
 	flick: 0,
+	dinkTrap: 0,
+	resetTrap: 0,
+	volleyTrap: 0,
 	smash: 0,
 	drive: 0,
 	volleyDink: 0,
@@ -147,6 +164,9 @@ export const shotSpeedKmh: Record<ShotType, number> = {
 	speedup: 70,
 	flick: 65,
 	drive: 65,
+	dinkTrap: 25,
+	resetTrap: 30,
+	volleyTrap: 25,
 	punch: 60,
 	roll: 50,
 	block: 40,
@@ -256,6 +276,8 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
 	smash: { hit: 'overhead', peak: 'overhead' },
 	lob: { hit: 'belowWaist', peak: 'sky' },
 };
+// トラップしてから打つ打ち方は、元の打ち方と同じ高さ
+for (const [t, b] of Object.entries(TRAP_BASE) as [TrapShot, Exclude<ShotType, 'move' | TrapShot>][]) (shotHeights as Record<string, unknown>)[t] = { ...shotHeights[b], range: undefined };
 /** 次に打つ球がないときの、受ける高さ */
 export const defaultReceiveHeight: HeightLevel = 'waistToShoulder';
 
@@ -279,12 +301,15 @@ export const defaultReceiveHeight: HeightLevel = 'waistToShoulder';
 /** 腰の高さ（ft、約 90cm）。打つ高さがこれより上か下かで形が変わる打ち方がある（shotSwing の high。リセット） */
 export const WAIST_FT = 2.95;
 /** 打ち方と打つ高さから、決めのポーズを選ぶ（腰より上で「打ち方:high」があればそれ） */
-export const keyPoseOf = (t: string, hitH?: number) =>
-	(hitH !== undefined && hitH > WAIST_FT ? keyPoses[`${t}:high` as KeyPoseName] : undefined) ?? keyPoses[t as KeyPoseName];
+export const keyPoseOf = (t0: string, hitH?: number) => {
+	const t = baseShot(t0);
+	return (hitH !== undefined && hitH > WAIST_FT ? keyPoses[`${t}:high` as KeyPoseName] : undefined) ?? keyPoses[t as KeyPoseName];
+};
 export const swingOf = (t: Exclude<ShotType, 'move'>, hand?: string, hitH?: number): SwingForm => {
-	const sw = shotSwing[t] as SwingForm & { bh?: SwingForm; high?: SwingForm };
-	if (hitH !== undefined && hitH > WAIST_FT && sw.high) return sw.high;
-	return hand === 'bh' && sw.bh ? sw.bh : sw;
+	const sw = shotSwing[baseShot(t) as Exclude<ShotType, 'move'>] as SwingForm & { bh?: SwingForm; high?: SwingForm };
+	const form = hitH !== undefined && hitH > WAIST_FT && sw.high ? sw.high : hand === 'bh' && sw.bh ? sw.bh : sw;
+	// トラップしてから打つ打ち方は、振りは元の打ち方のまま、説明だけトラップのもの
+	return t in TRAP_BASE ? { ...form, note: shotSwing[t].note } : form;
 };
 /** 打つ動きの形（shotSwing の1つ分。bh はバックハンドで打つときの形） */
 export interface SwingForm {
@@ -308,8 +333,6 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 	// ドロップはさらに、引いた所でパドルを地面と垂直（ヘッドが真下）にする（書き手の指摘。打つ所の向き 約 -46° から -45° 回す）
 	drop: {
 		back: [-0.15, -0.9], follow: [2.6, 1.7], turn: [-45, 70], note: 'ディンクと同じ構え（腰を落とし、ヘッドを下げる）から低く小さく引き、下から上へ運ぶ。打ったあとも止めずに、目標へ向けて肩の高さまで長く振り抜く',
-		// 腰より上の球（下がって高い打点のボレーで落とすなど）: パドルを立てて面を前上へ開き、前上へ短く押し出して弧を描かせる
-		high: { back: [0, -0.3], follow: [0.3, 0.6], turn: [0, 0], straight: true, note: 'パドルを立てて面を前上へ少し開き、強く振らずに前上へ短く押し出して、弧を描いて落とす（下がって頭より上で取るときなど）' },
 	},
 	// リセット: バックハンドで取ることが多い。打つ高さが腰（約90cm）より上か下かで形が変わる（書き手の指示）。
 	// 腰より下: ヘッドを手首より下げ、面を少し上へ向けて球の少し下に入れる。腰より上: ブロックボレーのように、パドルを上へ斜めに
@@ -392,6 +415,15 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 	// フォロースルーを前に大きく。よくない例は「テイクバックが大きい」）
 	return: { back: [-0.3, -0.8], follow: [1.4, 2.0], turn: [-30, 60], note: 'テイクバックは腰の横まで小さく、後ろから前へ動きながら、体の前の太ももの高さで打つ。フォロースルーは前へ大きく、腕を目標へ伸ばす' },
 };
+// トラップしてから打つ打ち方は、元の打ち方と同じ振り（説明だけ変える）
+for (const [t, b] of Object.entries(TRAP_BASE) as [TrapShot, Exclude<ShotType, 'move' | TrapShot>][]) {
+	const note = {
+		dinkTrap: '来た球をパドルで受けて勢いを殺し、ポンと少し上げて足元でワンバウンドさせる。弾んだ球をディンクで返す',
+		resetTrap: '来た球をパドルで受けて勢いを殺し、ポンと少し上げる。弾ませずに、落ちてきた球をリセットで低く返す',
+		volleyTrap: '来た球をパドルで受けて勢いを殺し、ポンと少し上げる。弾ませずに、落ちてきた球をボレーディンクで返す',
+	}[t];
+	(shotSwing as Record<string, unknown>)[t] = { ...shotSwing[b], high: undefined, bh: undefined, note };
+}
 
 /**
  * 決めのポーズ（書き手と決めた進め方「案A」）: 打ち方ごとに、お手本の動画のコマ（構え・引き切り・打つ瞬間・振り抜き）を見て、

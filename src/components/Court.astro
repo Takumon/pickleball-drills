@@ -367,7 +367,13 @@ const panels = groups.map((g) => {
 		}
 		return ft(defaultReceiveHeight);
 	};
-	for (const f of figures) Object.assign(f, { sideH: sideH(f.id) });
+	// 横から見た図の構えに使う打ち方: この手で打つならその球、受けるなら次に打つ球（構えは打ち方で変わる。例: ロールは前に倒れて手を前へ）
+	const sideType = (id: string): string | undefined => {
+		for (const s of g.shots) if (s.type !== 'move' && s.from === id) return s.type;
+		const later = diagram.shots.filter((s) => s.type !== 'move' && (s.n ?? 0) > (g.n ?? 0) && s.from === id);
+		return g.shots.some((s) => s.to === id) ? later[0]?.type : undefined;
+	};
+	for (const f of figures) Object.assign(f, { sideH: sideH(f.id), sideType: sideType(f.id) });
 	for (const s of g.shots) {
 		if (s.type === 'move' && typeof s.from === 'string' && typeof s.to !== 'string') positions.set(s.from, s.to);
 	}

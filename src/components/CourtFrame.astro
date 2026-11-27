@@ -19,6 +19,8 @@ interface Figure {
 	tip: Point;
 	/** 横から見た図で描くパドルの高さ（ft） */
 	sideH?: number;
+	/** 横から見た図の構えに使う打ち方（打つ球、受けるなら次に打つ球） */
+	sideType?: string;
 }
 interface Line {
 	type: string;
@@ -168,7 +170,7 @@ const isSub = (t: string) => t === 'move';
 						data-kind={animated ? (l.type === 'move' ? 'move' : 'ball') : undefined}
 						data-player={animated && l.type === 'move' && typeof l.from === 'string' ? l.from : undefined}
 						data-hitter={animated && l.type !== 'move' && typeof l.from === 'string' ? l.from : undefined}
-						data-swing={animated && l.type !== 'move' && l.type in shotSwing ? (({ back, follow }) => [...back, ...follow].join(','))(shotSwing[l.type as keyof typeof shotSwing]) : undefined}
+						data-swing={animated && l.type !== 'move' && l.type in shotSwing ? (({ back, follow, turn }) => [...back, ...follow, ...turn].join(','))(shotSwing[l.type as keyof typeof shotSwing]) : undefined}
 						data-shift={animated && l.shift ? l.shift.join(',') : undefined}
 						data-ms={animated ? l.ms : undefined}
 						data-pre={animated && l.pre ? `${l.pre[0]},${l.pre[1]}` : undefined}
@@ -267,6 +269,7 @@ const isSub = (t: string) => t === 'move';
 						y: p.y,
 						toNet: p.y < COURT.net ? 1 : -1,
 						hitH: p.sideH ?? 4,
+						shot: p.sideType,
 						faceY: (p.hand[1] + p.tip[1]) / 2,
 					});
 					const [ax1, ay1, ax2, ay2] = fig.upperArm;

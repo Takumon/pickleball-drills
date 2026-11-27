@@ -1,3 +1,4 @@
+import { bendSide, solveElbow } from '../lib/arm-ik';
 /**
  * コート図のアニメーション。場面（.frame）を1つずつ表示し、
  * 打球はボールを線に沿って動かし（線も伸ばして描く）、人の動きは人を移動先まで動かす。
@@ -35,10 +36,13 @@ const LOOP_PAUSE_MS = 1600;
  */
 const SWING_SCALE = 1;
 const SWING_MS = 300;
+/** 振り抜いた形で少し止める時間（振り抜き＝フォロースルーが見えるように） */
+const HOLD_MS = 220;
 const RETURN_MS = 450;
 const PREP_FROM = 0.55;
 const easeInOut = (u: number) => (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2);
 type Vec = [number, number];
+type Vec3 = [number, number, number];
 /**
  * 打つ人のパドルと腕を、打つ所からのずれ [上へ, 前へ]（ft）だけ動かす道具。上から見た図は前へのずれだけを、打球の向きに動かす。
  * 横から見た図は、パドルと手を動かし、前腕の手の側と、ひじ（上腕の先・前腕の元）をその半分だけ動かす
@@ -51,7 +55,11 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	const arm = g?.querySelector<SVGLineElement>('.arm');
 	if (!paddle || !arm) return undefined;
 	const side = frame.querySelector<SVGGElement>(`[data-side-player="${id}"]`);
-	const sidePaddle = side ? [...side.querySelectorAll<SVGElement>('.side-paddle, .side-grip, .side-hand')] : [];
+	// 横から見た図: パドル（グリップと面）は手のまわりに回し、手は動かすだけ
+	const sidePaddle = side ? [...side.querySelectorAll<SVGElement>('.side-paddle, .side-grip')] : [];
+	const sideHand = side?.querySelector<SVGCircleElement>('.side-hand');
+	const hx = Number(sideHand?.getAttribute('cx') ?? 0);
+	const hy = Number(sideHand?.getAttribute('cy') ?? 0);
 	const forearm = side?.querySelector<SVGLineElement>('.side-arm');
 	const upperArm = side?.querySelector<SVGLineElement>('.side-upperarm');
 	// 線の元の端を覚えておく（途中で止めても戻せるように）
@@ -60,6 +68,10 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 		for (const a of ['x1', 'y1', 'x2', 'y2']) el.dataset[a] ??= el.getAttribute(a) ?? '0';
 	};
 	[arm, forearm, upperArm].forEach(keep);
+	const d = (el: SVGLineElement | null | undefined) => (el ? Math.hypot(Number(el.dataset.x2) - Number(el.dataset.x1), Number(el.dataset.y2) - Number(el.dataset.y1)) : 0);
+	const armLen = { upper: d(upperArm), lower: d(forearm) };
+	const n0 = (el: SVGLineElement | null | undefined, k: string) => Number(el?.dataset[k]);
+	const armSide = bendSide(n0(upperArm, 'x1'), n0(upperArm, 'y1'), n0(upperArm, 'x2'), n0(upperArm, 'y2'), n0(forearm, 'x2'), n0(forearm, 'y2'));
 	const len = ball.getTotalLength();
 	const a = ball.getPointAtLength(0);
 	const z = ball.getPointAtLength(Math.min(len, 3));
@@ -67,11 +79,14 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	const ux = (z.x - a.x) / n;
 	const uy = (z.y - a.y) / n;
 	const sideK = Number(frame.dataset.sideK) || 0.8;
-	const v = (ball.dataset.swing ?? '0,-0.5,0.3,0.6').split(',').map((x) => Number(x) * SWING_SCALE);
-	const back: Vec = [v[0], v[1]];
-	const follow: Vec = [v[2], v[3]];
+	const v = (ball.dataset.swing ?? '0,-0.5,0.3,0.6,0,0').split(',').map((x) => Number(x) * SWING_SCALE);
+	// [上へ, 前へ, パドルの回り（度）]
+	const back: Vec3 = [v[0], v[1], v[4] ?? 0];
+	const follow: Vec3 = [v[2], v[3], v[5] ?? 0];
+	// 回る向き: 前から上へ（+）は、図ではネットの向きによって時計回りか反時計回りになる
+	const turnSign = -Math.sign(uy || 1);
 	const set = (el: SVGLineElement, k: 'x1' | 'y1' | 'x2' | 'y2', d: number) => el.setAttribute(k, String(Number(el.dataset[k]) + d));
-	const apply = ([up, fwd]: Vec) => {
+	const apply = ([up, fwd, turn = 0]: Vec3 | Vec) => {
 		const dx = ux * fwd;
 		const dy = uy * fwd;
 		paddle.setAttribute('transform', fwd ? `translate(${dx} ${dy})` : '');
@@ -79,32 +94,39 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 		set(arm, 'y2', dy);
 		const sx = up * sideK;
 		const sy = Math.sign(uy) * fwd;
-		sidePaddle.forEach((el) => el.setAttribute('transform', sx || sy ? `translate(${sx} ${sy})` : ''));
-		if (forearm) {
-			set(forearm, 'x2', sx);
-			set(forearm, 'y2', sy);
-			set(forearm, 'x1', sx / 2);
-			set(forearm, 'y1', sy / 2);
-		}
-		if (upperArm) {
-			set(upperArm, 'x2', sx / 2);
-			set(upperArm, 'y2', sy / 2);
+		const rot = turnSign * turn;
+		sidePaddle.forEach((el) => el.setAttribute('transform', sx || sy || rot ? `translate(${sx} ${sy}) rotate(${rot} ${hx} ${hy})` : ''));
+		sideHand?.setAttribute('transform', sx || sy ? `translate(${sx} ${sy})` : '');
+		// 腕は、肩から動いた手まで、上腕と前腕の長さを変えずに曲げ直す
+		if (forearm && upperArm) {
+			const n = (el: SVGLineElement, k: string) => Number(el.dataset[k]);
+			const hxx = n(forearm, 'x2') + sx;
+			const hyy = n(forearm, 'y2') + sy;
+			const [ex, ey] = solveElbow(n(upperArm, 'x1'), n(upperArm, 'y1'), hxx, hyy, armLen.upper, armLen.lower, armSide);
+			forearm.setAttribute('x2', String(hxx));
+			forearm.setAttribute('y2', String(hyy));
+			forearm.setAttribute('x1', String(ex));
+			forearm.setAttribute('y1', String(ey));
+			upperArm.setAttribute('x2', String(ex));
+			upperArm.setAttribute('y2', String(ey));
 		}
 	};
 	// パドルが打つ所を通る時刻（振りの中の割合）: 振りかぶりと振り抜きの長さの比
-	const lb = Math.hypot(...back);
-	const lf = Math.hypot(...follow);
+	const lb = Math.hypot(back[0], back[1]);
+	const lf = Math.hypot(follow[0], follow[1]);
 	const contact = lb + lf > 0 ? lb / (lb + lf) : 0;
 	return { apply, back, follow, contact };
 }
 type Rig = NonNullable<ReturnType<typeof hitterRig>>;
-const lerp = (p: Vec, q: Vec, t: number): Vec => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
-/** 打つ手の中の時刻 s（ミリ秒）での、パドルのずれ */
-const swingAt = (r: Rig, s: number): Vec => {
+const lerp = (p: Vec3, q: Vec3, t: number): Vec3 => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
+const REST: Vec3 = [0, 0, 0];
+/** 打つ手の中の時刻 s（ミリ秒）での、パドルのずれと回り: 振る → 振り抜いた形で止める → 構えへ戻る */
+const swingAt = (r: Rig, s: number): Vec3 => {
 	if (s < 0) return r.back;
 	if (s < SWING_MS) return lerp(r.back, r.follow, easeInOut(s / SWING_MS));
-	if (s < SWING_MS + RETURN_MS) return lerp(r.follow, [0, 0], easeInOut((s - SWING_MS) / RETURN_MS));
-	return [0, 0];
+	if (s < SWING_MS + HOLD_MS) return r.follow;
+	if (s < SWING_MS + HOLD_MS + RETURN_MS) return lerp(r.follow, REST, easeInOut((s - SWING_MS - HOLD_MS) / RETURN_MS));
+	return REST;
 };
 /**
  * 最後の手から最初の手へ戻るとき（ループ）: 人は最初の手の立ち位置まで歩いて戻り、ボールは新しい球になるなら消してから出し直す。
@@ -386,7 +408,7 @@ function setup(root: HTMLElement) {
 			const flight = Math.max(0, s - hitDelay);
 			const t = Math.min(1, flight / duration);
 			// 次の手で打つ人は、この手の後半で振りかぶる
-			if (t > PREP_FROM) preps.forEach((r) => r.apply(lerp([0, 0], r.back, easeInOut((t - PREP_FROM) / (1 - PREP_FROM)))));
+			if (t > PREP_FROM) preps.forEach((r) => r.apply(lerp(REST, r.back, easeInOut((t - PREP_FROM) / (1 - PREP_FROM)))));
 			const eb = Math.sin((t * Math.PI) / 2); // ボール: 打った瞬間が速く、少しずつ減速する
 			showMarks(eb);
 			drawTrace(eb);
@@ -403,7 +425,7 @@ function setup(root: HTMLElement) {
 				sg?.setAttribute('transform', `translate(0 ${dy * em})`);
 			});
 			// 振り抜いて元の構えに戻るまでは、手を終えない（途中で次の手に切り替わると、パドルが跳ぶため）
-			if (t < 1 || (rigs.length > 0 && s < SWING_MS + RETURN_MS)) raf = requestAnimationFrame(tick);
+			if (t < 1 || (rigs.length > 0 && s < SWING_MS + HOLD_MS + RETURN_MS)) raf = requestAnimationFrame(tick);
 			else {
 				balls.forEach((_, k) => setReveal(k, 1));
 				showMarks(1);
@@ -478,7 +500,7 @@ function setup(root: HTMLElement) {
 			const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
 			for (const m of moves) m.g.setAttribute('transform', `translate(${m.from[0] + (m.to[0] - m.from[0]) * e} ${m.from[1] + (m.to[1] - m.from[1]) * e})`);
 			if (fade) balls.forEach((b) => (b.style.opacity = String(Math.max(0, 1 - (now - t0) / BALL_FADE_MS))));
-			preps0.forEach((r) => r.apply(lerp([0, 0], r.back, e)));
+			preps0.forEach((r) => r.apply(lerp(REST, r.back, e)));
 			if (t < 1) raf = requestAnimationFrame(tick);
 			else done();
 		};

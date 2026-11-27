@@ -151,12 +151,12 @@ const strokes = strokeOrder.map((t) => {
 	</table>
 
 	<h2>横から見た図の構えとパドルの動き</h2>
-	<p>横から見た図の人は、打つ球の種類ごとに、打つ高さの構えで描きます。相手の球が飛んでくる間に振りかぶり、打つときは矢印のように、振りかぶった所から打つ所を通って振り抜き、元の構えに戻ります。黄色い丸がボールの位置（打つ高さ）で、右がネットの側です。動きは、ピックルボールのコーチの記事や動画の説明を調べて決めました。</p>
-	<p>パドルは、腰より下では腕の延長でヘッドが下がり、腰より上では高くなるほどヘッドが上を向きます。上体はほぼ起こしたまま、ひざを少し曲げた構えで、低い球ほどひざを少し深く曲げます。</p>
+	<p>横から見た図の人は、打つ球の種類ごとに、打つ高さの構えで描きます。相手の球が飛んでくる間に振りかぶり、打つときは矢印のように、振りかぶった所から打つ所を通って振り抜き、その形で少し止まってから元の構えに戻ります。パドルの向きも振りに合わせて回ります。黄色い丸がボールの位置（打つ高さ）で、右がネットの側です。動きはピックルボールのコーチの記事や動画の説明を調べて決めました。</p>
+	<p>パドルは、腰より下では腕の延長でヘッドが下がり、腰より上では高くなるほどヘッドが上を向きます。構えはひざを曲げて腰を落とし、胸はほぼ起こして、ひじを体の少し前に、手を体の前に出します。ロールボレーだけは、低い球に手を前へ伸ばして待ち構えるので、ひざを深く曲げ、上体も前に倒します。</p>
 	<div class="stroke-grid">
 		{
 			strokes.map(({ t, hitH, fig, sw, arrow, level }) => (
-				<figure class="stroke-card" data-stroke data-swing={[...sw.back, ...sw.follow].join(',')}>
+				<figure class="stroke-card" data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn].join(',')}>
 					<svg class="court-svg stroke" viewBox="-1.4 -10 5 10.6" aria-hidden="true">
 						<defs>
 							<marker id={`sw-${t}`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="0.8" markerHeight="0.8" orient="auto">
@@ -192,22 +192,25 @@ const strokes = strokeOrder.map((t) => {
 </div>
 
 <script>
+	import { bendSide, solveElbow } from '../lib/arm-ik';
 	/**
 	 * 打ち方の一覧を動かす: 振りかぶった所から、打つ所を通って振り抜き、元の構えに戻る。パドルが打つ所を通る瞬間に、
 	 * ボールが振り抜く向きへ飛んでいく。値は実際のアニメーションと同じ shotSwing（data-swing）。「視差効果を減らす」設定では動かさない
 	 */
 	const PREP_MS = 450;
 	const SWING_MS = 300;
+	const HOLD_MS = 220;
 	const RETURN_MS = 450;
-	const PERIOD_MS = 2200;
+	const PERIOD_MS = 2400;
 	const BALL_MS = 650;
 	const ease = (u: number) => (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2);
-	const lerp = (p: number[], q: number[], t: number) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+	const lerp = (p: number[], q: number[], t: number) => p.map((v, i) => v + (q[i] - v) * t);
 	if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
 		const cards = [...document.querySelectorAll<HTMLElement>('[data-stroke]')].map((card) => {
 			const v = (card.dataset.swing ?? '0,0,0,0').split(',').map(Number);
-			const back = [v[0], v[1]];
-			const follow = [v[2], v[3]];
+			// [上へ, 前へ, パドルの回り（度。前から上へが +）]
+			const back = [v[0], v[1], v[4] ?? 0];
+			const follow = [v[2], v[3], v[5] ?? 0];
 			const lb = Math.hypot(back[0], back[1]);
 			const lf = Math.hypot(follow[0], follow[1]);
 			const forearm = card.querySelector<SVGLineElement>('.side-arm')!;
@@ -215,11 +218,14 @@ const strokes = strokeOrder.map((t) => {
 			const ball = card.querySelector<SVGCircleElement>('.stroke-ball')!;
 			const num = (el: Element, a: string) => Number(el.getAttribute(a));
 			return {
-				moving: [...card.querySelectorAll<SVGElement>('.side-paddle, .side-grip, .side-hand')],
+				turning: [...card.querySelectorAll<SVGElement>('.side-paddle, .side-grip')],
+				hand: card.querySelector<SVGCircleElement>('.side-hand')!,
 				forearm,
 				upper,
 				f: [num(forearm, 'x1'), num(forearm, 'y1'), num(forearm, 'x2'), num(forearm, 'y2')],
-				u2: [num(upper, 'x2'), num(upper, 'y2')],
+				s0: [num(upper, 'x1'), num(upper, 'y1')],
+				side: bendSide(num(upper, 'x1'), num(upper, 'y1'), num(upper, 'x2'), num(upper, 'y2'), num(forearm, 'x2'), num(forearm, 'y2')),
+				len: [Math.hypot(num(upper, 'x2') - num(upper, 'x1'), num(upper, 'y2') - num(upper, 'y1')), Math.hypot(num(forearm, 'x2') - num(forearm, 'x1'), num(forearm, 'y2') - num(forearm, 'y1'))],
 				ball,
 				b: [Number(ball.dataset.cx), Number(ball.dataset.cy)],
 				back,
@@ -232,19 +238,33 @@ const strokes = strokeOrder.map((t) => {
 			const t = now % PERIOD_MS;
 			for (const c of cards) {
 				// ずれ [上, 前]: 振りかぶる → 振る → 戻る
-				let off = [0, 0];
-				if (t < PREP_MS) off = lerp([0, 0], c.back, ease(t / PREP_MS));
-				else if (t < PREP_MS + SWING_MS) off = lerp(c.back, c.follow, ease((t - PREP_MS) / SWING_MS));
-				else if (t < PREP_MS + SWING_MS + RETURN_MS) off = lerp(c.follow, [0, 0], ease((t - PREP_MS - SWING_MS) / RETURN_MS));
-				// 人の図は高さ（x）と前後（y）で描いて回してあるので、上へ = x、前へ = y に動かす
-				const [dx, dy] = off;
-				c.moving.forEach((el) => el.setAttribute('transform', dx || dy ? `translate(${dx} ${dy})` : ''));
-				c.forearm.setAttribute('x1', String(c.f[0] + dx / 2));
-				c.forearm.setAttribute('y1', String(c.f[1] + dy / 2));
-				c.forearm.setAttribute('x2', String(c.f[2] + dx));
-				c.forearm.setAttribute('y2', String(c.f[3] + dy));
-				c.upper.setAttribute('x2', String(c.u2[0] + dx / 2));
-				c.upper.setAttribute('y2', String(c.u2[1] + dy / 2));
+				// 振りかぶる → 振る → 振り抜いた形で止める → 戻る
+				const rest = [0, 0, 0];
+				let off = rest;
+				const s1 = PREP_MS;
+				const s2 = s1 + SWING_MS;
+				const s3 = s2 + HOLD_MS;
+				if (t < s1) off = lerp(rest, c.back, ease(t / s1));
+				else if (t < s2) off = lerp(c.back, c.follow, ease((t - s1) / SWING_MS));
+				else if (t < s3) off = c.follow;
+				else if (t < s3 + RETURN_MS) off = lerp(c.follow, rest, ease((t - s3) / RETURN_MS));
+				// 人の図は高さ（x）と前後（y）で描いて回してあるので、上へ = x、前へ = y に動かす。
+				// パドルは手のまわりに回す（この図ではネットが前（+）なので、前から上へ回すと図の上で反時計回り）
+				const [dx, dy, turn] = off;
+				const hx = Number(c.hand.getAttribute('cx'));
+				const hy = Number(c.hand.getAttribute('cy'));
+				c.turning.forEach((el) => el.setAttribute('transform', `translate(${dx} ${dy}) rotate(${-turn} ${hx} ${hy})`));
+				c.hand.setAttribute('transform', `translate(${dx} ${dy})`);
+				// 腕は、上腕と前腕の長さを変えずに、肩から動いた手まで曲げ直す（この図ではネットの側が +y）
+				const hx2 = c.f[2] + dx;
+				const hy2 = c.f[3] + dy;
+				const [ex, ey] = solveElbow(c.s0[0], c.s0[1], hx2, hy2, c.len[0], c.len[1], c.side);
+				c.forearm.setAttribute('x1', String(ex));
+				c.forearm.setAttribute('y1', String(ey));
+				c.forearm.setAttribute('x2', String(hx2));
+				c.forearm.setAttribute('y2', String(hy2));
+				c.upper.setAttribute('x2', String(ex));
+				c.upper.setAttribute('y2', String(ey));
 				// ボール: パドルが打つ所を通る瞬間から、振り抜く向きへ飛び、消える。次の振りかぶりの前に打つ所へ戻る
 				const hit = PREP_MS + c.contact * SWING_MS;
 				const fly = (t - hit) / BALL_MS;

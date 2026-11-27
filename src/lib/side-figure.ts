@@ -63,8 +63,20 @@ const PADDLE = { toFace: 7.5 / 12, toTip: 13 / 12, toButt: 3 / 12, faceLen: 11 /
 /** 手（こぶし）の大きさ（前後の幅。身長に対する割合）。約9cm */
 const FIST = 0.055;
 
-/** 構え: ひざの曲げ（度）と上体の前傾（度）の、ふつうと最大 */
-const STANCE = { kneeReady: 22, kneeMax: 42, leanReady: 6, leanMax: 15 };
+/**
+ * 構え: ひざの曲げ（度）と上体の前傾（度）の、ふつうと最大。コーチの記事から（2026-11-27 に調べた）:
+ * 「ひざを曲げて腰を落とし、胸はほぼ起こす」「上体の前傾はすねの前傾より大きくしない（大きいと腰から曲げすぎ）」。
+ * すねの前傾はひざの曲げの半分なので、上体の前傾はひざの曲げの半分以下にする。
+ * ロールボレーだけは、低い球に手を前へ伸ばして待ち構えるので、ひざを深く曲げ、上体も前に倒す（書き手の指示）
+ */
+const STANCE = { kneeReady: 36, kneeMax: 60, leanReady: 12, leanMax: 22, reach: 0 };
+/** ひじを体より前に置く量（身長の割合。0.06H ≒ 10cm）と、そのために体を後ろに置く最大（ft） */
+const ELBOW_FRONT = 0.06;
+const BACK_MAX = 1.2;
+const STANCE_BY_SHOT: Record<string, Partial<typeof STANCE>> = {
+	// reach: 手をネットの側へ伸ばす量（ft）。体をそのぶん後ろに置き、パドルを体の前へ出す
+	roll: { kneeReady: 56, kneeMax: 64, leanReady: 30, leanMax: 34, reach: 0.9 },
+};
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -78,6 +90,8 @@ export interface SideFigureInput {
 	/** 打つ（受ける）高さ（ft）と、パドルの面の真ん中の奥行き（図の y。上から見た図のパドルと同じ） */
 	hitH: number;
 	faceY: number;
+	/** この手で打つ（受けるなら次に打つ）球の種類。構えが変わる打ち方がある（ロールボレーなど） */
+	shot?: string;
 }
 
 export interface SideFigure {
@@ -99,10 +113,13 @@ export interface SideFigure {
 
 export function sideFigure(o: SideFigureInput): SideFigure {
 	const { x0, k, y, toNet, hitH, faceY } = o;
+	const stance = { ...STANCE, ...(o.shot ? STANCE_BY_SHOT[o.shot] : undefined) };
 	// 図の座標へ: 高さ h（ft）→ x、前後 d（ft、ネットの側が +）→ y。前後も k 倍にして形をゆがめない
 	const X = (h: number) => x0 + h * k;
 	const Y = (d: number) => y + toNet * d * k;
-	const at = (p: P): [number, number] => [X(p.h), Y(p.d)];
+	// 体を後ろに置いたぶん（bodyBack）は、描くときに引く（solve の中は体の足首を 0 とした前後）
+	let shiftBack = 0;
+	const at = (p: P): [number, number] => [X(p.h), Y(p.d - shiftBack)];
 	// パドルの面の真ん中: 本当の位置（ボールと同じ）を、図の前後の向きに戻す
 	const face: P = { h: hitH, d: (faceY - y) / (toNet * k) };
 
@@ -128,49 +145,56 @@ export function sideFigure(o: SideFigureInput): SideFigure {
 		const chin = up((LEVEL.chin - LEVEL.hip) * H, hip);
 		return { knee, hip, shoulderTop, shoulderJoint, neckBase, chin, t };
 	};
-	/**
-	 * パドルの向き（書き手と決めた規則）: 腰より下では腕の延長（肩からボールへの向き）でヘッドが下がり、
-	 * 腰より上では高くなるほどヘッドが上を向き、肩より上ではほぼ真上（少しだけ前）になる
-	 */
-	const gripOf = (sj: P) => {
-		const vh = face.h - sj.h;
-		const vd = face.d - sj.d;
-		const l = Math.hypot(vh, vd) || 1;
-		const t = Math.max(0, Math.min(1, (face.h - WAIST * H) / ((LEVEL.shoulder - WAIST) * H)));
-		const bh = vh / l + (0.97 - vh / l) * t;
-		const bd = vd / l + (0.25 - vd / l) * t;
-		const bl = Math.hypot(bh, bd) || 1;
-		const u = { h: bh / bl, d: bd / bl };
-		return { grip: { h: face.h - u.h * PADDLE.toFace, d: face.d - u.d * PADDLE.toFace }, u };
-	};
+	// パドルの向き（書き手と決めた規則）: 腰より下では腕の延長（肩からボールへの向き）でヘッドが下がり、
+	// 腰より上では高くなるほどヘッドが上を向き、肩より上ではほぼ真上（少しだけ前）になる（solve の gripAt）
 	const reach = upper + lower;
-	const fits = (p: ReturnType<typeof pose>) => {
-		const { grip } = gripOf(p.shoulderJoint);
-		return Math.hypot(grip.h - p.shoulderJoint.h, grip.d - p.shoulderJoint.d) <= reach * 0.97;
+	/** 構えと腕: 体を back（ft）だけ後ろに置いたときの、構え・手・ひじ */
+	const solve = (back: number) => {
+		const faceAt: P = { h: face.h, d: face.d + back };
+		const gripAt = (sj: P) => {
+			const vh = faceAt.h - sj.h;
+			const vd = faceAt.d - sj.d;
+			const l = Math.hypot(vh, vd) || 1;
+			const t = Math.max(0, Math.min(1, (faceAt.h - WAIST * H) / ((LEVEL.shoulder - WAIST) * H)));
+			const bh = vh / l + (0.97 - vh / l) * t;
+			const bd = vd / l + (0.25 - vd / l) * t;
+			const bl = Math.hypot(bh, bd) || 1;
+			const u = { h: bh / bl, d: bd / bl };
+			return { grip: { h: faceAt.h - u.h * PADDLE.toFace, d: faceAt.d - u.d * PADDLE.toFace }, u };
+		};
+		const fits = (q: ReturnType<typeof pose>) => {
+			const { grip } = gripAt(q.shoulderJoint);
+			return Math.hypot(grip.h - q.shoulderJoint.h, grip.d - q.shoulderJoint.d) <= reach * 0.97;
+		};
+		// ふつうの構えから始め、届かなければ、ひざを少しずつ曲げ、上体を少しずつ倒す
+		let knee = stance.kneeReady;
+		let lean = stance.leanReady;
+		let q = pose(knee, lean);
+		while (!fits(q) && (knee < stance.kneeMax || lean < stance.leanMax)) {
+			knee = Math.min(stance.kneeMax, knee + 1);
+			lean = Math.min(stance.leanMax, lean + 0.4);
+			q = pose(knee, lean);
+		}
+		// 腕: 肩の関節から手（パドルを握る所）まで、ひじで曲げる（2つの長さが決まった腕の、ひじの位置を求める）。
+		// 届かないときはまっすぐ伸ばす。ひじの候補は2つ（腕の線の両側）で、下に来るほう（人のひじは下に曲がる）
+		const { grip, u } = gripAt(q.shoulderJoint);
+		const sj = q.shoulderJoint;
+		const dx = grip.h - sj.h;
+		const dz = grip.d - sj.d;
+		const dist = Math.min(Math.hypot(dx, dz), reach * 0.999);
+		const cosA = (upper * upper + dist * dist - lower * lower) / (2 * upper * dist);
+		const base = Math.atan2(dz, dx);
+		const bend = Math.acos(Math.max(-1, Math.min(1, cosA)));
+		const cands = [base + bend, base - bend].map((g): P => ({ h: sj.h + upper * Math.cos(g), d: sj.d + upper * Math.sin(g) }));
+		const elbow = cands[0].h <= cands[1].h ? cands[0] : cands[1];
+		return { p: q, grip, u, sj, elbow, back };
 	};
-	// ふつうの構えから始め、届かなければ、ひざを少しずつ曲げ、上体を少しずつ倒す
-	let knee = STANCE.kneeReady;
-	let lean = STANCE.leanReady;
-	let p = pose(knee, lean);
-	while (!fits(p) && (knee < STANCE.kneeMax || lean < STANCE.leanMax)) {
-		knee = Math.min(STANCE.kneeMax, knee + 1);
-		lean = Math.min(STANCE.leanMax, lean + 0.4);
-		p = pose(knee, lean);
-	}
-
-	// 腕: 肩の関節から手（パドルを握る所）まで、ひじで曲げる（2つの長さが決まった腕の、ひじの位置を求める）。
-	// 届かないときはまっすぐ伸ばす。ひじは下・後ろ側に曲がる
-	const { grip, u } = gripOf(p.shoulderJoint);
-	const sj = p.shoulderJoint;
-	const dx = grip.h - sj.h;
-	const dz = grip.d - sj.d;
-	const dist = Math.min(Math.hypot(dx, dz), reach * 0.999);
-	const cosA = (upper * upper + dist * dist - lower * lower) / (2 * upper * dist);
-	const base = Math.atan2(dz, dx);
-	const bend = Math.acos(Math.max(-1, Math.min(1, cosA)));
-	// ひじの候補は2つ（腕の線の両側）。ひじは下に来るほうを選ぶ（人のひじは手より下・体の側に曲がる）
-	const cands = [base + bend, base - bend].map((g): P => ({ h: sj.h + upper * Math.cos(g), d: sj.d + upper * Math.sin(g) }));
-	const elbow = cands[0].h <= cands[1].h ? cands[0] : cands[1];
+	// ひじは体（肩の関節）より ELBOW_FRONT 前に置く（コーチの記事:「ひじは体の少し前に」「ひじを体の後ろへ引かない」）。
+	// 手が体に近くてひじが後ろへ出るときは、体を少しずつ後ろに置いて、手を体の前へ伸ばす（最大 BACK_MAX）
+	let r = solve(stance.reach);
+	while (r.elbow.d - r.sj.d < ELBOW_FRONT * H && r.back < BACK_MAX) r = solve(r.back + 0.05);
+	const { p, grip, u, sj, elbow, back: bodyBack } = r;
+	shiftBack = bodyBack;
 	const toGrip = Math.atan2(grip.d - elbow.d, grip.h - elbow.h);
 	const hand: P = { h: elbow.h + lower * Math.cos(toGrip), d: elbow.d + lower * Math.sin(toGrip) };
 	const butt: P = { h: hand.h - u.h * PADDLE.toButt, d: hand.d - u.d * PADDLE.toButt };

@@ -29,7 +29,7 @@ const BALL_R_MAX = 1;
 const PAUSE_MS = 700;
 const LOOP_PAUSE_MS = 1600;
 /**
- * 打つ動き（試し）: 打った瞬間に、打つ人のパドルが打球の進む向きへ SWING_FT だけピュッと出て、SWING_MS で戻る。
+ * 打つ動き: 打った瞬間に、打つ人のパドルが打球の進む向きへ SWING_FT だけピュッと出て、SWING_MS で戻る。
  * 0 にすると打つ動きはなくなる
  */
 const SWING_FT = 0.8;

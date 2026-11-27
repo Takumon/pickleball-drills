@@ -1,4 +1,4 @@
-import { bendSide, clampReach, solveElbow } from '../lib/arm-ik';
+import { arcLerp, bendSide, clampReach, solveElbow } from '../lib/arm-ik';
 /**
  * コート図のアニメーション。場面（.frame）を1つずつ表示し、
  * 打球はボールを線に沿って動かし（線も伸ばして描く）、人の動きは人を移動先まで動かす。
@@ -40,12 +40,15 @@ const SWING_MS = 300;
 const HOLD_MS = 220;
 const RETURN_MS = 450;
 const PREP_FROM = 0.55;
+/** 振りの間に手を伸ばせる量（腕の長さとの比）。0.93 でひじは約 135° */
+const REACH_RATIO = 0.93;
 const easeInOut = (u: number) => (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2);
+const easeInv = (c: number) => (c < 0.5 ? Math.sqrt(c / 2) : 1 - Math.sqrt((1 - c) / 2));
 type Vec = [number, number];
 type Vec3 = [number, number, number];
 /**
  * 打つ人のパドルと腕を、打つ所からのずれ [上へ, 前へ]（ft）だけ動かす道具。上から見た図は前へのずれだけを、打球の向きに動かす。
- * 横から見た図は、パドルと手を動かし、前腕の手の側と、ひじ（上腕の先・前腕の元）をその半分だけ動かす
+ * 横から見た図は、手を肩を中心にした弧で動かし、パドルを手のまわりに回し、腕は長さを変えずに曲げ直す
  */
 function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	const id = ball.dataset.hitter;
@@ -86,19 +89,31 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	// 回る向き: 前から上へ（+）は、図ではネットの向きによって時計回りか反時計回りになる
 	const turnSign = -Math.sign(uy || 1);
 	const set = (el: SVGLineElement, k: 'x1' | 'y1' | 'x2' | 'y2', d: number) => el.setAttribute(k, String(Number(el.dataset[k]) + d));
-	const apply = ([up, fwd, turn = 0]: Vec3 | Vec) => {
+	// 横から見た図の手の位置: 構えの手からのずれ（届かない所なら、届く所で止める）
+	const sx0 = n0(upperArm, 'x1');
+	const sy0 = n0(upperArm, 'y1');
+	const rx = n0(forearm, 'x2');
+	const ry = n0(forearm, 'y2');
+	// 手を伸ばせる所: 腕をいっぱいに伸ばさず、ひじが少し曲がった所まで（REACH_RATIO。テニスのフォアハンドの研究では、
+	// 振りかぶりでひじ 120°、打つ所で 130〜140°）。構えのほうが遠ければ構えの所まで
+	const reach = Math.max((armLen.upper + armLen.lower) * REACH_RATIO, Math.hypot(rx - sx0, ry - sy0) + 1e-6);
+	const handAt = ([up, fwd]: Vec3): [number, number] => clampReach(sx0, sy0, rx + up * sideK, ry + Math.sign(uy) * fwd, reach);
+	/**
+	 * 打つ所からのずれ p → q の途中（t）の形にする。上から見た図は前へのずれをまっすぐ、
+	 * 横から見た図は手を肩を中心にした弧で動かす（lib/arm-ik.ts の arcLerp。ひじが急に曲がらないように）
+	 */
+	const apply = (p: Vec3, q: Vec3 = p, t = 0) => {
+		const fwd = p[1] + (q[1] - p[1]) * t;
+		const turn = p[2] + (q[2] - p[2]) * t;
 		const dx = ux * fwd;
 		const dy = uy * fwd;
 		paddle.setAttribute('transform', fwd ? `translate(${dx} ${dy})` : '');
 		set(arm, 'x2', dx);
 		set(arm, 'y2', dy);
-		// 横から見た図: 手を動かす先（届かない所なら、届く所で止める）
-		let sx = up * sideK;
-		let sy = Math.sign(uy) * fwd;
+		let sx = 0;
+		let sy = 0;
 		if (forearm && upperArm) {
-			const rx = n0(forearm, 'x2');
-			const ry = n0(forearm, 'y2');
-			const [cx, cy] = clampReach(n0(upperArm, 'x1'), n0(upperArm, 'y1'), rx + sx, ry + sy, armLen.upper + armLen.lower);
+			const [cx, cy] = clampReach(sx0, sy0, ...arcLerp(sx0, sy0, handAt(p), handAt(q), t), reach);
 			sx = cx - rx;
 			sy = cy - ry;
 		}
@@ -126,15 +141,21 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	return { apply, back, follow, contact };
 }
 type Rig = NonNullable<ReturnType<typeof hitterRig>>;
-const lerp = (p: Vec3, q: Vec3, t: number): Vec3 => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
 const REST: Vec3 = [0, 0, 0];
-/** 打つ手の中の時刻 s（ミリ秒）での、パドルのずれと回り: 振る → 振り抜いた形で止める → 構えへ戻る */
-const swingAt = (r: Rig, s: number): Vec3 => {
-	if (s < 0) return r.back;
-	if (s < SWING_MS) return lerp(r.back, r.follow, easeInOut(s / SWING_MS));
-	if (s < SWING_MS + HOLD_MS) return r.follow;
-	if (s < SWING_MS + HOLD_MS + RETURN_MS) return lerp(r.follow, REST, easeInOut((s - SWING_MS - HOLD_MS) / RETURN_MS));
-	return REST;
+/**
+ * 打つ手の中の時刻 s（ミリ秒）での形を、r.apply で作る: 振りかぶり → 打つ所 → 振り抜き → 止める → 構えへ戻る。
+ * 振りは打つ所で2つに分け、どちらも弧で動かす（打つ瞬間にパドルが必ず打つ所を通る）
+ */
+const swingAt = (r: Rig, s: number) => {
+	if (s < 0) return r.apply(r.back);
+	if (s < SWING_MS) {
+		const u = easeInOut(s / SWING_MS);
+		const c = r.contact;
+		return u < c ? r.apply(r.back, REST, c > 0 ? u / c : 1) : r.apply(REST, r.follow, c < 1 ? (u - c) / (1 - c) : 1);
+	}
+	if (s < SWING_MS + HOLD_MS) return r.apply(r.follow);
+	if (s < SWING_MS + HOLD_MS + RETURN_MS) return r.apply(r.follow, REST, easeInOut((s - SWING_MS - HOLD_MS) / RETURN_MS));
+	return r.apply(REST);
 };
 /**
  * 最後の手から最初の手へ戻るとき（ループ）: 人は最初の手の立ち位置まで歩いて戻り、ボールは新しい球になるなら消してから出し直す。
@@ -382,7 +403,8 @@ function setup(root: HTMLElement) {
 			: [];
 		// 動かす手は、振りかぶった形から始める（前の手の後半で振りかぶってある）
 		if (animate) rigs.forEach((r) => r.apply(r.back));
-		const hitDelay = rigs.length ? rigs[0].contact * SWING_MS : 0;
+		// パドルが打つ所を通る時刻（easeInOut で振るので、ease の逆で求める）
+		const hitDelay = rigs.length ? SWING_MS * easeInv(rigs[0].contact) : 0;
 		const drops = pres.flatMap((pr) => (pr ? [pr.dropMs] : []));
 		const dropMs = drops.length ? Math.min(...drops) : 0;
 		const preMs = drops.length ? Math.max(...drops) + PRE_RISE_MS : 0;
@@ -412,11 +434,11 @@ function setup(root: HTMLElement) {
 			setPreRings(preMs > 0);
 			// 振り: 打つ手の始まり（preMs）から振り、パドルが打つ所を通る瞬間（hitDelay）にボールが飛び出す
 			const s = elapsed - preMs;
-			rigs.forEach((r) => r.apply(swingAt(r, s)));
+			rigs.forEach((r) => swingAt(r, s));
 			const flight = Math.max(0, s - hitDelay);
 			const t = Math.min(1, flight / duration);
 			// 次の手で打つ人は、この手の後半で振りかぶる
-			if (t > PREP_FROM) preps.forEach((r) => r.apply(lerp(REST, r.back, easeInOut((t - PREP_FROM) / (1 - PREP_FROM)))));
+			if (t > PREP_FROM) preps.forEach((r) => r.apply(REST, r.back, easeInOut((t - PREP_FROM) / (1 - PREP_FROM))));
 			const eb = Math.sin((t * Math.PI) / 2); // ボール: 打った瞬間が速く、少しずつ減速する
 			showMarks(eb);
 			drawTrace(eb);
@@ -508,7 +530,7 @@ function setup(root: HTMLElement) {
 			const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
 			for (const m of moves) m.g.setAttribute('transform', `translate(${m.from[0] + (m.to[0] - m.from[0]) * e} ${m.from[1] + (m.to[1] - m.from[1]) * e})`);
 			if (fade) balls.forEach((b) => (b.style.opacity = String(Math.max(0, 1 - (now - t0) / BALL_FADE_MS))));
-			preps0.forEach((r) => r.apply(lerp(REST, r.back, e)));
+			preps0.forEach((r) => r.apply(REST, r.back, e));
 			if (t < 1) raf = requestAnimationFrame(tick);
 			else done();
 		};

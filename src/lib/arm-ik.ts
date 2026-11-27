@@ -28,3 +28,21 @@ export function clampReach(sx: number, sy: number, hx: number, hy: number, reach
 	const max = reach * 0.995;
 	return d <= max ? [hx, hy] : [sx + (dx / d) * max, sy + (dy / d) * max];
 }
+
+/**
+ * 手の通り道: 2つの位置 p → q のあいだを、肩を中心にした弧で結ぶ（向きと、肩からの距離を、それぞれ少しずつ変える）。
+ * まっすぐ結ぶと、後ろの低い所から前の高い所へ振るときに手が肩の近くを通り、ひじが一時的に大きく曲がってしまう。
+ * 人の腕は肩を中心に振り子のように回るので、弧で結ぶ。回る向きは短いほう（下を通る振り、頭の上を通る振り）
+ */
+export function arcLerp(sx: number, sy: number, p: [number, number], q: [number, number], t: number): [number, number] {
+	const ap = Math.atan2(p[1] - sy, p[0] - sx);
+	const aq = Math.atan2(q[1] - sy, q[0] - sx);
+	let da = aq - ap;
+	while (da > Math.PI) da -= 2 * Math.PI;
+	while (da < -Math.PI) da += 2 * Math.PI;
+	const rp = Math.hypot(p[0] - sx, p[1] - sy);
+	const rq = Math.hypot(q[0] - sx, q[1] - sy);
+	const a = ap + da * t;
+	const r = rp + (rq - rp) * t;
+	return [sx + r * Math.cos(a), sy + r * Math.sin(a)];
+}

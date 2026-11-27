@@ -10,7 +10,7 @@ interface Props {
 const { drill } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 /** カテゴリの印: メインのカテゴリ、サブカテゴリの順。押すとドリル一覧のそのカテゴリへ飛ぶ */
-const catTags = [drill.category, ...drill.subCategories].map((code, i) => ({
+const catTags = [drill.category, ...(drill.subCategories ?? [])].map((code, i) => ({
 	code,
 	main: i === 0,
 	label: categories.find((c) => c.code === code)?.label ?? code,

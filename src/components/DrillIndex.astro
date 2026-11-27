@@ -19,7 +19,7 @@ const sections = categories
 		...c,
 		main: drills.filter((x) => x.d.category === c.code),
 		sub: drills
-			.filter((x) => x.d.subCategories.includes(c.code))
+			.filter((x) => (x.d.subCategories ?? []).includes(c.code))
 			.sort((a, b) => categories.findIndex((k) => k.code === a.d.category) - categories.findIndex((k) => k.code === b.d.category) || a.order - b.order),
 	}))
 	.filter((c) => c.main.length > 0 || c.sub.length > 0);

@@ -5,6 +5,7 @@
  * スタイルは Court.astro の .court 配下（is:global）で当てる。
  */
 import { COURT, zoneRects, type ZoneName } from '../config/court';
+import { sideFigure } from '../lib/side-figure';
 
 type Point = [number, number];
 interface Figure {
@@ -71,53 +72,7 @@ const GROUND_MARK = 0.6;
 // 線を伸ばして見せるマスクの範囲。図の表示範囲（viewBox）に余白を足して、どこに引いた線も切れないようにする
 const [vbX, vbY, vbW, vbH] = viewBox.split(/\s+/).map(Number);
 const maskBox = { x: vbX - 10, y: vbY - 10, width: vbW + 20, height: vbH + 20 };
-/**
- * 横から見た図の棒人間の寸法（ft）。大人の平均的な身長 170cm と、体の比率から決める。
- * 頭は実際の比率: 高さ（あご〜頭のてっぺん）が身長の約 1/7.5（約23cm）、前後の奥行きが約19cm の、縦に長い楕円。
- * 腕のつけ根（肩の関節）は身長の約 0.77（約131cm）。肩の骨の一番上（0.82）ではなく、腕が回る所に置き、首が見えるようにする。
- */
-const STATURE_FT = 5.58;
-const HEAD_FT = STATURE_FT / 7.5;
-const HEAD_DEPTH_FT = 0.62;
-/**
- * 太さ（ft。図では side.k 倍）: 胴は胸の厚み約24cm、首は約12cm、足は約14cm、腕は約8cm。
- * 胴の線は端が丸いので、丸みの分（太さの半分）だけ内側で止める
- */
-const TORSO_W_FT = 0.78;
-const NECK_W_FT = 0.4;
-const LEG_W_FT = 0.45;
-const ARM_W_FT = 0.27;
-const TORSO_CAP_FT = (TORSO_W_FT / 2) * 0.8;
-const CHIN_FT = STATURE_FT - HEAD_FT;
-const SHOULDER_FT = STATURE_FT * 0.77;
-/** 腰（股関節）・ひざ・足首の高さ（身長の約 0.53・0.285・0.04） */
-const HIP_FT = STATURE_FT * 0.53;
-const KNEE_FT = STATURE_FT * 0.285;
-const ANKLE_FT = STATURE_FT * 0.04;
-/** 肩から、パドルを握る手までの長さ（腕の長さ。身長の約 0.36） */
-const ARM_FT = STATURE_FT * 0.36;
-/**
- * パドルの寸法（ft）。長さはルールの上限が 17インチで、ふつうは約16インチ（約41cm）。
- * 握る手からパドルの面の真ん中までは約7.5インチ、手から先までは約13インチ
- */
-const PADDLE_HAND_TO_FACE_FT = 7.5 / 12;
-const PADDLE_HAND_TO_TIP_FT = 13 / 12;
-const PADDLE_HAND_TO_BUTT_FT = 3 / 12;
-/**
- * 構え（ピックルボールのよい姿勢）: 上体はほぼ起こしたまま、ひざを少し曲げて腰を落とす。
- * いつも READY_KNEE_FT だけ腰を落とし、低い球では、上体を少しだけ前に倒し（MAX_LEAN まで）、ひざをもう少し曲げる
- * （合わせて MAX_CROUCH_FT まで）。それでも届かない分は、腕とパドルを伸ばして届かせる（前かがみやしゃがみ込みはしない）
- */
-const READY_KNEE_FT = 0.12;
-const MAX_LEAN = (12 * Math.PI) / 180;
-const MAX_CROUCH_FT = 0.35;
-/**
- * スニーカーの形（足首の真下を 0 として、奥行き ft・高さ ft の点。奥行きはネットの側が +）。
- * 長さ約27cm、かかとの上（はき口）が少し高く、つま先は丸く低い
- */
-const SNEAKER: [number, number][] = [
-	[-0.26, 0.03], [0.55, 0.03], [0.64, 0.06], [0.66, 0.12], [0.6, 0.17], [0.42, 0.21], [0.2, 0.3], [0.05, 0.36], [-0.17, 0.36], [-0.24, 0.3], [-0.27, 0.15],
-];
+/* 横から見た図の人（棒人間）は src/lib/side-figure.ts で組み立てる */
 /** 弾んだ位置の輪の半径（控えめに小さく） */
 const MARK = 0.45;
 /** 練習役の二重丸: 内側の線を、体の丸のふちから何 ft 内側に引くか */
@@ -305,64 +260,29 @@ const isSub = (t: string) => t === 'move';
 					))}
 				<line class="side-net" x1={side.x0} y1={COURT.net} x2={side.x0 + NET_FT * side.k} y2={COURT.net} />
 				{figures.map((p) => {
-					// 棒人間は、高さ（ft）と奥行き（ft）で組み立ててから、図の座標（高さは side.k 倍）に直す
-					const toNet = p.y < COURT.net ? 1 : -1;
-					const X = (h: number) => side.x0 + h * side.k;
-					const hitH = p.sideH ?? 4;
-					const faceY = (p.hand[1] + p.tip[1]) / 2;
-					const dy = Math.abs(faceY - p.y);
-					// 構えと届き方: 少しひざを曲げ、低い球では上体を前に倒し、それでも届かなければさらにひざを曲げる
-					const reach = ARM_FT + PADDLE_HAND_TO_FACE_FT;
-					const torso = SHOULDER_FT - HIP_FT;
-					// 図では高さの向きだけ side.k 倍に縮めているので、体の前後のずれ（奥行き）も同じだけ縮めて、形がゆがまないようにする
-					const K = side.k;
-					const shoulderAt = (drop: number, lean: number) => ({
-						h: HIP_FT - drop + torso * Math.cos(lean),
-						d: p.y + toNet * K * torso * Math.sin(lean),
+					const fig = sideFigure({
+						x0: side.x0,
+						k: side.k,
+						y: p.y,
+						toNet: p.y < COURT.net ? 1 : -1,
+						hitH: p.sideH ?? 4,
+						faceY: (p.hand[1] + p.tip[1]) / 2,
 					});
-					const reaches = (drop: number, lean: number) => {
-						const sh = shoulderAt(drop, lean);
-						return Math.hypot(hitH - sh.h, faceY - sh.d) <= reach;
-					};
-					let drop = READY_KNEE_FT;
-					let lean = 0;
-					while (lean < MAX_LEAN && !reaches(drop, lean)) lean += Math.PI / 180;
-					while (drop < MAX_CROUCH_FT && !reaches(drop, lean)) drop += 0.02;
-					const sh = shoulderAt(drop, lean);
-					const hipH = HIP_FT - drop;
-					// 首と頭は上体と同じ向きに傾ける
-					const neck = (CHIN_FT - SHOULDER_FT);
-					const chin = { h: sh.h + neck * Math.cos(lean), d: sh.d + toNet * K * neck * Math.sin(lean) };
-					const headC = { h: chin.h + (HEAD_FT / 2) * Math.cos(lean), d: chin.d + toNet * K * (HEAD_FT / 2) * Math.sin(lean) };
-					// ひざ: 腰と足首を結ぶ線の真ん中から、ネットの側へ出す（太ももとすねの長さは変えない）
-					const thigh = HIP_FT - KNEE_FT;
-					const legSpan = hipH - ANKLE_FT;
-					const kneeFwd = K * Math.sqrt(Math.max(0, thigh * thigh - (legSpan / 2) ** 2));
-					const kneeH = ANKLE_FT + legSpan / 2;
-					// 腕とパドル: 肩からパドルの面の真ん中へ向かって伸ばし、パドルは腕の延長に持つ
-					// （低い球ではヘッドが下がり、高い球では上がる）
-					const vh = hitH - sh.h;
-					const vd = faceY - sh.d;
-					const vl = Math.hypot(vh, vd) || 1;
-					const [uh, ud] = [vh / vl, vd / vl];
-					const handH = hitH - uh * PADDLE_HAND_TO_FACE_FT;
-					const handD = faceY - ud * PADDLE_HAND_TO_FACE_FT;
-					const butt = [X(handH - uh * PADDLE_HAND_TO_BUTT_FT), handD - ud * PADDLE_HAND_TO_BUTT_FT];
-					const tip = [X(handH + uh * PADDLE_HAND_TO_TIP_FT), handD + ud * PADDLE_HAND_TO_TIP_FT];
-					// 頭は縦に長い楕円。高さの向き（図の横）は縮めずに、実際の縦横の比で描く
-					const rotDeg = (toNet * lean * 180) / Math.PI;
-					const shoe = SNEAKER.map(([d, h]) => `${X(h)},${p.y + toNet * K * d}`).join(" ");
+					const [ax1, ay1, ax2, ay2] = fig.upperArm;
+					const [fx1, fy1, fx2, fy2] = fig.forearm;
+					const [nx1, ny1, nx2, ny2] = fig.neck;
+					const [px1, py1, px2, py2] = fig.paddle;
 					return (
 						<g class={`side-person role-${p.role}`} data-side-player={animated ? p.id : undefined}>
-							{/* スニーカー、足（足首〜ひざ〜腰）、胴（腰〜肩、前に倒す）、首、頭、腕（肩〜手）、パドル */}
-							<polygon class="side-shoe" points={shoe} />
-							<polyline class="side-leg" stroke-width={LEG_W_FT * K} points={`${X(ANKLE_FT)},${p.y} ${X(kneeH)},${p.y + toNet * kneeFwd} ${X(hipH)},${p.y}`} />
-							{/* 胴は太く（胸の厚み約24cm）、首は細く描き、胴の上の端が肩（腕のつけ根）だと分かるようにする */}
-							<line class="side-torso" stroke-width={TORSO_W_FT * K} x1={X(hipH + TORSO_CAP_FT)} y1={p.y} x2={X(sh.h - TORSO_CAP_FT)} y2={sh.d} />
-							<line class="side-neck" stroke-width={NECK_W_FT * K} x1={X(sh.h)} y1={sh.d} x2={X(chin.h)} y2={chin.d} />
-							<ellipse class="side-head" cx={X(headC.h)} cy={headC.d} rx={(HEAD_FT / 2) * K} ry={(HEAD_DEPTH_FT / 2) * K} transform={`rotate(${rotDeg} ${X(headC.h)} ${headC.d})`} />
-							<line class="side-arm" stroke-width={ARM_W_FT * K} x1={X(sh.h)} y1={sh.d} x2={X(handH)} y2={handD} />
-							<line class="side-paddle" x1={butt[0]} y1={butt[1]} x2={tip[0]} y2={tip[1]} />
+							{/* スニーカー、足（足首〜ひざ〜股関節）、胴、首、頭、腕（肩〜ひじ〜手）、パドル */}
+							<polygon class="side-shoe" points={fig.shoe} />
+							<polyline class="side-leg" stroke-width={fig.widths.leg} points={fig.leg} />
+							<path class="side-torso" d={fig.torso} />
+							<line class="side-neck" stroke-width={fig.widths.neck} x1={nx1} y1={ny1} x2={nx2} y2={ny2} />
+							<ellipse class="side-head" cx={fig.head.cx} cy={fig.head.cy} rx={fig.head.rx} ry={fig.head.ry} transform={`rotate(${fig.head.rot} ${fig.head.cx} ${fig.head.cy})`} />
+							<line class="side-upperarm" stroke-width={fig.widths.upperArm} x1={ax1} y1={ay1} x2={ax2} y2={ay2} />
+							<line class="side-arm" stroke-width={fig.widths.forearm} x1={fx1} y1={fy1} x2={fx2} y2={fy2} />
+							<line class="side-paddle" x1={px1} y1={py1} x2={px2} y2={py2} />
 						</g>
 					);
 				})}

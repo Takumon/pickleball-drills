@@ -222,8 +222,14 @@
 	stroke-linejoin: round;
 }
 /* 横から見た図の棒人間（太さは CourtFrame.astro の TORSO_W_FT などで決める） */
-.court .side-torso,
-.court .side-neck {
+.court .side-torso {
+	fill: var(--side-ink);
+	stroke: var(--side-ink);
+	stroke-width: 0.08;
+	stroke-linejoin: round;
+}
+.court .side-neck,
+.court .side-upperarm {
 	stroke: var(--side-ink);
 	stroke-linecap: round;
 }

@@ -466,6 +466,9 @@ if (stillPanel) {
 							side={side}
 							step={i}
 							score={scores?.[i]}
+							win={diagram.score && scores && Math.abs(scores[i].after) >= diagram.score.to && Math.abs(scores[i].before) < diagram.score.to
+								? (scores[i].after > 0 ? diagram.score.plus : diagram.score.minus)
+								: undefined}
 						/>
 					))}
 				</div>

@@ -437,3 +437,32 @@
 	opacity: 1;
 	transform: translateY(0);
 }
+
+/* ゲーム形式: 勝ちの点に届いたときの「〇 の勝ち」。コートの真ん中に、少し大きくなりながらポンと出る */
+.court .win-label {
+	font-size: 3.4px;
+	font-weight: 800;
+	text-anchor: middle;
+	dominant-baseline: central;
+	font-family: system-ui, sans-serif;
+	fill: var(--label);
+	stroke: var(--court-surface);
+	stroke-width: 0.9px;
+	paint-order: stroke;
+	stroke-linejoin: round;
+	opacity: 0;
+	transform-box: fill-box;
+	transform-origin: center;
+	transform: scale(0.6);
+	transition: opacity 0.3s ease-out, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.court .win-label.on {
+	opacity: 1;
+	transform: scale(1);
+}
+.court svg .shot-label {
+	transition: opacity 0.3s ease-out;
+}
+.court svg.won .shot-label {
+	opacity: 0;
+}

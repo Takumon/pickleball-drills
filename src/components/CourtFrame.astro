@@ -61,8 +61,10 @@ interface Props {
 	step?: number;
 	/** ゲーム形式の点: この手の前と後の点 */
 	score?: { before: number; after: number };
+	/** ゲーム形式: この手で勝ちの点に届いた人（「〇 の勝ち」を出す） */
+	win?: string;
 }
-const { figures, lines, viewBox, zones, fences = [], uid, playerR, title, animated = false, side, step, score } = Astro.props;
+const { figures, lines, viewBox, zones, fences = [], uid, playerR, title, animated = false, side, step, score, win } = Astro.props;
 const NET_FT = 2.9;
 /** 横から見た図: ラインの位置で地面の線の色を変える長さ */
 const GROUND_MARK = 0.6;
@@ -221,6 +223,14 @@ const isSub = (t: string) => t === 'move';
 						{l.label}
 					</text>
 				),
+		)
+	}
+	{
+		/* ゲーム形式: 勝ちの点に届いた手では、コートの真ん中に「〇 の勝ち」。アニメーションでは手が終わったときにポンと出す */
+		win && (
+			<text class:list={['win-label', { on: !animated }]} x={COURT.width / 2} y={COURT.net} data-win>
+				{win} の勝ち
+			</text>
 		)
 	}
 	{

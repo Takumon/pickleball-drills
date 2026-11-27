@@ -105,7 +105,8 @@ function setup(root: HTMLElement) {
 		// 点の目盛り: 動かす手は前の点から、止まった図は後の点を見せる
 		setScore(scoreOf(frames[i], animate ? 'scoreBefore' : 'scoreAfter'), true);
 		// 「失点」は、動かす手では手が終わってから出す
-		frames[i].querySelectorAll('[data-lost]').forEach((t) => t.classList.toggle('on', !animate));
+		frames[i].querySelectorAll('[data-lost], [data-win]').forEach((t) => t.classList.toggle('on', !animate));
+		frames[i].classList.toggle('won', !animate && !!frames[i].querySelector('[data-win]'));
 		// ループで消したボールを、次に見せるときは元に戻す
 		frame.querySelectorAll<SVGElement>('.ball, .side-ball').forEach((b) => (b.style.opacity = ''));
 		const ball = frame.querySelector<SVGGElement>('.ball')!;
@@ -268,7 +269,9 @@ function setup(root: HTMLElement) {
 					drawBall(ballAt(balls[0], 1));
 				}
 				setScore(scoreOf(frame, 'scoreAfter'), false);
-				frame.querySelectorAll('[data-lost]').forEach((t) => t.classList.add('on'));
+				frame.querySelectorAll('[data-lost], [data-win]').forEach((t) => t.classList.add('on'));
+				// 「〇 の勝ち」を出すときは、線の名前を薄くして重ならないようにする
+				frame.classList.toggle('won', !!frame.querySelector('[data-win]'));
 				done?.();
 			}
 		};

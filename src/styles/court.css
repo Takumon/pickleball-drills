@@ -19,6 +19,12 @@
 	--me: #ffffff;
 	--me-ink: #111827;
 	--paddle: #f3f4f6;
+	/*
+	 * パドルの色（ローズ）。上から見た図と横から見た図で同じ色にして、2つの図を結び付ける（色の決まりの例外）。
+	 * コートの緑の上で見える明るさにし、横から見た図の明るい背景（ライト）ではもう少し濃くする
+	 */
+	--paddle-face: #f0628f;
+	--side-paddle: #d63a6d;
 	--fence: #b8bec7;
 	/* コートの外（横から見た高さの帯）に描く線と文字。ページの背景の上で見えるように、ライトとダークで変える */
 	--side-ink: #6b7280;
@@ -41,6 +47,7 @@
 	--sub: #9ca3af;
 	--label: #f9fafb;
 	--paddle: #e5e7eb;
+	--side-paddle: #f472a0;
 	--fence: #9aa1ab;
 	--side-ink: #9ca3af;
 	--side-skin: #e3ad84;
@@ -246,7 +253,7 @@
 	fill: var(--side-ink);
 }
 .court .side-grip {
-	stroke: var(--side-ink);
+	stroke: var(--side-paddle);
 	stroke-linecap: round;
 }
 .court .side-leg {
@@ -269,7 +276,7 @@
 	stroke-linecap: round;
 }
 .court .side-paddle {
-	stroke: var(--side-ink);
+	stroke: var(--side-paddle);
 	stroke-linecap: butt;
 }
 .court .side-trace {
@@ -385,7 +392,7 @@
 	stroke-linecap: round;
 }
 .court .player .paddle {
-	stroke: var(--paddle);
+	stroke: var(--paddle-face);
 	stroke-width: 0.45;
 	stroke-linecap: round;
 }

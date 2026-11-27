@@ -113,7 +113,9 @@ function lineOf(s: Shot, byId: Map<string, Figure>, straight: boolean, byIdTo: M
 	const candidates = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8].map(pointAt);
 	const mid = candidates.find(clear) ?? candidates.find((p) => Math.abs(p[1] - COURT.net) >= 1.6) ?? candidates[0];
 	// 人の動き（move）には名前を付けない（矢印だけで分かり、名前を置くと人に重なるため）
-	const label = s.type === 'move' ? s.label : (s.label ?? (s.feed ? `球出し（${shotLabels[s.type]}）` : shotLabels[s.type]));
+	// トラップしてから打つ打ち方は、線の名前は元の打ち方（「ディンク（トラップ）」の括弧は、トラップの間に出る「トラップ」の文字と重なって冗長。書き手の指摘）
+	const name = shotLabels[(TRAP_BASE as Record<string, keyof typeof shotLabels>)[s.type] ?? s.type];
+	const label = s.type === 'move' ? s.label : (s.label ?? (s.feed ? `球出し（${name}）` : name));
 	const receiver = typeof s.to === 'string' ? byIdTo.get(s.to) : undefined;
 	const bounces = bouncesOf(s, b.anchor, pointAt, receiver?.y);
 	// ネットを越える位置（線の長さに対する割合）。越えなければ undefined
@@ -169,7 +171,12 @@ function trapFromHeight(s: Shot): number | undefined {
 	if (s.feed) return undefined;
 	const hits = diagram.shots.filter((t) => t.type !== 'move');
 	const i = hits.indexOf(s);
+	// 前の手へさかのぼる。最後の手から最初の手へ続けて繰り返すのは、書いた手のままのラリー（rally: true）だけ。
+	// ラリーでないドリルの最初の手は、新しい球の球出しなので、最後の手の球をトラップしたことにしない
+	// （前は、ロブのドリルの最初の手の球出しが、最後の手の球のトラップとして描かれ、「トラップ」と出ていた）
+	const wrap = diagram.rally === true;
 	for (let k = 1; k < hits.length; k++) {
+		if (!wrap && i - k < 0) break;
 		const t = hits[(i - k + hits.length) % hits.length];
 		if (t.to === s.from) return receiveHeight(t);
 	}
@@ -341,14 +348,43 @@ function bowLine<L extends { d: string; mid: Point; bounces?: { pt: Point; at: n
 }
 const positions = new Map<string, Point>(diagram.players.map((p) => [p.id, [p.x, p.y]]));
 const panels = groups.map((g) => {
-	const figures = diagram.players.map((p) => figureOf(p, positions.get(p.id)!));
+	// この手で打ちも受けもしない人（動くだけ、待つだけ）は、次に打つか受ける手の構えで待つ。
+	// あとの手になければ、ループで次に来る最初のほうの手から探す
+	// （書き手の指摘: 決めの高さ（約1.2m）の構えで待つと、振り終わりのように腕を上げたまま走って見えた）
+	const nextGroup = (id: string) => {
+		const involved = (x: { shots: Shot[] }) => x.shots.some((s) => s.type !== 'move' && (s.from === id || s.to === id));
+		if (involved(g)) return g;
+		const i = groups.indexOf(g);
+		return groups.slice(i + 1).find(involved) ?? groups.slice(0, i).find(involved) ?? g;
+	};
+	const sideH = (id: string) => {
+		for (const s of nextGroup(id).shots) {
+			if (s.type === 'move') continue;
+			if (s.from === id) return ft(s.hit ?? shotHeights[s.type].hit);
+			if (s.to === id) return receiveHeight(s);
+		}
+		return ft(defaultReceiveHeight);
+	};
+	// 横から見た図の構えに使う打ち方: この手で打つならその球、受けるなら次に打つ球（構えは打ち方で変わる。例: ロールは前に倒れて手を前へ）
+	const sideType = (id: string): string | undefined => {
+		const ng = nextGroup(id);
+		for (const s of ng.shots) if (s.type !== 'move' && s.from === id) return s.type;
+		const later = diagram.shots.filter((s) => s.type !== 'move' && (s.n ?? 0) > (ng.n ?? 0) && s.from === id);
+		return ng.shots.some((s) => s.to === id) ? later[0]?.type : undefined;
+	};
+	// リセットはバックハンドで取ることが多いので、リセットを打つ人（受ける手も含む）は、バックハンドの構えで描く（書き手と決めた）
+	const paddleOf = (p: Player): Player => {
+		const t = sideType(p.id);
+		return t === 'reset' || t === 'resetTrap' ? { ...p, paddle: 'bh' } : p;
+	};
+	const figures = diagram.players.map((p) => figureOf(paddleOf(p), positions.get(p.id)!));
 	const byId = new Map(figures.map((f) => [f.id, f]));
 	// 同じ手で動く人（打たれた球に合わせてサイドステップするなど）は、動いた先で球を受ける
 	const movedTo = new Map(
 		g.shots.flatMap((s) => (s.type === 'move' && typeof s.from === 'string' && typeof s.to !== 'string' ? [[s.from, s.to] as const] : [])),
 	);
 	const byIdTo = new Map(
-		diagram.players.map((p) => [p.id, movedTo.has(p.id) ? figureOf(p, movedTo.get(p.id)!) : byId.get(p.id)!]),
+		diagram.players.map((p) => [p.id, movedTo.has(p.id) ? figureOf(paddleOf(p), movedTo.get(p.id)!) : byId.get(p.id)!]),
 	);
 	// 同じ手に同じ名前の線が2本以上あるとき（球を2つ以上同時に使うドリル）は、名前を最初の1本にだけ付ける（重なって読めないため）
 	const seenLabels = new Set<string>();
@@ -379,30 +415,6 @@ const panels = groups.map((g) => {
 	});
 	// 横から見た図で描くパドルの高さ: この手で打つ人は打つ高さ、受ける人は受ける高さ、ほかは既定の高さ。
 	// 同じ手で2つ以上打つときも、それぞれの打球から決める
-	// この手で打ちも受けもしない人（動くだけ、待つだけ）は、次に打つか受ける手の構えで待つ。
-	// あとの手になければ、ループで次に来る最初のほうの手から探す
-	// （書き手の指摘: 決めの高さ（約1.2m）の構えで待つと、振り終わりのように腕を上げたまま走って見えた）
-	const nextGroup = (id: string) => {
-		const involved = (x: { shots: Shot[] }) => x.shots.some((s) => s.type !== 'move' && (s.from === id || s.to === id));
-		if (involved(g)) return g;
-		const i = groups.indexOf(g);
-		return groups.slice(i + 1).find(involved) ?? groups.slice(0, i).find(involved) ?? g;
-	};
-	const sideH = (id: string) => {
-		for (const s of nextGroup(id).shots) {
-			if (s.type === 'move') continue;
-			if (s.from === id) return ft(s.hit ?? shotHeights[s.type].hit);
-			if (s.to === id) return receiveHeight(s);
-		}
-		return ft(defaultReceiveHeight);
-	};
-	// 横から見た図の構えに使う打ち方: この手で打つならその球、受けるなら次に打つ球（構えは打ち方で変わる。例: ロールは前に倒れて手を前へ）
-	const sideType = (id: string): string | undefined => {
-		const ng = nextGroup(id);
-		for (const s of ng.shots) if (s.type !== 'move' && s.from === id) return s.type;
-		const later = diagram.shots.filter((s) => s.type !== 'move' && (s.n ?? 0) > (ng.n ?? 0) && s.from === id);
-		return ng.shots.some((s) => s.to === id) ? later[0]?.type : undefined;
-	};
 	for (const f of figures) Object.assign(f, { sideH: sideH(f.id), sideType: sideType(f.id) });
 	for (const s of g.shots) {
 		if (s.type === 'move' && typeof s.from === 'string' && typeof s.to !== 'string') positions.set(s.from, s.to);

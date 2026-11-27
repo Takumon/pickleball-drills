@@ -193,6 +193,8 @@
 .court .shot.t-volleyDink,
 .court .shot.t-volleyTrap,
 .court .shot.t-dinkTrap,
+.court .shot.t-sliceDink,
+.court .shot.t-sliceDinkTrap,
 .court .shot.t-resetTrap {
 	stroke-width: 0.35;
 	stroke-dasharray: 0.05 0.55;
@@ -504,6 +506,23 @@
 }
 
 /* ゲーム形式: 点を失った人の上の「失点」。手が終わったときに、下から少し上がりながらふわっと出る */
+.court .trap-label {
+	font-size: 1.5px;
+	font-weight: 700;
+	text-anchor: middle;
+	dominant-baseline: central;
+	font-family: system-ui, sans-serif;
+	fill: var(--label);
+	stroke: var(--court-surface);
+	stroke-width: 0.5px;
+	paint-order: stroke;
+	stroke-linejoin: round;
+	opacity: 0;
+	transition: opacity 0.12s;
+}
+.court .trap-label.on {
+	opacity: 1;
+}
 .court .lost-label {
 	font-size: 1.6px;
 	font-weight: 700;

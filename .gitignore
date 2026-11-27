@@ -33,3 +33,5 @@ skills-lock.json
 # 手元だけで使う一時ページ（動画のお手本と見比べる。公開しない）
 public/_*
 src/pages/dev/
+# 任せたエージェントの作業ツリー（公開のリポジトリに入れない）
+.claude/worktrees/

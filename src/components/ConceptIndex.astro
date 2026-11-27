@@ -88,7 +88,7 @@ sections.push({
 		...(Object.keys(shotLabels) as (keyof typeof shotLabels)[]).filter((t) => t !== 'move').map((t): Row => ({ name: shotLabels[t], meaning: '打球の種類', who: '両方', data: `type: ${t}` })),
 		{ name: '球出し', meaning: '練習を始めるために出す球。出す球の種類で描き、「球出し（ディンク）」と名前を付ける。新しいボール', who: '両方', data: 'feed: true' },
 		{ name: '打つ前に弾ませる', meaning: '手元で落として弾ませてから打つ球出し。パドルの真下で弾む', who: '両方', data: 'afterBounce: true' },
-		{ name: 'トラップ', meaning: '来た球を面で吸収してポンと上げる。ディンクは足元でワンバウンドさせてから、リセットとボレーは弾ませずに落ちてきた球を打つ（ボレーはボレーディンクで打つ）', who: '両方', data: 'type: dinkTrap / resetTrap / volleyTrap（afterBounce: true でも書ける）' },
+		{ name: 'トラップ', meaning: '来た球を面で吸収してポンと上げる。ディンクは足元でワンバウンドさせてから、リセットとボレーは弾ませずに落ちてきた球を打つ（ボレーはボレーディンクで打つ）。トラップのあいだは図に「トラップ」と出る', who: '両方', data: 'type: dinkTrap / resetTrap / volleyTrap（afterBounce: true でも書ける）' },
 		{ name: 'バウンド', meaning: 'ボールが弾む位置。黄色い輪が出る。コートに落とす球は着地点で弾み、受ける人の手前で弾む球もある', who: '両方', data: 'bounce: front / false' },
 		{ name: '投げ下ろす弧', meaning: '上から投げ下ろす球。打った高さから上がらずに落ちる', who: '作り手', data: 'fall: true' },
 		{ name: 'ネットを越える高さ', meaning: 'ドライブ以外の球はネットの白帯より少し上を必ず通る', who: '作り手' },
@@ -112,7 +112,7 @@ sections.push({
 		{ name: '手', meaning: '打つ順の1つ分。①②③の番号ごとに1コマで再生する', who: '両方', data: 'n' },
 		{ name: '手と手の間', meaning: 'ふつうは0.7秒止まる。次の手がトラップで始まるときは止まらずに続ける', who: '両方' },
 		{ name: '1周の終わり', meaning: '最後の手のあと1.6秒止まり、人は最初の立ち位置へ歩いて戻ってから繰り返す', who: '両方' },
-		{ name: 'ラリー', meaning: 'ラリー形式かどうかを、全部のドリルに必ず書く。数は球出しから往復を描き（往復の手はコードが作る）、true は書いた手のまま続けて繰り返す', who: '両方', data: 'rally: 2 / true / false' },
+		{ name: 'ラリー', meaning: 'ラリー形式かどうかを、全部のドリルに必ず書く。数は球出しから往復を描き（往復の手はコードが作る）、true は書いた手のまま続けて繰り返す。題名には書かず、ページ・サイドバー・メニューを作るページに「ラリー」「ラリーなし」の印が出る', who: '両方', data: 'rally: 2 / true / false' },
 		{ name: '新しいボール', meaning: '球出しや、点が決まったあとの球。前の球の続きにならないので、出し直して見せる', who: '作り手' },
 		{ name: 'つながり（連続性）', meaning: '手の切れ目やループで、人・ボールの位置や高さが跳ばない。作るたびに測って確かめる', who: '作り手', data: '.claude/skills/add-drill/anim-continuity.js' },
 		{ name: '打つ動き', meaning: '打った瞬間に、パドルが打ち方ごとの向きへ出て戻る', who: '両方', data: 'config/court.ts の shotSwing' },
@@ -138,6 +138,8 @@ sections.push({
 		{ name: '構え', meaning: '上体はほぼ起こし、ひざを少し曲げる。低い球ほどひざを少し深く曲げる', who: '両方' },
 		{ name: 'パドルの向き', meaning: '腰より下ではヘッドが下がり、腰より上では高いほどヘッドが上を向く', who: '両方' },
 		{ name: 'ボールの大きさ', meaning: '見やすさのために実物より大きく描く（ほかは実物の比率）', who: '両方' },
+		{ name: 'リセットの構え', meaning: 'リセットを打つ人は受ける手も含めてバックハンドで描く。スピードアップやカウンターを受けたリセットは腰より上の球として描く', who: '両方' },
+		{ name: 'ロブに下がる人', meaning: '弾んでから打つときは、後ろを向いて走り、着く前に前足を踏み込んで前を向き直る。弾む前に打つときは、ボールのほうを向いたまま下がる', who: '両方' },
 	],
 });
 

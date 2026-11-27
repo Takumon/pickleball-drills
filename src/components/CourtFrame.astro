@@ -249,6 +249,19 @@ const isSub = (t: string) => t === 'move';
 		)
 	}
 	{
+		/* トラップ（相手から来た球をパドルで受けてポンと上げる）の間だけ、パドルの横に「トラップ」と出す（書き手の希望）。止まった図では出さない */
+		animated &&
+			lines.map(
+				(l) =>
+					l.pre &&
+					l.preFromH !== undefined && (
+						<text class="trap-label" x={l.pre[0] + (l.pre[0] < COURT.width / 2 ? 2.6 : -2.6)} y={l.pre[1]} data-trap-label>
+							トラップ
+						</text>
+					),
+			)
+	}
+	{
 		/* ゲーム形式: 勝ちの点に届いた手では、コートの真ん中に「〇 の勝ち」。アニメーションでは手が終わったときにポンと出す */
 		win && (
 			<text class:list={['win-label', { on: !animated }]} x={COURT.width / 2} y={COURT.net} data-win>

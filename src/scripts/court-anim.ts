@@ -363,6 +363,12 @@ function setup(root: HTMLElement) {
 		stop();
 		// 手が切り替わる前の、横から見た人の形（次の手の始まりへなめらかにつなぐため）
 		const prevSnap = animate && current !== i && frames[current]?.style.display !== 'none' ? snapshotSide(frames[current]) : undefined;
+		// 前の手の終わりのボールの位置（トラップは、球が届いた所から始める。線の先はパドルの少し手前で終わるため）
+		const prevBall = (() => {
+			if (!animate || current === i) return undefined;
+			const m = frames[current]?.querySelector('.ball')?.getAttribute('transform')?.match(/translate\(([-\d.e]+)[ ,]+([-\d.e]+)\)/);
+			return m ? { x: Number(m[1]), y: Number(m[2]) } : undefined;
+		})();
 		// 前の混ぜ途中で止めた残り（data-blend-ty）を消す
 		root.querySelectorAll<HTMLElement>('[data-blend-ty], [data-move-ty]').forEach((g) => {
 			delete g.dataset.blendTy;
@@ -460,6 +466,9 @@ function setup(root: HTMLElement) {
 		const marks = [...frame.querySelectorAll<SVGGElement>('.bounce:not([data-pre-ring])')];
 		// 手から弾ませる球の輪（弾んだ瞬間に出す）
 		const preRings = [...frame.querySelectorAll<SVGGElement>('[data-pre-ring]')];
+		// トラップの間だけ出す「トラップ」の文字
+		const trapLabels = [...frame.querySelectorAll<SVGTextElement>('[data-trap-label]')];
+		const setTrapLabels = (on: boolean) => trapLabels.forEach((t) => t.classList.toggle('on', on));
 		const setPreRings = (on: boolean) =>
 			preRings.forEach((m) => {
 				if (on && !m.classList.contains('on')) m.classList.add('on', ...(animate ? ['pop'] : []));
@@ -492,7 +501,11 @@ function setup(root: HTMLElement) {
 			const th = balls[k].dataset.preFromH !== undefined ? Number(balls[k].dataset.preFromH) : undefined;
 			// ボレーのトラップ（data-pre-pop）: 弾ませずに、打つ高さまで落ちてきたところで打つ（弾んで上がる時間はない）
 			const pop = balls[k].dataset.prePop !== undefined && th !== undefined;
+			// 受けた球の位置（前の手の終わり）。パドルの近く（2ft 以内）のときだけ使い、トラップの間にパドルの位置へ寄せる
+			const near = th !== undefined && prevBall && Math.hypot(prevBall.x - p[0], prevBall.y - p[1]) < 2 ? prevBall : undefined;
 			return {
+				fx: near?.x ?? p[0],
+				fy: near?.y ?? p[1],
 				x: p[0],
 				y: p[1],
 				h0: th ?? HAND_FT,
@@ -502,6 +515,7 @@ function setup(root: HTMLElement) {
 			};
 		};
 		const reset = () => {
+			setTrapLabels(false);
 			showMarks(animate ? -1 : 1);
 			balls.forEach((_, k) => setReveal(k, animate ? 0 : 1));
 			// 動く人だけでなく、ループで最初の立ち位置へ戻した人（rewind）の移動も消す
@@ -529,7 +543,7 @@ function setup(root: HTMLElement) {
 			if (!balls.length) drawBall(startBall[i]);
 			balls.forEach((b, k) => {
 				const pr = preOf(k);
-				drawBall(animate && pr ? { x: pr.x, y: pr.y, h: pr.h0 } : ballAt(b, animate ? 0 : 1), k);
+				drawBall(animate && pr ? { x: pr.fx, y: pr.fy, h: pr.h0 } : ballAt(b, animate ? 0 : 1), k);
 			});
 			drawTrace(animate ? 0 : 1);
 		};
@@ -550,19 +564,28 @@ function setup(root: HTMLElement) {
 		// 打つ前に弾ませる球が1つでもあれば、その球が地面まで落ちて打点まで上がる時間だけ、打球を待つ
 		const pres = balls.map((_, k) => preOf(k));
 		// 打つ動き: この手で打つ人の道具（rigs）と、次の手で打つ人の道具（preps。この手の後半で振りかぶる）
-		const rigs = balls.flatMap((b) => hitterRig(frame, b) ?? []);
+		// トラップしてから打つ球（data-pre-from-h）: 打つ人は、球が来た所でパドルを球に当てて受け（打つ所の形）、
+		// 球がポンと上がって落ちる間に振りかぶってから打つ（前は振りかぶった形のまま受けていて、パドルが球に触れずに球だけが跳ねていた）
+		const trapped = (b: SVGPathElement) => b.dataset.preFromH !== undefined;
+		const rigs = balls.flatMap((b) => {
+			const r = hitterRig(frame, b);
+			return r ? [Object.assign(r, { trap: trapped(b) })] : [];
+		});
 		const next = frames[i + 1];
 		// 走って下がる人（data-run）は、走る形のまま次の手へつなぐので、この手の後半で振りかぶらない
 		const runners = new Set(moves.filter((m) => m.dataset.run !== undefined).map((m) => m.dataset.player));
 		const preps = next
 			? [...next.querySelectorAll<SVGPathElement>('path[data-kind="ball"]')].flatMap((nb) => {
 					if (runners.has(nb.dataset.hitter)) return [];
+					// 次の手でトラップする人は、振りかぶらずに、打つ所の形で球を待つ
+					if (trapped(nb)) return [];
 					const r = hitterRig(frame, nb);
 					return r ? [r] : [];
 				})
 			: [];
 		// 動かす手は、振りかぶった形から始める（前の手の後半で振りかぶってある）
-		if (animate) rigs.forEach((r) => r.apply(r.back));
+		const AT_BALL: Vec3 = [0, 0, 0];
+		if (animate) rigs.forEach((r) => r.apply(r.trap ? AT_BALL : r.back));
 		// パドルが打つ所を通る時刻（easeInOut で振るので、ease の逆で求める）
 		const hitDelay = rigs.length ? SWING_MS * easeInv(rigs[0].contact) : 0;
 		const drops = pres.flatMap((pr) => (pr ? [pr.dropMs] : []));
@@ -577,7 +600,12 @@ function setup(root: HTMLElement) {
 		const tick = (now: number) => {
 			const elapsed = now - t0;
 			if (preMs > 0 && elapsed < preMs) {
-				rigs.forEach((r) => swingAt(r, elapsed - swingStart));
+				rigs.forEach((r) => {
+					// トラップする人: 球を受けた形から、振り始めまでに振りかぶる
+					if (r.trap && elapsed < swingStart) r.apply(AT_BALL, r.back, easeInOut(Math.min(1, elapsed / Math.max(1, swingStart))));
+					else swingAt(r, elapsed - swingStart);
+				});
+				setTrapLabels(true);
 				setPreRings(elapsed >= dropMs && pres.some((pr) => pr && !pr.pop));
 				// 打つ前に弾ませる球（手から落とす・トラップ）は、球ごとに地面まで落ちて弾み、打点まで上がる
 				pres.forEach((pr, k) => {
@@ -587,11 +615,12 @@ function setup(root: HTMLElement) {
 					if (pr.pop) {
 						// ボレーのトラップ: ポンと上げて、打つ高さまで落ちる（弾ませない）
 						const u = Math.min(1, elapsed / pr.dropMs);
-						return drawBall({ x: pr.x + (start.x - pr.x) * u, y: pr.y + (start.y - pr.y) * u, h: pr.fall(u) }, k);
+						return drawBall({ x: pr.fx + (start.x - pr.fx) * u, y: pr.fy + (start.y - pr.fy) * u, h: pr.fall(u) }, k);
 					}
 					if (elapsed < pr.dropMs) {
 						// 地面まで: 手から落とす球はだんだん速く、トラップした球はポンと少し上がってから落ちる
-						drawBall({ x: pr.x, y: pr.y, h: pr.fall(elapsed / pr.dropMs) }, k);
+						const v = elapsed / pr.dropMs;
+						drawBall({ x: pr.fx + (pr.x - pr.fx) * v, y: pr.fy + (pr.y - pr.fy) * v, h: pr.fall(v) }, k);
 					} else {
 						// 弾んで打点まで上がる（上がるにつれてゆるむ）
 						const u = Math.min(1, (elapsed - pr.dropMs) / rise);
@@ -603,6 +632,8 @@ function setup(root: HTMLElement) {
 				return;
 			}
 			setPreRings(preMs > 0 && pres.some((pr) => pr && !pr.pop));
+			// 「トラップ」の文字は、打つまで残す
+			setTrapLabels(elapsed < hitAt + 150);
 			// 振り: swingStart から振り、パドルが打つ所を通る瞬間（hitAt）にボールが飛び出す
 			const s = elapsed - swingStart;
 			rigs.forEach((r) => swingAt(r, s));

@@ -174,6 +174,13 @@ const diagram = z.object({
 			}
 		}
 	}
+	// スピードアップやカウンター（パンチボレー）を受けて打つリセットは、腰より上の球を取る（書き手と決めた規則）。hit を書いたときはそのまま
+	const ordered = [...shots].filter((s) => s.type !== 'move').sort((a, b) => (a.n ?? 0) - (b.n ?? 0));
+	for (const s of ordered) {
+		if ((s.type !== 'reset' && s.type !== 'resetTrap') || s.hit) continue;
+		const before = ordered.filter((t) => (t.n ?? 0) < (s.n ?? 0) && t.to === s.from).pop();
+		if (before && (before.type === 'speedup' || before.type === 'punch')) s.hit = 'waist';
+	}
 	return {
 		...d,
 		players,

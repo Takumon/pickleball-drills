@@ -107,7 +107,9 @@ export const shotLabels = {
 	punch: 'パンチボレー',
 	speedup: 'スピードアップ',
 	flick: 'フリック',
+	sliceDink: 'スライスディンク',
 	dinkTrap: 'ディンク（トラップ）',
+	sliceDinkTrap: 'スライスディンク（トラップ）',
 	resetTrap: 'リセット（トラップ）',
 	volleyTrap: 'ボレー（トラップ）',
 	lob: 'ロブ',
@@ -122,7 +124,7 @@ export type ShotType = keyof typeof shotLabels;
  * ディンクは、足元でワンバウンドさせてから打つ。リセットとボレーは弾ませずに、落ちてきた球を打つ（ボレーはボレーディンクで打つ）。
  * 打つ形・高さ・速さは元の打ち方と同じ
  */
-export const TRAP_BASE = { dinkTrap: 'dink', resetTrap: 'reset', volleyTrap: 'volleyDink' } as const;
+export const TRAP_BASE = { dinkTrap: 'dink', sliceDinkTrap: 'sliceDink', resetTrap: 'reset', volleyTrap: 'volleyDink' } as const;
 export type TrapShot = keyof typeof TRAP_BASE;
 /** 弾ませずに打つトラップ（ポンと上げて、落ちてきた球を打つ。書き手の指摘: リセットのトラップはワンバウンドしない） */
 export const TRAP_NO_BOUNCE = new Set<string>(['resetTrap', 'volleyTrap']);
@@ -142,7 +144,9 @@ export const shotCurve: Record<ShotType, number> = {
 	return: 0,
 	speedup: 0,
 	flick: 0,
+	sliceDink: 0,
 	dinkTrap: 0,
+	sliceDinkTrap: 0,
 	resetTrap: 0,
 	volleyTrap: 0,
 	smash: 0,
@@ -164,7 +168,9 @@ export const shotSpeedKmh: Record<ShotType, number> = {
 	speedup: 70,
 	flick: 65,
 	drive: 65,
+	sliceDink: 25,
 	dinkTrap: 25,
+	sliceDinkTrap: 25,
 	resetTrap: 30,
 	volleyTrap: 25,
 	punch: 60,
@@ -257,6 +263,7 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
 	return: { hit: 'thigh', peak: 'aboveTape' },
 	drop: { hit: 'belowWaist', peak: 'aboveTape' },
 	dink: { hit: 'knee', peak: 'overTape' },
+	sliceDink: { hit: 'knee', peak: 'overTape' },
 	// リセット: 打つ高さは場面で変わる（腰の高さ〜足首、ワンバウンドさせてから打つこともある。書き手の指摘）。図の既定値は膝の高さ
 	reset: { hit: 'knee', peak: 'overTape', range: '腰〜足首の高さ。ワンバウンドしてから打つこともある' },
 	// ドライブ: Richard の「ドライブをマスター！」（3:38〜）では、低く弾んだ球を膝の高さで打っている
@@ -328,6 +335,9 @@ export interface SwingForm {
 }
 export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
 	dink: { back: [-0.1, -0.6], follow: [0.5, 0.7], turn: [-10, 25], note: '少しだけ後ろに引き、肩から振り子のように前へ。振り抜きは短く、腰の高さで目標を指す' },
+	// スライスディンク: 面を少し上へ開いたまま（垂直から約30°）、手首を固めて、体の前で短く前へ運ぶ。回転は面の角度でかかる。
+	// 上から下へ切る振りはテニスのスライスで、ピックルボールではしない（書き手の指摘。コーチの記事も「チョップしない、コンパクトに前へ」）
+	sliceDink: { back: [0, -0.45], follow: [0.1, 0.6], turn: [0, 0], straight: true, note: '面を少し上へ開いたまま、手首を固めて、体の前で短く前へ運ぶ。回転は面の角度でかかる。上から下へは切らない' },
 	// ドロップ・ロブ: 引いた所はディンクと同じ形（腰を落とし、ヘッドを下げる。書き手の指摘）。ディンクより高い所で打つぶん、
 	// 打つ所のパドルはディンクより約 20° 起きているので、引く所ではそのぶん多く回してヘッドを下げる（ディンク -10° → -30°）。
 	// ドロップはさらに、引いた所でパドルを地面と垂直（ヘッドが真下）にする（書き手の指摘。打つ所の向き 約 -46° から -45° 回す）
@@ -419,6 +429,7 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 for (const [t, b] of Object.entries(TRAP_BASE) as [TrapShot, Exclude<ShotType, 'move' | TrapShot>][]) {
 	const note = {
 		dinkTrap: '来た球をパドルで受けて勢いを殺し、ポンと少し上げて足元でワンバウンドさせる。弾んだ球をディンクで返す',
+		sliceDinkTrap: '来た球をパドルで受けて勢いを殺し、ポンと少し上げて足元でワンバウンドさせる。弾んだ球をスライスディンクで返す',
 		resetTrap: '来た球をパドルで受けて勢いを殺し、ポンと少し上げる。弾ませずに、落ちてきた球をリセットで低く返す',
 		volleyTrap: '来た球をパドルで受けて勢いを殺し、ポンと少し上げる。弾ませずに、落ちてきた球をボレーディンクで返す',
 	}[t];

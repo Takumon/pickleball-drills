@@ -74,6 +74,8 @@ const maskBox = { x: vbX - 10, y: vbY - 10, width: vbW + 20, height: vbH + 20 };
 /** 横から見た図の人の背の高さ（ft）とパドルの長さ */
 const BODY_FT = 5.5;
 const SIDE_PADDLE = 1.1;
+/** 横から見た図の肩の高さ（ft）。腕は肩から出て、パドルを持つ手まで伸びる */
+const SHOULDER_FT = 4.6;
 /** 弾んだ位置の輪の半径（控えめに小さく） */
 const MARK = 0.45;
 /** 練習役の二重丸: 内側の線を、体の丸のふちから何 ft 内側に引くか */
@@ -264,11 +266,22 @@ const isSub = (t: string) => t === 'move';
 					const head = side.x0 + BODY_FT * side.k;
 					const px = side.x0 + (p.sideH ?? 4) * side.k;
 					const toNet = p.y < COURT.net ? 1 : -1;
+					// 腕とパドル: 肩から、パドルの真ん中（打つ高さ・上から見た図のパドルと同じ奥行き）へ向かって伸ばす。
+					// パドルは腕の延長に持つので、低い球ではヘッドが下がり、高い球では上がる
+					const sx = side.x0 + SHOULDER_FT * side.k;
+					const faceY = (p.hand[1] + p.tip[1]) / 2;
+					const vx = px - sx;
+					const vy = faceY - p.y;
+					const vl = Math.hypot(vx, vy) || 1;
+					const half = SIDE_PADDLE / 2;
+					const hand = [px - (vx / vl) * half, faceY - (vy / vl) * half];
+					const tip = [px + (vx / vl) * half, faceY + (vy / vl) * half];
 					return (
 						<g class={`side-person role-${p.role}`} data-side-player={animated ? p.id : undefined}>
 							<line class="side-body" x1={side.x0} y1={p.y} x2={head} y2={p.y} />
 							<circle class="side-head" cx={head} cy={p.y} r="0.45" />
-							<line class="side-paddle" x1={px} y1={p.y} x2={px} y2={p.y + toNet * SIDE_PADDLE} />
+							<line class="side-arm" x1={sx} y1={p.y} x2={hand[0]} y2={hand[1]} />
+							<line class="side-paddle" x1={hand[0]} y1={hand[1]} x2={tip[0]} y2={tip[1]} />
 						</g>
 					);
 				})}

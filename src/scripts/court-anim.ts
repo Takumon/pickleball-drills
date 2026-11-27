@@ -241,7 +241,7 @@ function setup(root: HTMLElement) {
 			frame.querySelectorAll('[data-player-id], [data-side-player]').forEach((g) => g.setAttribute('transform', ''));
 			// 打つ動きの途中で止めたパドルと腕も元に戻す
 			frame.querySelectorAll<SVGLineElement>('.paddle, .side-paddle').forEach((p) => p.removeAttribute('transform'));
-			frame.querySelectorAll<SVGLineElement>('.arm').forEach((a) => {
+			frame.querySelectorAll<SVGLineElement>('.arm, .side-arm').forEach((a) => {
 				if (a.dataset.x2) a.setAttribute('x2', a.dataset.x2);
 				if (a.dataset.y2) a.setAttribute('y2', a.dataset.y2);
 			});
@@ -276,6 +276,11 @@ function setup(root: HTMLElement) {
 			const paddle = g?.querySelector<SVGLineElement>('.paddle');
 			// 横から見た図のパドル（奥行きの向きだけ、打球の進む側へ出す）
 			const sidePaddle = frame.querySelector<SVGLineElement>(`[data-side-player="${b.dataset.hitter}"] .side-paddle`);
+			const sideArm = frame.querySelector<SVGLineElement>(`[data-side-player="${b.dataset.hitter}"] .side-arm`);
+			if (sideArm) {
+				sideArm.dataset.x2 ??= sideArm.getAttribute('x2') ?? '0';
+				sideArm.dataset.y2 ??= sideArm.getAttribute('y2') ?? '0';
+			}
 			const arm = g?.querySelector<SVGLineElement>('.arm');
 			if (!b.dataset.hitter || !paddle || !arm) return [];
 			const len = b.getTotalLength();
@@ -285,7 +290,7 @@ function setup(root: HTMLElement) {
 			// 腕の手の位置は、最初に読んだ値を覚えておく（途中で止めても元に戻せるように）
 			arm.dataset.x2 ??= arm.getAttribute('x2') ?? '0';
 			arm.dataset.y2 ??= arm.getAttribute('y2') ?? '0';
-			return [{ paddle, arm, sidePaddle, ux: (z.x - a.x) / n, uy: (z.y - a.y) / n, x2: Number(arm.dataset.x2), y2: Number(arm.dataset.y2) }];
+			return [{ paddle, arm, sidePaddle, sideArm, ux: (z.x - a.x) / n, uy: (z.y - a.y) / n, x2: Number(arm.dataset.x2), y2: Number(arm.dataset.y2) }];
 		});
 		const swing = (elapsedHit: number) => {
 			const u = elapsedHit / SWING_MS;
@@ -294,7 +299,10 @@ function setup(root: HTMLElement) {
 				sw.paddle.setAttribute('transform', a ? `translate(${sw.ux * a} ${sw.uy * a})` : '');
 				sw.arm.setAttribute('x2', String(sw.x2 + sw.ux * a));
 				sw.arm.setAttribute('y2', String(sw.y2 + sw.uy * a));
-				sw.sidePaddle?.setAttribute('transform', a ? `translate(0 ${Math.sign(sw.uy) * a})` : '');
+				// 横から見た図: パドルを打球の進む側（奥行き）へ出し、肩から出る腕の手の位置も一緒に動かす
+				const sy = Math.sign(sw.uy) * a;
+				sw.sidePaddle?.setAttribute('transform', a ? `translate(0 ${sy})` : '');
+				if (sw.sideArm) sw.sideArm.setAttribute('y2', String(Number(sw.sideArm.dataset.y2) + sy));
 			}
 		};
 		const drops = pres.flatMap((pr) => (pr ? [pr.dropMs] : []));

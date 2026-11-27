@@ -222,6 +222,11 @@
 .court .side-head {
 	fill: var(--side-ink);
 }
+.court .side-arm {
+	stroke: var(--side-ink);
+	stroke-width: 0.16;
+	stroke-linecap: round;
+}
 .court .side-paddle {
 	stroke: var(--side-ink);
 	stroke-width: 0.3;

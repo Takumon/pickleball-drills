@@ -5,10 +5,12 @@ export const categories = [
 	{ code: 'rst', label: 'リセット', en: 'Reset' },
 	{ code: 'spd', label: 'スピードアップ・ファイヤーファイト', en: 'Speed-up / Firefight' },
 	{ code: 'vly', label: 'ボレー', en: 'Volley' },
+	{ code: 'vdk', label: 'ボレーディンク', en: 'Volley dink' },
 	{ code: '4th', label: '4thショット', en: '4th shot' },
 	{ code: 'trn', label: 'トランジション', en: 'Transition' },
 	{ code: 'lob', label: 'ロブ・スマッシュ', en: 'Lob / Overhead' },
-	{ code: 'drv', label: 'ストローク・リターン', en: 'Drive / Return' },
+	{ code: 'drv', label: 'ストローク', en: 'Drive' },
+	{ code: 'rtn', label: 'リターン', en: 'Return' },
 	{ code: 'ftw', label: 'フットワーク', en: 'Footwork' },
 	{ code: 'gam', label: 'ゲーム形式', en: 'Game-based' },
 ] as const;

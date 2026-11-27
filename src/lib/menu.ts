@@ -111,6 +111,8 @@ export const totalMinutes = (menu: Menu) => menu.items.reduce((s, it) => s + ite
 export interface CatalogDrill {
 	id: string;
 	title: string;
+	/** ラリーかどうかの印（「ラリー」「ラリーなし」） */
+	rally?: string;
 	category: string;
 	categoryLabel: string;
 	order: number;

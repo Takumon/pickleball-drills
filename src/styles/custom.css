@@ -42,3 +42,23 @@
 	font-weight: 400;
 	color: var(--sl-color-gray-3);
 }
+
+/* サイドバーのドリル名の後ろの「ラリー」「ラリーなし」の印。小さく、枠と色を控えめにする */
+.sidebar-content .rally-badge {
+	margin-inline-start: 0.35em;
+	padding: 0 0.35em;
+	font-size: 0.7em;
+	font-weight: 400;
+	background: none;
+	border: 1px solid var(--sl-color-gray-4);
+	color: var(--sl-color-gray-2);
+}
+.sidebar-content .rally-badge.no {
+	border-color: transparent;
+	color: var(--sl-color-gray-3);
+}
+/* 今いるページの行（背景が色付き）では、文字と同じ色にする */
+.sidebar-content [aria-current='page'] .rally-badge {
+	color: inherit;
+	border-color: currentColor;
+}

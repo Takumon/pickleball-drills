@@ -1,6 +1,6 @@
 ---
 import type { Drill } from '../content.config';
-import { fieldLabels, visibleFields, detailGroups, type DrillField } from '../config/drill-display';
+import { fieldLabels, rallyLabel, visibleFields, detailGroups, type DrillField } from '../config/drill-display';
 import Court from './Court.astro';
 
 interface Props {
@@ -36,6 +36,7 @@ const serviceOf = (url: string) => {
 ---
 
 <div class="drill">
+	{drill.diagram && <p class="rally-tag" data-rally={drill.diagram.rally === false ? 'no' : 'yes'}>{rallyLabel(drill.diagram.rally)}</p>}
 	{
 		[{ fields: shown, label: undefined }, ...groups].map(({ fields, label }) => {
 			// トグルの名前と同じ見出しは、中では繰り返さない
@@ -134,6 +135,20 @@ const serviceOf = (url: string) => {
 </div>
 
 <style>
+	/* ラリーかどうかの印（題名の下） */
+	.rally-tag {
+		display: inline-block;
+		margin: 0 0 0.5rem;
+		padding: 0.05rem 0.6rem;
+		border-radius: 999px;
+		font-size: var(--sl-text-sm);
+		border: 1px solid var(--sl-color-gray-4);
+		color: var(--sl-color-gray-2);
+	}
+	.rally-tag[data-rally='yes'] {
+		border-color: var(--sl-color-accent);
+		color: var(--sl-color-accent-high);
+	}
 	.field h3 {
 		font-size: var(--sl-text-lg);
 		margin-top: 1.25rem;

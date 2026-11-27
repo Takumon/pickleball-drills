@@ -338,6 +338,7 @@ export default function Builder({ base }: { base: string }) {
 							</button>
 							<span class="title">
 								{d.title}
+								{d.rally && <span class="rally-tag"> {d.rally}</span>}
 								{/* 派生形があるドリルは、派生形を選んで足せる */}
 								{d.variants.length > 0 && (
 									<span class="variant-adds">

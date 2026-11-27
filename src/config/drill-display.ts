@@ -4,6 +4,9 @@
  * 項目を移したいときは、配列の間で項目名を移動するだけでよい（配列内の順番が表示順）。
  * ここに書かない項目はページに出さない。
  */
+/** ラリー形式かどうかの印（図のデータの rally から自動で出す。題名には書かない。書き手と決めた） */
+export const rallyLabel = (rally: number | boolean | undefined) => (rally === false ? 'ラリーなし' : 'ラリー');
+
 export const fieldLabels = {
 	setup: '人数・配置',
 	feed: '球出し',

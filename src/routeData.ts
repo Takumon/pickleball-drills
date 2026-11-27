@@ -6,17 +6,40 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { defineRouteMiddleware } from '@astrojs/starlight/route-data';
+import { getCollection } from 'astro:content';
+import { rallyLabel } from './config/drill-display';
+
+/** ドリルのページの URL（末尾の / なし）→ ラリーかどうかの印 */
+let rallyByPath: Map<string, string> | undefined;
+const rallyMap = async () => {
+	if (rallyByPath) return rallyByPath;
+	const docs = await getCollection('docs', (e) => !!e.data.drill?.diagram);
+	rallyByPath = new Map(docs.map((e) => [e.id.replace(/\/$/, ''), rallyLabel(e.data.drill!.diagram!.rally)]));
+	return rallyByPath;
+};
+type SidebarEntry = { type: string; href?: string; badge?: unknown; entries?: SidebarEntry[] };
 
 let cache: Record<string, string> | undefined;
 const manifest = () => (cache ??= existsSync('public/og/manifest.json') ? JSON.parse(readFileSync('public/og/manifest.json', 'utf8')) : {});
 
-export const onRequest = defineRouteMiddleware((context) => {
+export const onRequest = defineRouteMiddleware(async (context) => {
 	const route = context.locals.starlightRoute;
+	// サイドバーのドリル名の後ろに、ラリーかどうかの印を出す（題名には書かない。書き手と決めた）
+	const map = await rallyMap();
+	const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+	const mark = (entries: SidebarEntry[]) => {
+		for (const e of entries) {
+			if (e.entries) mark(e.entries);
+			const key = e.href?.replace(base, '').replace(/^\/|\/$/g, '');
+			const label = key ? map.get(key) : undefined;
+			if (label) e.badge = { text: label, variant: 'default', class: label === 'ラリー' ? 'rally-badge' : 'rally-badge no' };
+		}
+	};
+	mark(route.sidebar as unknown as SidebarEntry[]);
 	const drill = route.entry.data.drill;
 	// ドリルのページはそのドリルの画像、ほかのページ（トップページ・練習メニューなど）はサイト共通の画像
 	const name = drill ? drill.id : 'site';
 	if (!existsSync(`public/og/${name}.png`)) return;
-	const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 	const image = new URL(`${base}/og/${name}.png`, context.site);
 	const hash: string | undefined = manifest()[name];
 	if (hash) image.searchParams.set('v', hash.slice(0, 8));

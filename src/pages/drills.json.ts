@@ -5,6 +5,7 @@
 import { getCollection } from 'astro:content';
 import { categories } from '../config/categories';
 import type { CatalogDrill } from '../lib/menu';
+import { rallyLabel } from '../config/drill-display';
 
 export async function GET() {
 	const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -16,6 +17,7 @@ export async function GET() {
 			return {
 				id: d.id,
 				title: e.data.title,
+				rally: rallyLabel(d.diagram?.rally),
 				category: d.category,
 				categoryLabel: categories.find((c) => c.code === d.category)?.label ?? d.category,
 				order: e.data.sidebar?.order ?? 999,

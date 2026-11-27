@@ -71,11 +71,16 @@ const GROUND_MARK = 0.6;
 // 線を伸ばして見せるマスクの範囲。図の表示範囲（viewBox）に余白を足して、どこに引いた線も切れないようにする
 const [vbX, vbY, vbW, vbH] = viewBox.split(/\s+/).map(Number);
 const maskBox = { x: vbX - 10, y: vbY - 10, width: vbW + 20, height: vbH + 20 };
-/** 横から見た図の人の背の高さ（ft）とパドルの長さ */
-const BODY_FT = 5.5;
+/**
+ * 横から見た図の棒人間の寸法（ft）。大人の平均的な身長 170cm と、ふつうの体の比率から決める。
+ * 頭の高さは身長の約 1/7.5（約23cm）、肩の高さは身長の約 0.82（約139cm）。
+ * 体の線は地面からあごまで、頭は丸、腕は肩から出てパドルを持つ手まで伸びる
+ */
+const STATURE_FT = 5.58;
+const HEAD_FT = STATURE_FT / 7.5;
+const CHIN_FT = STATURE_FT - HEAD_FT;
+const SHOULDER_FT = STATURE_FT * 0.82;
 const SIDE_PADDLE = 1.1;
-/** 横から見た図の肩の高さ（ft）。腕は肩から出て、パドルを持つ手まで伸びる */
-const SHOULDER_FT = 4.6;
 /** 弾んだ位置の輪の半径（控えめに小さく） */
 const MARK = 0.45;
 /** 練習役の二重丸: 内側の線を、体の丸のふちから何 ft 内側に引くか */
@@ -263,7 +268,9 @@ const isSub = (t: string) => t === 'move';
 					))}
 				<line class="side-net" x1={side.x0} y1={COURT.net} x2={side.x0 + NET_FT * side.k} y2={COURT.net} />
 				{figures.map((p) => {
-					const head = side.x0 + BODY_FT * side.k;
+					const chin = side.x0 + CHIN_FT * side.k;
+					const headR = (HEAD_FT / 2) * side.k;
+					const head = chin + headR;
 					const px = side.x0 + (p.sideH ?? 4) * side.k;
 					const toNet = p.y < COURT.net ? 1 : -1;
 					// 腕とパドル: 肩から、パドルの真ん中（打つ高さ・上から見た図のパドルと同じ奥行き）へ向かって伸ばす。
@@ -278,8 +285,8 @@ const isSub = (t: string) => t === 'move';
 					const tip = [px + (vx / vl) * half, faceY + (vy / vl) * half];
 					return (
 						<g class={`side-person role-${p.role}`} data-side-player={animated ? p.id : undefined}>
-							<line class="side-body" x1={side.x0} y1={p.y} x2={head} y2={p.y} />
-							<circle class="side-head" cx={head} cy={p.y} r="0.45" />
+							<line class="side-body" x1={side.x0} y1={p.y} x2={chin} y2={p.y} />
+							<circle class="side-head" cx={head} cy={p.y} r={headR} />
 							<line class="side-arm" x1={sx} y1={p.y} x2={hand[0]} y2={hand[1]} />
 							<line class="side-paddle" x1={hand[0]} y1={hand[1]} x2={tip[0]} y2={tip[1]} />
 						</g>

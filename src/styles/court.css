@@ -221,17 +221,29 @@
 	stroke-linecap: round;
 	stroke-linejoin: round;
 }
-.court .side-shoe {
+/* 横から見た図の棒人間（太さは CourtFrame.astro の TORSO_W_FT などで決める） */
+.court .side-torso,
+.court .side-neck {
 	stroke: var(--side-ink);
-	stroke-width: 0.36;
 	stroke-linecap: round;
+}
+.court .side-leg {
+	fill: none;
+	stroke: var(--side-ink);
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.court .side-shoe {
+	fill: var(--side-ink);
+	stroke: var(--side-ink);
+	stroke-width: 0.04;
+	stroke-linejoin: round;
 }
 .court .side-head {
 	fill: var(--side-ink);
 }
 .court .side-arm {
 	stroke: var(--side-ink);
-	stroke-width: 0.16;
 	stroke-linecap: round;
 }
 .court .side-paddle {

@@ -94,6 +94,11 @@ const diagram = z.object({
 	 * 打球の point で点が動き、図の下の目盛りの印が左右に動く
 	 */
 	score: z.object({ to: z.number().int().min(1), plus: z.string(), minus: z.string() }).optional(),
+	/**
+	 * ラリーを続けるドリル: 往復の回数。書いた打球（1往復ぶん。例: A→B と B→A）を、球出しから始めてこの回数だけ往復させる。
+	 * 最初の手は球出し（手元で一度弾ませて出す）になり、繰り返すときは新しい球の球出しから始め直す（書き手と決めた規則）
+	 */
+	rally: z.number().int().min(1).optional(),
 	/** 共有のプレビュー画像に描く手（番号 n）。書かなければ決まりで選ぶ（src/lib/og.ts） */
 	ogSteps: z.array(z.number().int()).optional(),
 }).refine(
@@ -126,9 +131,20 @@ const diagram = z.object({
 		if (!spot) ctx.addIssue({ code: 'custom', message: `コート図: "${ref}" は人の ID でも位置の名前でもない` });
 		return spot ?? [0, 0];
 	};
+	// ラリー: 1往復ぶんの手を、球出しから始めて rally 回往復させる（球出し → 返球 → … の 2×rally+1 手）
+	let base = d.shots;
+	if (d.rally) {
+		const steps = [...new Set(d.shots.map((s) => s.n ?? 0))].sort((a, b) => a - b);
+		const cycle = steps.map((n) => d.shots.filter((s) => (s.n ?? 0) === n));
+		base = Array.from({ length: 2 * d.rally + 1 }, (_, k) =>
+			cycle[k % cycle.length].map((s) =>
+				k === 0 && s.type !== 'move' ? { ...s, n: 1, feed: true, afterBounce: true, label: undefined } : { ...s, n: k + 1 },
+			),
+		).flat();
+	}
 	// 基本の位置と受けるときの位置（sidestep）の行き来を、打つ順から動き（move）として足す
-	const shots = [...d.shots];
-	const hits = d.shots.filter((s) => s.type !== 'move').sort((a, b) => (a.n ?? 0) - (b.n ?? 0));
+	const shots = [...base];
+	const hits = base.filter((s) => s.type !== 'move').sort((a, b) => (a.n ?? 0) - (b.n ?? 0));
 	for (const p of d.players) {
 		if (!p.sidestep) continue;
 		const side = spotPoint(p.sidestep);

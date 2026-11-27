@@ -406,8 +406,12 @@ function setup(root: HTMLElement) {
 	if (reduce) {
 		toggleBtn.hidden = true;
 		setPlaying(false);
+		show(0, false);
+	} else {
+		// 動かす前は、最初の手の始まりの形で見せる（終わりの形から始めると、再生が始まる瞬間に人やボールが跳ぶため）
+		show(0, true);
+		stop();
 	}
-	show(0, false);
 }
 
 /**

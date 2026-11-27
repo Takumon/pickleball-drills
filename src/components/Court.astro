@@ -148,6 +148,8 @@ function receiveHeight(s: Shot) {
  * 見つかればその球を受けた高さ（ft）を返す。手から落とす球出しなら undefined
  */
 function trapFromHeight(s: Shot): number | undefined {
+	// 球出しは新しいボールなので、トラップではない（手から落とす）
+	if (s.feed) return undefined;
 	const hits = diagram.shots.filter((t) => t.type !== 'move');
 	const i = hits.indexOf(s);
 	for (let k = 1; k < hits.length; k++) {

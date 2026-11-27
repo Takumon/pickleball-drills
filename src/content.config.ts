@@ -95,10 +95,15 @@ const diagram = z.object({
 	 */
 	score: z.object({ to: z.number().int().min(1), plus: z.string(), minus: z.string() }).optional(),
 	/**
-	 * ラリーを続けるドリル: 往復の回数。書いた打球（1往復ぶん。例: A→B と B→A）を、球出しから始めてこの回数だけ往復させる。
-	 * 最初の手は球出し（手元で一度弾ませて出す）になり、繰り返すときは新しい球の球出しから始め直す（書き手と決めた規則）
+	 * ラリー形式か（全部のドリルに必ず書く。書き手と決めた規則: ラリーかどうかで、アニメーションの繰り返し方が決まるため）。
+	 * - 数（例: 2）: ラリー。書いた打球（1往復ぶん。例: A→B と B→A）を、球出しから始めてこの回数だけ往復させる。
+	 *   最初の手は球出し（手元で一度弾ませて出す）になり、繰り返すときは新しい球の球出しから始め直す
+	 * - true: ラリー。打球は書いたとおりに描き、最後の手から最初の手へ続けて繰り返す（球が4つ、点数を数える、途中でディンクをはさむなど）
+	 * - false: ラリーではない（1本ずつ球出しして返す、決まった順に打つ）
 	 */
-	rally: z.number().int().min(1).optional(),
+	rally: z.union([z.number().int().min(1), z.boolean()], {
+		error: 'コート図: rally（ラリー形式か）を必ず書く。2 などの数（コードが往復を作る）、true（書いた手のままのラリー）、false（ラリーではない）',
+	}),
 	/** 共有のプレビュー画像に描く手（番号 n）。書かなければ決まりで選ぶ（src/lib/og.ts） */
 	ogSteps: z.array(z.number().int()).optional(),
 }).refine(
@@ -133,7 +138,7 @@ const diagram = z.object({
 	};
 	// ラリー: 1往復ぶんの手を、球出しから始めて rally 回往復させる（球出し → 返球 → … の 2×rally+1 手）
 	let base = d.shots;
-	if (d.rally) {
+	if (typeof d.rally === 'number') {
 		const steps = [...new Set(d.shots.map((s) => s.n ?? 0))].sort((a, b) => a - b);
 		const cycle = steps.map((n) => d.shots.filter((s) => (s.n ?? 0) === n));
 		base = Array.from({ length: 2 * d.rally + 1 }, (_, k) =>

@@ -112,7 +112,7 @@ sections.push({
 		{ name: '手', meaning: '打つ順の1つ分。①②③の番号ごとに1コマで再生する', who: '両方', data: 'n' },
 		{ name: '手と手の間', meaning: 'ふつうは0.7秒止まる。次の手がトラップで始まるときは止まらずに続ける', who: '両方' },
 		{ name: '1周の終わり', meaning: '最後の手のあと1.6秒止まり、人は最初の立ち位置へ歩いて戻ってから繰り返す', who: '両方' },
-		{ name: 'ラリー', meaning: 'ラリーを続けるドリルは球出しから2往復を描く。往復の手はコードが作る', who: '両方', data: 'rally: 2' },
+		{ name: 'ラリー', meaning: 'ラリー形式かどうかを、全部のドリルに必ず書く。数は球出しから往復を描き（往復の手はコードが作る）、true は書いた手のまま続けて繰り返す', who: '両方', data: 'rally: 2 / true / false' },
 		{ name: '新しいボール', meaning: '球出しや、点が決まったあとの球。前の球の続きにならないので、出し直して見せる', who: '作り手' },
 		{ name: 'つながり（連続性）', meaning: '手の切れ目やループで、人・ボールの位置や高さが跳ばない。作るたびに測って確かめる', who: '作り手', data: '.claude/skills/add-drill/anim-continuity.js' },
 		{ name: '打つ動き', meaning: '打った瞬間に、パドルが打ち方ごとの向きへ出て戻る', who: '両方', data: 'config/court.ts の shotSwing' },

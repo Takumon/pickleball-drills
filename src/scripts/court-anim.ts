@@ -29,10 +29,10 @@ const BALL_R_MAX = 1;
 const PAUSE_MS = 700;
 const LOOP_PAUSE_MS = 1600;
 /**
- * 打つ動き: 打った瞬間に、打つ人のパドルが打球の進む向きへ SWING_FT だけピュッと出て、SWING_MS で戻る。
- * 0 にすると打つ動きはなくなる
+ * 打つ動き: 打った瞬間に、打つ人のパドルがピュッと出て、SWING_MS で戻る。向きと量は打球の種類ごとに config/court.ts の
+ * shotSwing で決める（data-swing）。SWING_SCALE を 0 にすると打つ動きはなくなる
  */
-const SWING_FT = 0.8;
+const SWING_SCALE = 1;
 const SWING_MS = 260;
 /**
  * 最後の手から最初の手へ戻るとき（ループ）: 人は最初の手の立ち位置まで歩いて戻り、ボールは新しい球になるなら消してから出し直す。
@@ -291,19 +291,27 @@ function setup(root: HTMLElement) {
 			// 腕の手の位置は、最初に読んだ値を覚えておく（途中で止めても元に戻せるように）
 			arm.dataset.x2 ??= arm.getAttribute('x2') ?? '0';
 			arm.dataset.y2 ??= arm.getAttribute('y2') ?? '0';
-			return [{ paddle, arm, sidePaddle, sideArm, ux: (z.x - a.x) / n, uy: (z.y - a.y) / n, x2: Number(arm.dataset.x2), y2: Number(arm.dataset.y2) }];
+			const [up, fwd, ft] = (b.dataset.swing ?? '0,1,0.8').split(',').map(Number);
+			const n2 = Math.hypot(up, fwd) || 1;
+			return [{ paddle, arm, sidePaddle, sideArm, up: up / n2, fwd: fwd / n2, ft: ft * SWING_SCALE, ux: (z.x - a.x) / n, uy: (z.y - a.y) / n, x2: Number(arm.dataset.x2), y2: Number(arm.dataset.y2) }];
 		});
 		const swing = (elapsedHit: number) => {
 			const u = elapsedHit / SWING_MS;
-			const a = u > 0 && u < 1 ? SWING_FT * Math.sin(Math.PI * u) : 0;
+			const e = u > 0 && u < 1 ? Math.sin(Math.PI * u) : 0;
 			for (const sw of swings) {
+				// 上から見た図: 打球の進む向きへ、前への量だけ出す
+				const a = sw.ft * sw.fwd * e;
 				sw.paddle.setAttribute('transform', a ? `translate(${sw.ux * a} ${sw.uy * a})` : '');
 				sw.arm.setAttribute('x2', String(sw.x2 + sw.ux * a));
 				sw.arm.setAttribute('y2', String(sw.y2 + sw.uy * a));
-				// 横から見た図: パドルを打球の進む側（奥行き）へ出し、肩から出る腕の手の位置も一緒に動かす
-				const sy = Math.sign(sw.uy) * a;
-				sw.sidePaddle.forEach((el) => el.setAttribute('transform', a ? `translate(0 ${sy})` : ''));
-				if (sw.sideArm) sw.sideArm.setAttribute('y2', String(Number(sw.sideArm.dataset.y2) + sy));
+				// 横から見た図: 上下（図の横、高さ 1ft あたり sideK）と前（奥行き）へ出し、腕の手の位置も一緒に動かす
+				const sx = sw.ft * sw.up * e * sideK;
+				const sy = Math.sign(sw.uy) * sw.ft * sw.fwd * e;
+				sw.sidePaddle.forEach((el) => el.setAttribute('transform', e ? `translate(${sx} ${sy})` : ''));
+				if (sw.sideArm) {
+					sw.sideArm.setAttribute('x2', String(Number(sw.sideArm.dataset.x2) + sx));
+					sw.sideArm.setAttribute('y2', String(Number(sw.sideArm.dataset.y2) + sy));
+				}
 			}
 		};
 		const drops = pres.flatMap((pr) => (pr ? [pr.dropMs] : []));

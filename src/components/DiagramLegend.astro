@@ -2,7 +2,8 @@
 /**
  * 「図の見方」ページ用の凡例。打球の線・人の描き方を、実際の図と同じスタイル（styles/court.css）で描く。
  */
-import { heightLevels, roleLabels, shotLabels, shotSpeedKmh, type Role, type ShotType } from '../config/court';
+import { heightLevels, roleLabels, shotHeights, shotLabels, shotSpeedKmh, shotSwing, type Role, type ShotType } from '../config/court';
+import { sideFigure } from '../lib/side-figure';
 import '../styles/court.css';
 
 const order: ShotType[] = ['speedup', 'smash', 'punch', 'drive', 'roll', 'block', 'serve', 'return', 'reset', 'dink', 'drop', 'volleyDink', 'lob', 'move'];
@@ -45,6 +46,22 @@ const roles = Object.keys(roleLabels) as Role[];
 const samplePath = (_t: ShotType) => `M1.2 2 L12.4 2`;
 /** 速さの目安（実際の球速。アニメーションは同じ比のままゆっくり再生する） */
 const speed = (t: ShotType) => `時速 約${shotSpeedKmh[t]}km`;
+
+/**
+ * 打ち方ごとの、横から見た図の構えとパドルの動き。実際の図と同じ組み立て（lib/side-figure.ts）で、打つ高さ（shotHeights）の構えを描き、
+ * 打つ動き（shotSwing）の向きを矢印で示す。図は人が立った向き（上が上）に回して描く
+ */
+const strokeOrder = order.filter((t): t is Exclude<ShotType, 'move'> => t !== 'move');
+const strokes = strokeOrder.map((t) => {
+	const hitH = heightLevels[shotHeights[t].hit].ft;
+	const fig = sideFigure({ x0: 0, k: 1, y: 0, toNet: 1, hitH, faceY: 1.4 });
+	const sw = shotSwing[t];
+	const n = Math.hypot(sw.up, sw.fwd) || 1;
+	// 矢印: パドルの面の真ん中（ボールの位置）から、打つ動きの向きへ
+	const len = 0.5 + sw.ft * 0.9;
+	const arrow = { x1: 1.4, y1: -hitH, x2: 1.4 + (sw.fwd / n) * len, y2: -hitH - (sw.up / n) * len };
+	return { t, hitH, fig, sw, arrow, level: heightLevels[shotHeights[t].hit].label };
+});
 ---
 
 <div class="court legend-page">
@@ -133,6 +150,46 @@ const speed = (t: ShotType) => `時速 約${shotSpeedKmh[t]}km`;
 			}
 		</tbody>
 	</table>
+
+	<h2>横から見た図の構えとパドルの動き</h2>
+	<p>横から見た図の人は、打つ球の種類ごとに、打つ高さの構えで描きます。打った瞬間に、パドルが矢印の向きへ少し出て戻ります。黄色い丸がボールの位置（打つ高さ）で、右がネットの側です。</p>
+	<p>パドルは、腰より下では腕の延長でヘッドが下がり、腰より上では高くなるほどヘッドが上を向きます。上体はほぼ起こしたまま、ひざを少し曲げた構えで、低い球ほどひざを少し深く曲げます。</p>
+	<div class="stroke-grid">
+		{
+			strokes.map(({ t, hitH, fig, sw, arrow, level }) => (
+				<figure class="stroke-card">
+					<svg class="court-svg stroke" viewBox="-1.4 -10 5 10.6" aria-hidden="true">
+						<defs>
+							<marker id={`sw-${t}`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="0.8" markerHeight="0.8" orient="auto">
+								<path d="M0 0 L10 5 L0 10 z" class="swing-head" />
+							</marker>
+						</defs>
+						<line class="side-ground" x1="-1.4" y1="0" x2="3.6" y2="0" />
+						<g class="side-person" transform="matrix(0,-1,1,0,0,0)">
+							<polygon class="side-shoe" points={fig.shoe} />
+							<polyline class="side-leg" stroke-width={fig.widths.leg} points={fig.leg} />
+							<path class="side-torso" d={fig.torso} />
+							<circle class="side-hip" cx={fig.hip.cx} cy={fig.hip.cy} r={fig.hip.r} />
+							<line class="side-neck" stroke-width={fig.widths.neck} x1={fig.neck[0]} y1={fig.neck[1]} x2={fig.neck[2]} y2={fig.neck[3]} />
+							<ellipse class="side-head" cx={fig.head.cx} cy={fig.head.cy} rx={fig.head.rx} ry={fig.head.ry} transform={`rotate(${fig.head.rot} ${fig.head.cx} ${fig.head.cy})`} />
+							<line class="side-upperarm" stroke-width={fig.widths.upperArm} x1={fig.upperArm[0]} y1={fig.upperArm[1]} x2={fig.upperArm[2]} y2={fig.upperArm[3]} />
+							<line class="side-arm" stroke-width={fig.widths.forearm} x1={fig.forearm[0]} y1={fig.forearm[1]} x2={fig.forearm[2]} y2={fig.forearm[3]} />
+							<line class="side-grip" stroke-width={fig.widths.grip} x1={fig.grip[0]} y1={fig.grip[1]} x2={fig.grip[2]} y2={fig.grip[3]} />
+							<line class="side-paddle" stroke-width={fig.widths.face} x1={fig.face[0]} y1={fig.face[1]} x2={fig.face[2]} y2={fig.face[3]} />
+							<circle class="side-hand" cx={fig.hand.cx} cy={fig.hand.cy} r={fig.hand.r} />
+						</g>
+						<circle class="stroke-ball" cx="1.4" cy={-hitH} r="0.22" />
+						<line class="swing-arrow" x1={arrow.x1} y1={arrow.y1} x2={arrow.x2} y2={arrow.y2} marker-end={`url(#sw-${t})`} />
+					</svg>
+					<figcaption>
+						<b>{shotLabels[t]}</b>
+						<span>{level}（{hitH}ft）</span>
+						<span>{sw.note}</span>
+					</figcaption>
+				</figure>
+			))
+		}
+	</div>
 </div>
 
 <style>
@@ -165,5 +222,45 @@ const speed = (t: ShotType) => `時速 約${shotSpeedKmh[t]}km`;
 	.legend-page svg.sample.person {
 		width: 3.5rem;
 		min-width: 3.5rem;
+	}
+	/* 打ち方ごとの構え: スマホでは3列、広い画面では4列以上に並べる */
+	.legend-page .stroke-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(6.4rem, 1fr));
+		gap: 0.75rem;
+	}
+	.legend-page .stroke-card {
+		margin: 0;
+		padding: 0.35rem;
+		border-radius: 0.5rem;
+		background: var(--side-panel);
+	}
+	.legend-page svg.stroke {
+		width: 100%;
+		height: auto;
+		display: block;
+	}
+	.legend-page .stroke-card figcaption {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+		font-size: 0.75rem;
+		line-height: 1.35;
+		margin-top: 0.3rem;
+	}
+	.legend-page .stroke-ball {
+		fill: var(--ball, #facc15);
+	}
+	.legend-page .swing-arrow {
+		stroke: var(--side-ink);
+		stroke-width: 0.09;
+		stroke-dasharray: 0.18 0.12;
+	}
+	.legend-page .swing-head {
+		fill: var(--side-ink);
+	}
+	/* 一覧では人を見本として見せるので、実際の図より濃く描く */
+	.legend-page .stroke-card .side-person {
+		opacity: 0.9;
 	}
 </style>

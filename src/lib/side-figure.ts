@@ -47,6 +47,8 @@ const DEPTH = {
 	upperArm: 0.05,
 	forearm: 0.04,
 };
+/** 腰（ウエスト）の高さ。パドルの向きを決める境目（身長の約 0.6） */
+const WAIST = 0.6;
 /** 肩の関節（腕が回る所）は、肩峰より約4cm 下、胴の上の端の少し前 */
 const SHOULDER_JOINT_DROP = 0.024;
 /** 首のつけ根（第7頸椎の高さの目安） */
@@ -126,12 +128,19 @@ export function sideFigure(o: SideFigureInput): SideFigure {
 		const chin = up((LEVEL.chin - LEVEL.hip) * H, hip);
 		return { knee, hip, shoulderTop, shoulderJoint, neckBase, chin, t };
 	};
-	/** 肩からパドルを握る手までの距離（届くか） */
+	/**
+	 * パドルの向き（書き手と決めた規則）: 腰より下では腕の延長（肩からボールへの向き）でヘッドが下がり、
+	 * 腰より上では高くなるほどヘッドが上を向き、肩より上ではほぼ真上（少しだけ前）になる
+	 */
 	const gripOf = (sj: P) => {
 		const vh = face.h - sj.h;
 		const vd = face.d - sj.d;
 		const l = Math.hypot(vh, vd) || 1;
-		const u = { h: vh / l, d: vd / l };
+		const t = Math.max(0, Math.min(1, (face.h - WAIST * H) / ((LEVEL.shoulder - WAIST) * H)));
+		const bh = vh / l + (0.97 - vh / l) * t;
+		const bd = vd / l + (0.25 - vd / l) * t;
+		const bl = Math.hypot(bh, bd) || 1;
+		const u = { h: bh / bl, d: bd / bl };
 		return { grip: { h: face.h - u.h * PADDLE.toFace, d: face.d - u.d * PADDLE.toFace }, u };
 	};
 	const reach = upper + lower;

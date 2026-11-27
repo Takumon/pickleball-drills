@@ -234,3 +234,24 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
 };
 /** 次に打つ球がないときの、受ける高さ */
 export const defaultReceiveHeight: HeightLevel = 'waistToShoulder';
+
+/**
+ * 打球の種類ごとの、打つ動き（パドルの振り）。打った瞬間に、パドルがこの向きへ ft だけ出て戻る。
+ * up: 上へ（+）・下へ（-）、fwd: 前へ（打球の進む側）。向きは長さ1に直して使う。
+ * 上から見た図では前への量だけ、横から見た図では上下と前の両方で動かす。「図の見方」の一覧にも note を出す
+ */
+export const shotSwing: Record<Exclude<ShotType, 'move'>, { up: number; fwd: number; ft: number; note: string }> = {
+	dink: { up: 0.35, fwd: 1, ft: 0.6, note: '下から前へ短く押し出す' },
+	drop: { up: 0.5, fwd: 1, ft: 0.8, note: '下から前上へ運ぶように振る' },
+	reset: { up: 0.15, fwd: 1, ft: 0.4, note: '面を作って前へ短く押す' },
+	drive: { up: 0.45, fwd: 1, ft: 1.2, note: '下から前上へ大きく振り抜く' },
+	volleyDink: { up: 0, fwd: 1, ft: 0.3, note: '面を作って当てるだけ（ほとんど振らない）' },
+	block: { up: 0, fwd: 1, ft: 0.35, note: '面で止める（ほとんど振らない）' },
+	roll: { up: 0.9, fwd: 0.6, ft: 0.6, note: '下から上へこすり上げる' },
+	punch: { up: -0.35, fwd: 1, ft: 0.8, note: '上から前下へ短く打ち込む' },
+	speedup: { up: 0.25, fwd: 1, ft: 0.9, note: '前へ速く振り抜く' },
+	lob: { up: 1, fwd: 0.4, ft: 0.9, note: '下から上へすくい上げる' },
+	smash: { up: -0.8, fwd: 0.6, ft: 1.2, note: '頭の上から前下へ振り下ろす' },
+	serve: { up: 0.6, fwd: 1, ft: 1, note: '下から前上へ振る（アンダーハンド）' },
+	return: { up: 0.45, fwd: 1, ft: 1, note: '下から前上へ振る' },
+};

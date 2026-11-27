@@ -157,7 +157,7 @@ const strokes = strokeOrder.map((t) => {
 	<div class="stroke-grid">
 		{
 			strokes.map(({ t, hitH, fig, sw, arrow, level }) => (
-				<figure class="stroke-card">
+				<figure class="stroke-card" data-stroke data-up={sw.up / Math.hypot(sw.up, sw.fwd)} data-fwd={sw.fwd / Math.hypot(sw.up, sw.fwd)} data-ft={sw.ft}>
 					<svg class="court-svg stroke" viewBox="-1.4 -10 5 10.6" aria-hidden="true">
 						<defs>
 							<marker id={`sw-${t}`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="0.8" markerHeight="0.8" orient="auto">
@@ -178,7 +178,7 @@ const strokes = strokeOrder.map((t) => {
 							<line class="side-paddle" stroke-width={fig.widths.face} x1={fig.face[0]} y1={fig.face[1]} x2={fig.face[2]} y2={fig.face[3]} />
 							<circle class="side-hand" cx={fig.hand.cx} cy={fig.hand.cy} r={fig.hand.r} />
 						</g>
-						<circle class="stroke-ball" cx="1.4" cy={-hitH} r="0.22" />
+						<circle class="stroke-ball" cx="1.4" cy={-hitH} r="0.22" data-cx="1.4" data-cy={-hitH} />
 						<line class="swing-arrow" x1={arrow.x1} y1={arrow.y1} x2={arrow.x2} y2={arrow.y2} marker-end={`url(#sw-${t})`} />
 					</svg>
 					<figcaption>
@@ -191,6 +191,59 @@ const strokes = strokeOrder.map((t) => {
 		}
 	</div>
 </div>
+
+<script>
+	/**
+	 * 打ち方の一覧を動かす: 打った瞬間にパドルと手が打つ動きの向きへ出て戻り、ボールが矢印の向きへ飛んでいく。
+	 * 動きの向きと量は、実際のアニメーションと同じ shotSwing（data-up・data-fwd・data-ft）。「視差効果を減らす」設定では動かさない
+	 */
+	const SWING_MS = 260;
+	const PERIOD_MS = 1800;
+	const BALL_MS = 650;
+	if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		const cards = [...document.querySelectorAll<HTMLElement>('[data-stroke]')].map((card) => {
+			const moving = [...card.querySelectorAll<SVGElement>('.side-paddle, .side-grip, .side-hand')];
+			const forearm = card.querySelector<SVGLineElement>('.side-arm')!;
+			const ball = card.querySelector<SVGCircleElement>('.stroke-ball')!;
+			return {
+				moving,
+				forearm,
+				fx: Number(forearm.getAttribute('x2')),
+				fy: Number(forearm.getAttribute('y2')),
+				ball,
+				bx: Number(ball.dataset.cx),
+				by: Number(ball.dataset.cy),
+				up: Number(card.dataset.up),
+				fwd: Number(card.dataset.fwd),
+				ft: Number(card.dataset.ft),
+			};
+		});
+		const tick = (now: number) => {
+			const t = now % PERIOD_MS;
+			const e = t < SWING_MS ? Math.sin((Math.PI * t) / SWING_MS) : 0;
+			const fly = Math.min(1, t / BALL_MS);
+			for (const c of cards) {
+				// 人の図は、高さ（x）と前後（y）で描いて回してあるので、上へ = x、前へ = y に動かす
+				const dx = c.up * c.ft * e;
+				const dy = c.fwd * c.ft * e;
+				c.moving.forEach((el) => el.setAttribute('transform', e ? `translate(${dx} ${dy})` : ''));
+				c.forearm.setAttribute('x2', String(c.fx + dx));
+				c.forearm.setAttribute('y2', String(c.fy + dy));
+				// ボール: 打ってから矢印の向き（右 = 前、上 = 上）へ飛び、消える
+				const dist = 2.4 * fly;
+				c.ball.setAttribute('cx', String(c.bx + c.fwd * dist));
+				c.ball.setAttribute('cy', String(c.by - c.up * dist));
+				c.ball.style.opacity = t < BALL_MS ? String(1 - fly * 0.85) : t > PERIOD_MS - 250 ? '1' : '0';
+				if (t >= BALL_MS && t <= PERIOD_MS - 250) {
+					c.ball.setAttribute('cx', String(c.bx));
+					c.ball.setAttribute('cy', String(c.by));
+				}
+			}
+			requestAnimationFrame(tick);
+		};
+		requestAnimationFrame(tick);
+	}
+</script>
 
 <style>
 	.legend-page {

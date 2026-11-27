@@ -29,6 +29,12 @@ const BALL_R_MAX = 1;
 const PAUSE_MS = 700;
 const LOOP_PAUSE_MS = 1600;
 /**
+ * 打つ動き（試し）: 打った瞬間に、打つ人のパドルが打球の進む向きへ SWING_FT だけピュッと出て、SWING_MS で戻る。
+ * 0 にすると打つ動きはなくなる
+ */
+const SWING_FT = 0.8;
+const SWING_MS = 260;
+/**
  * 最後の手から最初の手へ戻るとき（ループ）: 人は最初の手の立ち位置まで歩いて戻り、ボールは新しい球になるなら消してから出し直す。
  * 図が途切れたり、人やボールが跳んだりして見えないようにするため（docs/diagrams.md「アニメーション」の連続性）
  */
@@ -233,6 +239,12 @@ function setup(root: HTMLElement) {
 			balls.forEach((_, k) => setReveal(k, animate ? 0 : 1));
 			// 動く人だけでなく、ループで最初の立ち位置へ戻した人（rewind）の移動も消す
 			frame.querySelectorAll('[data-player-id], [data-side-player]').forEach((g) => g.setAttribute('transform', ''));
+			// 打つ動きの途中で止めたパドルと腕も元に戻す
+			frame.querySelectorAll<SVGLineElement>('.paddle').forEach((p) => p.removeAttribute('transform'));
+			frame.querySelectorAll<SVGLineElement>('.arm').forEach((a) => {
+				if (a.dataset.x2) a.setAttribute('x2', a.dataset.x2);
+				if (a.dataset.y2) a.setAttribute('y2', a.dataset.y2);
+			});
 			// 打つ手なら打つ人のパドルから、人が動くだけの手なら前の手の終わりの位置にボールを置く
 			setPreRings(!animate && !!preOf(0));
 			if (!balls.length) drawBall(startBall[i]);
@@ -258,6 +270,30 @@ function setup(root: HTMLElement) {
 		// トラップなら、受けた高さから少し上がって落ちる。手から落とす球出しなら、手の高さから落ちる
 		// 打つ前に弾ませる球が1つでもあれば、その球が地面まで落ちて打点まで上がる時間だけ、打球を待つ
 		const pres = balls.map((_, k) => preOf(k));
+		// 打つ動き: 打つ人ごとに、パドルと腕の元の位置と、打球の進む向きを覚えておく
+		const swings = balls.flatMap((b) => {
+			const g = frame.querySelector<SVGGElement>(`[data-player-id="${b.dataset.hitter}"]`);
+			const paddle = g?.querySelector<SVGLineElement>('.paddle');
+			const arm = g?.querySelector<SVGLineElement>('.arm');
+			if (!b.dataset.hitter || !paddle || !arm) return [];
+			const len = b.getTotalLength();
+			const a = b.getPointAtLength(0);
+			const z = b.getPointAtLength(Math.min(len, 3));
+			const n = Math.hypot(z.x - a.x, z.y - a.y) || 1;
+			// 腕の手の位置は、最初に読んだ値を覚えておく（途中で止めても元に戻せるように）
+			arm.dataset.x2 ??= arm.getAttribute('x2') ?? '0';
+			arm.dataset.y2 ??= arm.getAttribute('y2') ?? '0';
+			return [{ paddle, arm, ux: (z.x - a.x) / n, uy: (z.y - a.y) / n, x2: Number(arm.dataset.x2), y2: Number(arm.dataset.y2) }];
+		});
+		const swing = (elapsedHit: number) => {
+			const u = elapsedHit / SWING_MS;
+			const a = u > 0 && u < 1 ? SWING_FT * Math.sin(Math.PI * u) : 0;
+			for (const sw of swings) {
+				sw.paddle.setAttribute('transform', a ? `translate(${sw.ux * a} ${sw.uy * a})` : '');
+				sw.arm.setAttribute('x2', String(sw.x2 + sw.ux * a));
+				sw.arm.setAttribute('y2', String(sw.y2 + sw.uy * a));
+			}
+		};
 		const drops = pres.flatMap((pr) => (pr ? [pr.dropMs] : []));
 		const dropMs = drops.length ? Math.min(...drops) : 0;
 		const preMs = drops.length ? Math.max(...drops) + PRE_RISE_MS : 0;
@@ -285,6 +321,7 @@ function setup(root: HTMLElement) {
 				return;
 			}
 			setPreRings(preMs > 0);
+			swing(elapsed - preMs);
 			const t = Math.min(1, (elapsed - preMs) / duration);
 			const eb = Math.sin((t * Math.PI) / 2); // ボール: 打った瞬間が速く、少しずつ減速する
 			showMarks(eb);

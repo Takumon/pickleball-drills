@@ -40,6 +40,8 @@ interface Line {
 	delay?: number;
 	/** 新しいボール（前の球で点が決まったあと、または球出し） */
 	fresh?: boolean;
+	/** ゲーム形式: この球で点を失った人の上（「失点」を出す位置） */
+	lostAt?: Point;
 	/** 人の動きで、体の中心が動く量（線の長さではなく、動く前と後の位置の差） */
 	shift?: Point;
 }
@@ -217,6 +219,17 @@ const isSub = (t: string) => t === 'move';
 				l.label && (
 					<text class="shot-label" x={l.mid[0]} y={l.mid[1]}>
 						{l.label}
+					</text>
+				),
+		)
+	}
+	{
+		/* ゲーム形式: 点を失った人の上に「失点」。アニメーションでは、その手が終わったときにふわっと出す */
+		lines.map(
+			(l) =>
+				l.lostAt && (
+					<text class:list={['lost-label', { on: !animated }]} x={l.lostAt[0]} y={l.lostAt[1]} data-lost>
+						失点
 					</text>
 				),
 		)

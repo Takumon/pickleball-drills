@@ -311,9 +311,18 @@ const panels = groups.map((g) => {
 	);
 	// 同じ手に同じ名前の線が2本以上あるとき（球を2つ以上同時に使うドリル）は、名前を最初の1本にだけ付ける（重なって読めないため）
 	const seenLabels = new Set<string>();
+	// ゲーム形式: 点が決まった球では、点を失った人の上に「失点」を出す
+	const loserOf = (s: Shot) => {
+		const sc = diagram.score;
+		if (!s.point || !sc) return undefined;
+		const id = s.point === sc.plus ? sc.minus : s.point === sc.minus ? sc.plus : undefined;
+		const f = id ? byIdTo.get(id) : undefined;
+		return f ? ([f.x, f.y - PLAYER_R - 1.2] as Point) : undefined;
+	};
 	const lines = g.shots.map((s) => ({
 		...lineOf(s, byId, groups.length > 1, byIdTo),
 		fresh: freshShots.has(s),
+		lostAt: loserOf(s),
 		// 相手の打球を見て動く人は、反応する時間だけ遅れて動き出す（自分で打ちながら動くときは遅れない）
 		delay:
 			s.type === 'move' && g.shots.some((o) => o.type !== 'move' && o.from !== s.from) ? reactionMs : undefined,

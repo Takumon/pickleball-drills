@@ -104,6 +104,8 @@ function setup(root: HTMLElement) {
 		const frame = frames[i];
 		// 点の目盛り: 動かす手は前の点から、止まった図は後の点を見せる
 		setScore(scoreOf(frames[i], animate ? 'scoreBefore' : 'scoreAfter'), true);
+		// 「失点」は、動かす手では手が終わってから出す
+		frames[i].querySelectorAll('[data-lost]').forEach((t) => t.classList.toggle('on', !animate));
 		// ループで消したボールを、次に見せるときは元に戻す
 		frame.querySelectorAll<SVGElement>('.ball, .side-ball').forEach((b) => (b.style.opacity = ''));
 		const ball = frame.querySelector<SVGGElement>('.ball')!;
@@ -266,6 +268,7 @@ function setup(root: HTMLElement) {
 					drawBall(ballAt(balls[0], 1));
 				}
 				setScore(scoreOf(frame, 'scoreAfter'), false);
+				frame.querySelectorAll('[data-lost]').forEach((t) => t.classList.add('on'));
 				done?.();
 			}
 		};
@@ -319,8 +322,8 @@ function setup(root: HTMLElement) {
 		// 位置が同じでも、高さが違えば（例: 肩の高さで受けた球を、膝の高さのディンクで打ち始める）つながらないので出し直す
 		const fade = !!start && (fresh || !end || Math.hypot(start.x - end.x, start.y - end.y) > 0.5 || Math.abs(start.h - end.h) > 0.5);
 		const balls = [...frame.querySelectorAll<SVGElement>('.ball, .side-ball')];
-		// 点の目盛りも、最初の手の始まりの点（0）へ戻す
-		setScore(scoreOf(first, 'scoreBefore'), false);
+		// 点の目盛りは、繰り返しの最初で動かさずに一度に戻す（+2 から 0 へ流れて戻ると、点が動いたように見えるため）
+		setScore(scoreOf(first, 'scoreBefore'), true);
 		const t0 = performance.now();
 		const tick = (now: number) => {
 			const t = Math.min(1, (now - t0) / REWIND_MS);

@@ -415,3 +415,24 @@
 .court .score-marker.instant {
 	transition: none;
 }
+
+/* ゲーム形式: 点を失った人の上の「失点」。手が終わったときに、下から少し上がりながらふわっと出る */
+.court .lost-label {
+	font-size: 1.6px;
+	font-weight: 700;
+	text-anchor: middle;
+	dominant-baseline: central;
+	font-family: system-ui, sans-serif;
+	fill: var(--label);
+	stroke: var(--court-surface);
+	stroke-width: 0.5px;
+	paint-order: stroke;
+	stroke-linejoin: round;
+	opacity: 0;
+	transform: translateY(0.8px);
+	transition: opacity 0.35s ease-out, transform 0.35s ease-out;
+}
+.court .lost-label.on {
+	opacity: 1;
+	transform: translateY(0);
+}

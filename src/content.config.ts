@@ -209,6 +209,11 @@ const drill = z.object({
 	/** ドリルID: カテゴリ3文字 + 3桁（例: dnk001） */
 	id: z.string().regex(/^[a-z0-9]{3}\d{3}$/),
 	category: z.enum(categoryCodes),
+	/**
+	 * サブカテゴリ: メインのカテゴリ（ID の頭・フォルダ・サイドバーの場所）のほかに、このドリルで練習するカテゴリ（いくつでも）。
+	 * ドリルのページの印、ビルダーのカテゴリの絞り込み、ドリル一覧の「ほかのカテゴリのドリル」に出す。サイドバーには出さない（書き手と決めた）
+	 */
+	subCategories: z.array(z.enum(categoryCodes)).default([]),
 	/** 別名・旧称（検索用） */
 	aliases: z.array(z.string()).default([]),
 	/** 場面: このドリルが想定する試合の場面（何が起きていて、何が困るか）。目的の前に出す */
@@ -230,6 +235,9 @@ const drill = z.object({
 	 * 練習する人が、サイトの説明だけでは分かりにくいときに見て理解を深めるためのもの。公開されているものだけを載せる
 	 */
 	links: z.array(z.object({ title: z.string(), url: z.string().url() })).default([]),
+}).refine((d) => !d.subCategories.includes(d.category) && new Set(d.subCategories).size === d.subCategories.length, {
+	message: 'サブカテゴリにはメインのカテゴリと同じものや、同じものを2回書かない',
+	path: ['subCategories'],
 }).refine((d) => d.variants.length === 0 || d.variants.filter((v) => v.default).length === 1, {
 	message: '派生形があるときは、図で描いている派生形（default: true）をちょうど1つ決める',
 	path: ['variants'],

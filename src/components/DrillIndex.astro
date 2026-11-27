@@ -1,0 +1,95 @@
+---
+/**
+ * ドリル一覧: カテゴリごとに、メインのカテゴリのドリルを表示順に並べ、その下に「ほかのカテゴリのドリル」として
+ * サブカテゴリにこのカテゴリを持つドリルを並べる（書き手と決めた）。ドリルが1つもないカテゴリは出さない。
+ * 見出しの id はカテゴリのコード（ドリルのページのカテゴリの印から飛んでくる）。
+ */
+import { getCollection } from 'astro:content';
+import { categories } from '../config/categories';
+import { rallyLabel } from '../config/drill-display';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const docs = await getCollection('docs', (e) => !!e.data.drill);
+const drills = docs
+	.map((e) => ({ d: e.data.drill!, title: e.data.title, order: e.data.sidebar?.order ?? 999, url: `${base}/${e.id}/` }))
+	.sort((a, b) => a.order - b.order || a.d.id.localeCompare(b.d.id));
+const labelOf = (code: string) => categories.find((c) => c.code === code)?.label ?? code;
+const sections = categories
+	.map((c) => ({
+		...c,
+		main: drills.filter((x) => x.d.category === c.code),
+		sub: drills
+			.filter((x) => x.d.subCategories.includes(c.code))
+			.sort((a, b) => categories.findIndex((k) => k.code === a.d.category) - categories.findIndex((k) => k.code === b.d.category) || a.order - b.order),
+	}))
+	.filter((c) => c.main.length > 0 || c.sub.length > 0);
+---
+
+<div class="drill-index">
+	{
+		sections.map((c) => (
+			<section>
+				<h2 id={c.code}>{c.label}</h2>
+				{c.main.length > 0 ? (
+					<ul>
+						{c.main.map((x) => (
+							<li>
+								<a href={x.url}>{x.title}</a>
+								<span class="rally" data-rally={x.d.diagram?.rally === false ? 'no' : 'yes'}>{rallyLabel(x.d.diagram?.rally)}</span>
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="none">このカテゴリが主のドリルはまだありません。</p>
+				)}
+				{c.sub.length > 0 && (
+					<>
+						<h3>ほかのカテゴリのドリル</h3>
+						<ul class="sub">
+							{c.sub.map((x) => (
+								<li>
+									<a href={x.url}>{x.title}</a>
+									<span class="from">{labelOf(x.d.category)}</span>
+									<span class="rally" data-rally={x.d.diagram?.rally === false ? 'no' : 'yes'}>{rallyLabel(x.d.diagram?.rally)}</span>
+								</li>
+							))}
+						</ul>
+					</>
+				)}
+			</section>
+		))
+	}
+</div>
+
+<style>
+	.drill-index ul {
+		padding-left: 1.1rem;
+	}
+	.drill-index li {
+		margin: 0.2rem 0;
+	}
+	.drill-index h3 {
+		font-size: var(--sl-text-base);
+		color: var(--sl-color-gray-2);
+		margin-top: 0.75rem;
+	}
+	.drill-index .none {
+		color: var(--sl-color-gray-3);
+		font-size: var(--sl-text-sm);
+	}
+	.rally,
+	.from {
+		display: inline-block;
+		margin-left: 0.4rem;
+		padding: 0 0.45rem;
+		border-radius: 999px;
+		font-size: var(--sl-text-xs);
+		border: 1px solid var(--sl-color-gray-5);
+		color: var(--sl-color-gray-3);
+		vertical-align: 0.1em;
+	}
+	.rally[data-rally='yes'] {
+		border-color: var(--sl-color-accent);
+		color: var(--sl-color-accent-high);
+	}
+</style>

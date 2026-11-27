@@ -16,6 +16,7 @@ import {
 	type Menu,
 	type MenuItem,
 } from '../../lib/menu';
+import { categories } from '../../config/categories';
 
 type Row = MenuItem & { uid: number };
 interface State {
@@ -224,10 +225,13 @@ export default function Builder({ base }: { base: string }) {
 
 	const filtered = catalog.filter(
 		(d) =>
-			(!category || d.category === category) &&
+			(!category || d.category === category || (d.subCategories ?? []).includes(category)) &&
 			(!query.trim() || `${d.title} ${d.id}`.toLowerCase().includes(query.trim().toLowerCase())),
 	);
-	const categoriesInCatalog = [...new Map(catalog.map((d) => [d.category, d.categoryLabel])).entries()];
+	// 絞り込みの選択肢: メインかサブカテゴリでドリルが1つでもあるカテゴリ（サブカテゴリだけのカテゴリも出す）
+	const categoriesInCatalog = categories
+		.filter((c) => catalog.some((d) => d.category === c.code || (d.subCategories ?? []).includes(c.code)))
+		.map((c) => [c.code, c.label] as const);
 
 	// 見出しごとの合計（見出しの行に出す）
 	const headingMinutes = new Map<number, number>();

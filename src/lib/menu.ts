@@ -115,6 +115,8 @@ export interface CatalogDrill {
 	rally?: string;
 	category: string;
 	categoryLabel: string;
+	/** サブカテゴリ（ビルダーのカテゴリの絞り込みで、メインと同じように当てはまる） */
+	subCategories?: string[];
 	order: number;
 	url: string;
 	fragment: string;

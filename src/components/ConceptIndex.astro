@@ -18,6 +18,7 @@ sections.push({
 		{ name: 'ID', meaning: 'ドリルの名前の代わりの記号（例: dnk001）。カテゴリ3文字＋作った順の番号。ページには出さない', who: '作り手', data: 'drill.id' },
 		{ name: '表示順', meaning: 'サイドバーやドリル一覧で並ぶ順。ID とは別に持つ', who: '作り手', data: 'sidebar.order' },
 		...categories.map((c): Row => ({ name: `カテゴリ: ${c.label}`, meaning: `ドリルの分類（${c.en}）`, who: '両方', data: c.code })),
+		{ name: 'サブカテゴリ', meaning: 'メインのカテゴリのほかに、このドリルで練習するカテゴリ（いくつでも）。ドリルのページの印・ビルダーの絞り込み・ドリル一覧に出る。サイドバーには出ない', who: '両方', data: 'drill.subCategories' },
 		{ name: '派生形', meaning: '打ち方だけが違う、同じドリルの変化（フォア／バックなど）。図で描いている派生形を1つ決める', who: '両方', data: 'drill.variants（default: true）' },
 		{ name: '別名', meaning: 'ドリルの別の呼び方。探すときに使う。ページには出さない', who: '作り手', data: 'drill.aliases' },
 		{ name: '練習メニュー', meaning: 'その日にやるドリルと時間を並べたもの。URL だけで表す', who: '両方', data: '/?v=1&m=…（src/lib/menu.ts）' },

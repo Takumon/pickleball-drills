@@ -231,7 +231,7 @@ export const heightLevels = {
 	waist: { label: '腰の高さ', note: '腰より上のリセットの打点', ft: 3.2 },
 	overTape: { label: '白帯のちょい上', note: 'フリックの打点', ft: 3.3 },
 	// ディンクはネットぎりぎりを通さない（ネットにかけやすい）。ネットの上は余裕を持って通し、相手が打つところで低くなればよい（書き手の指摘、2026-11-28）
-	dinkArc: { label: '白帯の約30cm上', note: 'ディンク・ボレーディンクの頂点（打つ人の側で山になり、ネットを越えたら下がる）', ft: 3.9 },
+	dinkArc: { label: '白帯の約30cm上', note: 'ディンク・ボレーディンク・リセットの頂点（打つ人の側で山になり、ネットを越えたら下がる）', ft: 3.9 },
 	waistToShoulder: { label: '腰上〜肩下', note: 'ボレーの打点', ft: 4.0 },
 	head: { label: '肩より上・頭付近', note: '強めのボレーの打点', ft: 5.5 },
 	aboveTape: { label: '白帯から上', note: 'サーブ・リターン・ドロップの頂点', ft: 6.0 },
@@ -267,7 +267,7 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
 	dink: { hit: 'knee', peak: 'dinkArc' },
 	sliceDink: { hit: 'knee', peak: 'dinkArc' },
 	// リセット: 打つ高さは場面で変わる（腰の高さ〜足首、ワンバウンドさせてから打つこともある。書き手の指摘）。図の既定値は膝の高さ
-	reset: { hit: 'knee', peak: 'overTape', range: '腰〜足首の高さ。ワンバウンドしてから打つこともある' },
+	reset: { hit: 'knee', peak: 'dinkArc', range: '腰〜足首の高さ。ワンバウンドしてから打つこともある' },
 	// ドライブ: Richard の「ドライブをマスター！」（3:38〜）では、低く弾んだ球を膝の高さで打っている
 	drive: { hit: 'knee', peak: 'tape' },
 	// ボレーディンク: ネットより下で面を作って当て、弧を描いてゆっくり落とす（ディンクやドロップをノーバウンドで受け流す）
@@ -286,10 +286,10 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
 	lob: { hit: 'belowWaist', peak: 'sky' },
 };
 /**
- * 柔らかく落とす弧（ディンクの仲間）: 打つ人の側で山になり、ネットの白帯より netClearFt 上を通って、ネットを越えたら下がっていく。
+ * 柔らかく落とす弧（ディンクの仲間とリセット）: 打つ人の側で山になり、ネットの白帯より netClearFt 上を通って、ネットを越えたら下がっていく。
  * ネットの上の高さより、相手が打つところで低いことが大事（書き手の指摘、2026-11-28）。トラップしてから打つ打ち方も元の打ち方に従う
  */
-export const SOFT_ARC = { types: ['dink', 'sliceDink', 'volleyDink'] as ShotType[], netClearFt: 0.65 } as const;
+export const SOFT_ARC = { types: ['dink', 'sliceDink', 'volleyDink', 'reset'] as ShotType[], netClearFt: 0.65 } as const;
 // トラップしてから打つ打ち方は、元の打ち方と同じ高さ
 for (const [t, b] of Object.entries(TRAP_BASE) as [TrapShot, Exclude<ShotType, 'move' | TrapShot>][]) (shotHeights as Record<string, unknown>)[t] = { ...shotHeights[b], range: undefined };
 /** 次に打つ球がないときの、受ける高さ */

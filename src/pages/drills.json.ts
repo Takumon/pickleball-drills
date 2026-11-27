@@ -20,6 +20,7 @@ export async function GET() {
 				rally: rallyLabel(d.diagram?.rally),
 				category: d.category,
 				categoryLabel: categories.find((c) => c.code === d.category)?.label ?? d.category,
+				subCategories: d.subCategories,
 				order: e.data.sidebar?.order ?? 999,
 				url: `${base}/${e.id}/`,
 				fragment: `${base}/fragments/${d.id}/`,

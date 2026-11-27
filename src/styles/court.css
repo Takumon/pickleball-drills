@@ -215,8 +215,15 @@
 	opacity: 0.7;
 }
 .court .side-body {
+	fill: none;
 	stroke: var(--side-ink);
 	stroke-width: 0.22;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.court .side-shoe {
+	stroke: var(--side-ink);
+	stroke-width: 0.36;
 	stroke-linecap: round;
 }
 .court .side-head {

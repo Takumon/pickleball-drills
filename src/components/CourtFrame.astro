@@ -72,15 +72,32 @@ const GROUND_MARK = 0.6;
 const [vbX, vbY, vbW, vbH] = viewBox.split(/\s+/).map(Number);
 const maskBox = { x: vbX - 10, y: vbY - 10, width: vbW + 20, height: vbH + 20 };
 /**
- * 横から見た図の棒人間の寸法（ft）。大人の平均的な身長 170cm と、ふつうの体の比率から決める。
- * 頭の高さは身長の約 1/7.5（約23cm）、肩の高さは身長の約 0.82（約139cm）。
- * 体の線は地面からあごまで、頭は丸、腕は肩から出てパドルを持つ手まで伸びる
+ * 横から見た図の棒人間の寸法（ft）。大人の平均的な身長 170cm と、体の比率から決める。
+ * 頭は身長の約 1/5.5（約31cm。実際の 1/7.5 より大きくして、小さい図でも顔として見えるようにする）。
+ * 腕のつけ根（肩の関節）は身長の約 0.77（約131cm）。肩の骨の一番上（0.82）ではなく、腕が回る所に置き、首が見えるようにする。
+ * 体の線は足首から腰・肩を通ってあごまで、頭は丸、腕は肩から出てパドルを持つ手まで伸びる
  */
 const STATURE_FT = 5.58;
-const HEAD_FT = STATURE_FT / 7.5;
+const HEAD_FT = STATURE_FT / 5.5;
 const CHIN_FT = STATURE_FT - HEAD_FT;
-const SHOULDER_FT = STATURE_FT * 0.82;
-const SIDE_PADDLE = 1.1;
+const SHOULDER_FT = STATURE_FT * 0.77;
+/** 腰（股関節）・ひざ・足首の高さ（身長の約 0.53・0.285・0.04） */
+const HIP_FT = STATURE_FT * 0.53;
+const KNEE_FT = STATURE_FT * 0.285;
+const ANKLE_FT = STATURE_FT * 0.04;
+/** 肩から、パドルを握る手までの長さ（腕の長さ。身長の約 0.36） */
+const ARM_FT = STATURE_FT * 0.36;
+/** 靴の長さ（約27cm）。かかとから少し後ろ、つま先がネットの側 */
+const SHOE_FT = 0.89;
+/**
+ * パドルの寸法（ft）。長さはルールの上限が 17インチで、ふつうは約16インチ（約41cm）。
+ * 握る手からパドルの面の真ん中までは約7.5インチ、手から先までは約13インチ
+ */
+const PADDLE_HAND_TO_FACE_FT = 7.5 / 12;
+const PADDLE_HAND_TO_TIP_FT = 13 / 12;
+const PADDLE_HAND_TO_BUTT_FT = 3 / 12;
+/** 低い球では、手が届くまでひざを曲げて腰を落とす。落とせるのはここまで（ft） */
+const MAX_CROUCH_FT = 1.6;
 /** 弾んだ位置の輪の半径（控えめに小さく） */
 const MARK = 0.45;
 /** 練習役の二重丸: 内側の線を、体の丸のふちから何 ft 内側に引くか */
@@ -268,27 +285,44 @@ const isSub = (t: string) => t === 'move';
 					))}
 				<line class="side-net" x1={side.x0} y1={COURT.net} x2={side.x0 + NET_FT * side.k} y2={COURT.net} />
 				{figures.map((p) => {
-					const chin = side.x0 + CHIN_FT * side.k;
-					const headR = (HEAD_FT / 2) * side.k;
-					const head = chin + headR;
-					const px = side.x0 + (p.sideH ?? 4) * side.k;
+					// 棒人間は、高さ（ft）と奥行き（ft）で組み立ててから、図の座標（高さは side.k 倍）に直す
 					const toNet = p.y < COURT.net ? 1 : -1;
-					// 腕とパドル: 肩から、パドルの真ん中（打つ高さ・上から見た図のパドルと同じ奥行き）へ向かって伸ばす。
-					// パドルは腕の延長に持つので、低い球ではヘッドが下がり、高い球では上がる
-					const sx = side.x0 + SHOULDER_FT * side.k;
+					const X = (h: number) => side.x0 + h * side.k;
+					const hitH = p.sideH ?? 4;
 					const faceY = (p.hand[1] + p.tip[1]) / 2;
-					const vx = px - sx;
-					const vy = faceY - p.y;
-					const vl = Math.hypot(vx, vy) || 1;
-					const half = SIDE_PADDLE / 2;
-					const hand = [px - (vx / vl) * half, faceY - (vy / vl) * half];
-					const tip = [px + (vx / vl) * half, faceY + (vy / vl) * half];
+					const dy = Math.abs(faceY - p.y);
+					// 低い球: 肩からパドルの面の真ん中まで、腕とパドルで届くように、ひざを曲げて腰を落とす
+					const reach = ARM_FT + PADDLE_HAND_TO_FACE_FT;
+					const needDrop = reach > dy ? SHOULDER_FT - hitH - Math.sqrt(reach * reach - dy * dy) : 0;
+					const crouch = Math.max(0, Math.min(MAX_CROUCH_FT, needDrop));
+					const shoulderH = SHOULDER_FT - crouch;
+					const hipH = HIP_FT - crouch;
+					const chinH = CHIN_FT - crouch;
+					// ひざ: 腰と足首を結ぶ線の真ん中から、ネットの側へ出す（太ももとすねの長さは変えない）
+					const thigh = HIP_FT - KNEE_FT;
+					const legSpan = hipH - ANKLE_FT;
+					const kneeFwd = Math.sqrt(Math.max(0, thigh * thigh - (legSpan / 2) ** 2));
+					const kneeH = ANKLE_FT + legSpan / 2;
+					// 腕とパドル: 肩からパドルの面の真ん中へ向かって伸ばし、パドルは腕の延長に持つ
+					// （低い球ではヘッドが下がり、高い球では上がる）
+					const vh = hitH - shoulderH;
+					const vd = faceY - p.y;
+					const vl = Math.hypot(vh, vd) || 1;
+					const [uh, ud] = [vh / vl, vd / vl];
+					const handH = hitH - uh * PADDLE_HAND_TO_FACE_FT;
+					const handD = faceY - ud * PADDLE_HAND_TO_FACE_FT;
+					const butt = [X(handH - uh * PADDLE_HAND_TO_BUTT_FT), handD - ud * PADDLE_HAND_TO_BUTT_FT];
+					const tip = [X(handH + uh * PADDLE_HAND_TO_TIP_FT), handD + ud * PADDLE_HAND_TO_TIP_FT];
+					const headR = (HEAD_FT / 2) * side.k;
 					return (
 						<g class={`side-person role-${p.role}`} data-side-player={animated ? p.id : undefined}>
-							<line class="side-body" x1={side.x0} y1={p.y} x2={chin} y2={p.y} />
-							<circle class="side-head" cx={head} cy={p.y} r={headR} />
-							<line class="side-arm" x1={sx} y1={p.y} x2={hand[0]} y2={hand[1]} />
-							<line class="side-paddle" x1={hand[0]} y1={hand[1]} x2={tip[0]} y2={tip[1]} />
+							{/* 靴（かかと〜つま先）、足（足首〜ひざ〜腰）、胴（腰〜肩）、首（肩〜あご）、頭 */}
+							<line class="side-shoe" x1={X(0.2)} y1={p.y - toNet * SHOE_FT * 0.3} x2={X(0.2)} y2={p.y + toNet * SHOE_FT * 0.7} />
+							<polyline class="side-body" points={`${X(ANKLE_FT)},${p.y} ${X(kneeH)},${p.y + toNet * kneeFwd} ${X(hipH)},${p.y}`} />
+							<line class="side-body" x1={X(hipH)} y1={p.y} x2={X(chinH)} y2={p.y} />
+							<circle class="side-head" cx={X(chinH) + headR} cy={p.y} r={headR} />
+							<line class="side-arm" x1={X(shoulderH)} y1={p.y} x2={X(handH)} y2={handD} />
+							<line class="side-paddle" x1={butt[0]} y1={butt[1]} x2={tip[0]} y2={tip[1]} />
 						</g>
 					);
 				})}

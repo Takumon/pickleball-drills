@@ -26,7 +26,7 @@ const popArc = (h0: number, pop: number) => {
 const BALL_R_GROUND = 0.6;
 const BALL_R_PER_FT = 0.05;
 const BALL_R_MAX = 1;
-const PAUSE_MS = 200;
+const PAUSE_MS = 700;
 const LOOP_PAUSE_MS = 1600;
 /**
  * 最後の手から最初の手へ戻るとき（ループ）: 人は最初の手の立ち位置まで歩いて戻り、ボールは新しい球になるなら消してから出し直す。

@@ -157,7 +157,7 @@ const strokes = strokeOrder.map((t) => {
 		{
 			strokes.map(({ t, hitH, fig, sw, arrow, level }) => (
 				<figure class="stroke-card" data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn].join(',')}>
-					<svg class="court-svg stroke" viewBox="-1.4 -10 5 10.6" aria-hidden="true">
+					<svg class="court-svg stroke" viewBox="-2.3 -10 5.9 10.6" aria-hidden="true">
 						<defs>
 							<marker id={`sw-${t}`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="0.8" markerHeight="0.8" orient="auto">
 								<path d="M0 0 L10 5 L0 10 z" class="swing-head" />
@@ -192,7 +192,7 @@ const strokes = strokeOrder.map((t) => {
 </div>
 
 <script>
-	import { bendSide, solveElbow } from '../lib/arm-ik';
+	import { bendSide, clampReach, solveElbow } from '../lib/arm-ik';
 	/**
 	 * 打ち方の一覧を動かす: 振りかぶった所から、打つ所を通って振り抜き、元の構えに戻る。パドルが打つ所を通る瞬間に、
 	 * ボールが振り抜く向きへ飛んでいく。値は実際のアニメーションと同じ shotSwing（data-swing）。「視差効果を減らす」設定では動かさない
@@ -250,7 +250,11 @@ const strokes = strokeOrder.map((t) => {
 				else if (t < s3 + RETURN_MS) off = lerp(c.follow, rest, ease((t - s3) / RETURN_MS));
 				// 人の図は高さ（x）と前後（y）で描いて回してあるので、上へ = x、前へ = y に動かす。
 				// パドルは手のまわりに回す（この図ではネットが前（+）なので、前から上へ回すと図の上で反時計回り）
-				const [dx, dy, turn] = off;
+				// 手が届かない所なら、届く所で止める（パドルも一緒に）
+				const [cx, cy] = clampReach(c.s0[0], c.s0[1], c.f[2] + off[0], c.f[3] + off[1], c.len[0] + c.len[1]);
+				const dx = cx - c.f[2];
+				const dy = cy - c.f[3];
+				const turn = off[2];
 				const hx = Number(c.hand.getAttribute('cx'));
 				const hy = Number(c.hand.getAttribute('cy'));
 				c.turning.forEach((el) => el.setAttribute('transform', `translate(${dx} ${dy}) rotate(${-turn} ${hx} ${hy})`));

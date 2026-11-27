@@ -16,3 +16,15 @@ export function solveElbow(sx: number, sy: number, hx: number, hy: number, upper
 export function bendSide(sx: number, sy: number, ex: number, ey: number, hx: number, hy: number): number {
 	return (hx - sx) * (ey - sy) - (hy - sy) * (ex - sx) >= 0 ? 1 : -1;
 }
+
+/**
+ * 手が届く所まで: 肩から reach（上腕＋前腕）より遠い所へ手を動かそうとしたときは、同じ向きの届く所で止める。
+ * 大きく振りかぶる打ち方（ドライブ・サーブ・リターン）で、腕が伸びて見えないように使う。パドルも手と一緒に止める
+ */
+export function clampReach(sx: number, sy: number, hx: number, hy: number, reach: number): [number, number] {
+	const dx = hx - sx;
+	const dy = hy - sy;
+	const d = Math.hypot(dx, dy);
+	const max = reach * 0.995;
+	return d <= max ? [hx, hy] : [sx + (dx / d) * max, sy + (dy / d) * max];
+}

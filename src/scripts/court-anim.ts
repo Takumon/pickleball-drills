@@ -1,4 +1,4 @@
-import { bendSide, solveElbow } from '../lib/arm-ik';
+import { bendSide, clampReach, solveElbow } from '../lib/arm-ik';
 /**
  * コート図のアニメーション。場面（.frame）を1つずつ表示し、
  * 打球はボールを線に沿って動かし（線も伸ばして描く）、人の動きは人を移動先まで動かす。
@@ -92,8 +92,16 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 		paddle.setAttribute('transform', fwd ? `translate(${dx} ${dy})` : '');
 		set(arm, 'x2', dx);
 		set(arm, 'y2', dy);
-		const sx = up * sideK;
-		const sy = Math.sign(uy) * fwd;
+		// 横から見た図: 手を動かす先（届かない所なら、届く所で止める）
+		let sx = up * sideK;
+		let sy = Math.sign(uy) * fwd;
+		if (forearm && upperArm) {
+			const rx = n0(forearm, 'x2');
+			const ry = n0(forearm, 'y2');
+			const [cx, cy] = clampReach(n0(upperArm, 'x1'), n0(upperArm, 'y1'), rx + sx, ry + sy, armLen.upper + armLen.lower);
+			sx = cx - rx;
+			sy = cy - ry;
+		}
 		const rot = turnSign * turn;
 		sidePaddle.forEach((el) => el.setAttribute('transform', sx || sy || rot ? `translate(${sx} ${sy}) rotate(${rot} ${hx} ${hy})` : ''));
 		sideHand?.setAttribute('transform', sx || sy ? `translate(${sx} ${sy})` : '');

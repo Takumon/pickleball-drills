@@ -168,7 +168,7 @@ const isSub = (t: string) => t === 'move';
 						data-kind={animated ? (l.type === 'move' ? 'move' : 'ball') : undefined}
 						data-player={animated && l.type === 'move' && typeof l.from === 'string' ? l.from : undefined}
 						data-hitter={animated && l.type !== 'move' && typeof l.from === 'string' ? l.from : undefined}
-						data-swing={animated && l.type !== 'move' && l.type in shotSwing ? (({ up, fwd, ft }) => `${up},${fwd},${ft}`)(shotSwing[l.type as keyof typeof shotSwing]) : undefined}
+						data-swing={animated && l.type !== 'move' && l.type in shotSwing ? (({ back, follow }) => [...back, ...follow].join(','))(shotSwing[l.type as keyof typeof shotSwing]) : undefined}
 						data-shift={animated && l.shift ? l.shift.join(',') : undefined}
 						data-ms={animated ? l.ms : undefined}
 						data-pre={animated && l.pre ? `${l.pre[0]},${l.pre[1]}` : undefined}

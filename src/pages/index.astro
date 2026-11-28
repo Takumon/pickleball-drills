@@ -21,7 +21,8 @@ const drills = docs.map((e) => e.data.drill!);
 const HERO_ID = 'spd002';
 const hero = docs.find((e) => e.data.drill!.id === HERO_ID);
 if (!hero?.data.drill?.diagram) throw new Error(`トップページ: ${HERO_ID} の図がない`);
-// カテゴリのタイル: メインかサブカテゴリでそのカテゴリに入るドリルの数（ドリル一覧と同じ数え方）
+// カテゴリのタイル: メインかサブカテゴリでそのカテゴリに入るドリルの数（ドリル一覧と同じ数え方）。
+// ドリルとカテゴリの総数は出さない。タイルが並ぶだけで、たくさんあることが伝わるため（書き手の指摘）
 const tiles = categories
 	.map((c) => ({ ...c, count: drills.filter((d) => d.category === c.code || d.subCategories.includes(c.code)).length }))
 	.filter((c) => c.count > 0);
@@ -36,11 +37,6 @@ const tiles = categories
 				<Court diagram={hero.data.drill.diagram} title={`見本: ${HERO_ID}`} />
 			</figure>
 		</section>
-
-		<ul class="stats">
-			<li><b>{drills.length}</b><span>本のドリル</span></li>
-			<li><b>{tiles.length}</b><span>のカテゴリ</span></li>
-		</ul>
 
 		<section>
 			<h2>カテゴリから探す</h2>
@@ -217,32 +213,6 @@ const tiles = categories
 	}
 	.hero-court {
 		margin: 1rem 0 0;
-	}
-	.stats {
-		display: flex;
-		gap: 0.75rem;
-		list-style: none;
-		padding: 0;
-		margin: 1.5rem 0 0;
-	}
-	.stats li {
-		flex: 1;
-		margin: 0;
-		padding: 0.75rem 1rem;
-		border-radius: 0.75rem;
-		background: var(--sl-color-gray-6);
-		display: flex;
-		align-items: baseline;
-		gap: 0.3rem;
-	}
-	.stats b {
-		font-size: var(--sl-text-3xl);
-		line-height: 1;
-		color: var(--sl-color-accent-high);
-	}
-	.stats span {
-		color: var(--sl-color-gray-2);
-		font-size: var(--sl-text-sm);
 	}
 	.tiles {
 		display: grid;

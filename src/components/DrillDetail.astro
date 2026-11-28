@@ -125,8 +125,10 @@ const serviceOf = (url: string) => {
 						</ul>
 					)}
 					{field === 'points' && (
-						<ul>
-							{drill.points.map((s) => (
+						<ul
+							data-variant-points={switchable ? JSON.stringify(Object.fromEntries(drill.variants.map((v) => [v.key, v.points ?? drill.points]))) : undefined}
+						>
+							{((switchable && drill.variants.find((v) => v.default)?.points) || drill.points).map((s) => (
 								<li>{s}</li>
 							))}
 						</ul>
@@ -141,7 +143,7 @@ const serviceOf = (url: string) => {
 									</dt>
 									<dd>
 										{v.setup && <p>人数・配置: {v.setup}</p>}
-										{v.feed && <p>球出し: {v.feed}</p>}
+										{v.feed && !switchable && <p>球出し: {v.feed}</p>}
 										{v.steps && (
 											<ol>
 												{v.steps.map((s) => (
@@ -149,7 +151,7 @@ const serviceOf = (url: string) => {
 												))}
 											</ol>
 										)}
-										{v.points && (
+										{v.points && !switchable && (
 											<ul>
 												{v.points.map((s) => (
 													<li>{s}</li>

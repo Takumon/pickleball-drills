@@ -34,6 +34,9 @@ function setupVariantSwitch(sw: HTMLElement, root: ParentNode, key: string | und
 	const panels = [...sw.querySelectorAll<HTMLElement>('.vs-panel')];
 	const feedEl = root.querySelector<HTMLElement>('[data-variant-feed]');
 	const feeds: Record<string, string> = feedEl ? JSON.parse(feedEl.dataset.variantFeed ?? '{}') : {};
+	// 練習のコツも、派生形ごとのコツに差し替える（共通のコツ＋打ち方ごとのコツ。書き手と決めた）
+	const pointsEl = root.querySelector<HTMLElement>('[data-variant-points]');
+	const pointsBy: Record<string, string[]> = pointsEl ? JSON.parse(pointsEl.dataset.variantPoints ?? '{}') : {};
 	const thumb = sw.querySelector<HTMLElement>('.vs-thumb');
 	// 色の面を、選んでいるボタンの下へ動かす（instant: 最初に置くときは滑らせない）
 	const moveThumb = (instant: boolean) => {
@@ -50,6 +53,15 @@ function setupVariantSwitch(sw: HTMLElement, root: ParentNode, key: string | und
 		moveThumb(instant);
 		panels.forEach((p) => p.classList.toggle('off', p.dataset.v !== k));
 		if (feedEl && feeds[k]) feedEl.textContent = feeds[k];
+		if (pointsEl && pointsBy[k]) {
+			pointsEl.replaceChildren(
+				...pointsBy[k].map((t) => {
+					const li = document.createElement('li');
+					li.textContent = t;
+					return li;
+				}),
+			);
+		}
 		if (updateUrl && root === document) {
 			const u = new URL(location.href);
 			if (k === sw.dataset.default) u.searchParams.delete('variant');

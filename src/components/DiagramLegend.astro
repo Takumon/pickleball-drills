@@ -266,7 +266,7 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 	<div class="stroke-grid">
 		{
 			strokes.map(({ t, key, name, hitH, fig, sw, arrow, launch, kp, poseInput, bodyBack, ballAt, head, level, range }) => (
-				<figure class="stroke-card" data-trap={t in TRAP_BASE ? (TRAP_NO_BOUNCE.has(t) ? 'pop' : 'bounce') : undefined} data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ?? []).flat()].join(',')} data-setup={sw.setup ? '' : undefined} data-hold={sw.hold ? '' : undefined} data-lateral={sw.lateral ? '' : undefined} data-pivot={sw.pivot} data-straight={sw.straight ? '' : undefined} data-pivot-turn={sw.pivotTurn?.join(',')} data-launch={launch} data-keyposes={kp ? JSON.stringify(kp.poses) : undefined} data-pose-input={kp ? JSON.stringify(poseInput) : undefined} data-body-back={bodyBack}>
+				<figure class="stroke-card" data-trap={t in TRAP_BASE ? (TRAP_NO_BOUNCE.has(t) ? 'pop' : 'bounce') : undefined} data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ?? []).flat()].join(',')} data-setup={sw.setup ? '' : undefined} data-hold={sw.hold ? '' : undefined} data-lateral={sw.lateral?.join(',')} data-pivot={sw.pivot} data-straight={sw.straight ? '' : undefined} data-pivot-turn={sw.pivotTurn?.join(',')} data-launch={launch} data-keyposes={kp ? JSON.stringify(kp.poses) : undefined} data-pose-input={kp ? JSON.stringify(poseInput) : undefined} data-body-back={bodyBack}>
 					<svg class="court-svg stroke" viewBox="-2.9 -10 6.5 10.6" aria-hidden="true">
 						<defs>
 							<marker id={`sw-${key}`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth={head} markerHeight={head} orient="auto">
@@ -463,7 +463,8 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 				const hy = Number(c.hand.getAttribute('cy'));
 				// 3次元で動かす振り（フォアのフリック）は、横から見たグリップと面の線を引き直す（この図では前が +y）
 				if (c.card.dataset.lateral !== undefined) {
-					const ln = flickLines(turn, hx + dx, hy + dy, Number(c.face.getAttribute('stroke-width')) / 0.078, 1);
+					const [st, en] = c.card.dataset.lateral!.split(',').map(Number);
+					const ln = flickLines(turn, hx + dx, hy + dy, Number(c.face.getAttribute('stroke-width')) / 0.078, 1, st, en);
 					const put = (el: Element, v: number[]) => ['x1', 'y1', 'x2', 'y2'].forEach((k, i) => el.setAttribute(k, String(v[i])));
 					put(c.grip, ln.grip);
 					put(c.face, ln.face);

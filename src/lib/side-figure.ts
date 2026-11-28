@@ -139,7 +139,8 @@ const STANCE_BY_SHOT: Record<string, Partial<typeof STANCE>> = {
 	// フォアは、打つ瞬間にパドルの先が体の横を向く（手首を軸に、体の横の側を通る半円の途中。書き手の説明 2026-11-28）。
 	// 横から見ると面の幅だけが見えるので、体の前を横切るパドル（across）と同じに描く。面は前を向く
 	flick: { kneeReady: 45, kneeMax: 62, leanReady: 34, leanMax: 40, reach: 2.2, across: 0 },
-	'flick:bh': { kneeReady: 45, kneeMax: 62, leanReady: 34, leanMax: 40, reach: 2.4, elbowHigh: true },
+	// バックも、打つ瞬間はパドルの先が体の横を向くので、横から見ると面の幅だけが見える（across。フォアと同じ要領）
+	'flick:bh': { kneeReady: 45, kneeMax: 62, leanReady: 34, leanMax: 40, reach: 2.4, elbowHigh: true, across: 0 },
 };
 
 /** ボレー（弾む前に打つ）打ち方。キッチンの中から打てない */

@@ -216,7 +216,7 @@ const isSub = (t: string) => t === 'move';
 						data-swing={animated && l.type !== 'move' && l.type in shotSwing ? ((sw) => [...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ? sw.via.flat() : [])].join(','))(swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l))) : undefined}
 						data-setup={animated && l.type !== 'move' && l.type in shotSwing && swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).setup ? '' : undefined}
 						data-hold={animated && l.type !== 'move' && l.type in shotSwing && swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).hold ? '' : undefined}
-						data-lateral={animated && l.type !== 'move' && l.type in shotSwing && swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).lateral ? '' : undefined}
+						data-lateral={animated && l.type !== 'move' && l.type in shotSwing && swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).lateral?.join(',')}
 						data-pivot={animated && l.type !== 'move' && l.type in shotSwing ? swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).pivot : undefined}
 						data-straight={animated && l.type !== 'move' && l.type in shotSwing && swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).straight ? '' : undefined}
 						data-keyposes={animated && l.type !== 'move' && (handOf(l.from) !== 'bh' || (hitOf(l) ?? 0) > WAIST_FT) && keyPoseOf(l.type, hitOf(l)) ? JSON.stringify(keyPoseOf(l.type, hitOf(l))!.poses) : undefined}

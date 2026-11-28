@@ -345,8 +345,8 @@ export interface SwingForm {
 	setup?: boolean;
 	/** 打ったあと、振り終わりの形のまま止めて、手を戻さない（フリック。書き手の指摘 2026-11-28: フリスビーを投げた形から手を戻さない） */
 	hold?: boolean;
-	/** 3次元で動かす振り（フォアのフリック。lib/swing-path.ts の flickLines）。turn は半円の中の位置 */
-	lateral?: boolean;
+	/** 3次元で動かす振り（フリック。lib/swing-path.ts の flickLines）: 横から見たパドルの先の、始めと終わりの向き（度。前が 0、上が 90）。turn は半円の中の位置 */
+	lateral?: [number, number];
 	/** 関節を軸に回す振り: 腕とパドルを1つのかたまりとして肩かひじのまわりに turn の角度だけ回す（back と follow は使わない） */
 	pivot?: 'shoulder' | 'elbow';
 	/** pivot の振りで、腕を回す角度（なければ turn と同じ）。パドルはそのうえで turn まで、振りに合わせて少しずつ回る */
@@ -355,7 +355,7 @@ export interface SwingForm {
 	straight?: boolean;
 	note: string;
 }
-export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; lateral?: boolean; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
+export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; lateral?: [number, number]; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
 	dink: { back: [-0.1, -0.6], follow: [0.5, 0.7], turn: [-10, 25], note: '少しだけ後ろに引き、肩から振り子のように前へ。振り抜きは短く、腰の高さで目標を指す' },
 	// ロールディンク: ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。ディンクより速く、鋭いクロスを狙える
 	rollDink: { back: [-0.25, -0.5], follow: [0.6, 0.55], turn: [-15, 30], note: 'ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。振り抜きは短く、目標の方向へ' },
@@ -437,7 +437,8 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 		back: [-0.6, -0.15],
 		follow: [0.1, 0.3],
 		turn: [-100, 100],
-		lateral: true,
+		// 横から見て、始めはほぼ真下（6時の少し後ろ）、振り終わりは1時（書き手の指示）
+		lateral: [-105, 60],
 		setup: true,
 		hold: true,
 		// 説明の文は実際の動き（手首を軸に半円）を書く。6時から1時は、横から見た図での見え方（書き手の指摘: 実際の動きと混ぜない）
@@ -445,14 +446,17 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 		// バック: ヘッドは手首で下げる（前腕は動かさず、手首を折ってパドルを下へ向ける。ひじを曲げて下げるのではない。書き手の指摘）。
 		// 打つときは、前腕を前へ振り出しながら手首を戻し、面を目標へ向けて止める
 		bh: {
-			back: [-0.05, -0.05],
-			// 振り終わりはフリスビーの投げ終わり: ひじを伸ばして腕を目標へまっすぐ伸ばし、パドルは前腕の延長（手首で返さない）。
-			// 動画（Humberg ほか）の横からの場面でも、腕を前へ伸ばし切り、パドルは腕と一直線で前を向いて終わる
+			// バックもフォアと同じ要領で3次元で動かす（書き手の指示 2026-11-28）: 構えは体の前（利き手と反対の側）の低い所で、ひじを上げ、
+			// パドルの先はほぼ真下。手首を軸に、体の横（利き手と反対の側）を通る半円を描いてパドルを上げ、腕を目標へ伸ばす（フリスビー）。
+			// Richard の動画 nYQxmcDYgEg の 7:29 ごろのコマでも、構えの手は腰の前、パドルの先はひざの近くまで下がる。
+			// 振り終わりはフリスビーの投げ終わり: 腕を前へ伸ばし切り、パドルは前腕の延長（パドルを上へ立てない。書き手の指摘）。横から見て2時
+			back: [-0.4, -0.05],
 			follow: [0.9, 1.4],
-			turn: [-70, 0],
+			turn: [-100, 100],
+			lateral: [-100, 30],
 			setup: true,
 			hold: true,
-			note: 'ひじを手首より高く上げてネットへ向け、手首を折ってヘッドを下げて待つ（前腕は動かさない）。フリスビーを投げるように、ひじを伸ばして腕を目標へまっすぐ振り出す。振り終わりはパドルが腕と一直線（手首で返さない）',
+			note: 'ひじを手首より高く上げてネットへ向け、手首を折ってヘッドを下げ、体の前の低い所で待つ。フリスビーを投げるように、手首を軸に半円を描いてパドルを上げながら、ひじを伸ばして腕を目標へまっすぐ振り出す。振り終わりはパドルが腕と一直線（横から見ると、パドルの先がほぼ6時から2時の向きへ動いて見える）',
 		},
 	},
 	lob: { back: [-0.2, -0.6], follow: [2.4, 0.8], turn: [-30, 70], note: 'ディンクと同じ構え（腰を落とし、ヘッドを下げる）から、球の下に入れて上へすくい上げる。振り抜きは頭の高さまで' },

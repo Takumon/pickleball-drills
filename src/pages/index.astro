@@ -77,7 +77,7 @@ const tiles = categories
 		{/* 「ほかのページ」（ドリル一覧・図の見方・大原則・用語集）は出さない。ドリル一覧はカテゴリのタイルから、ほかはサイドバーから行ける。
 		    トップで見せても、読み手にしてほしい行動がないため（書き手の指摘） */}
 		<ShareButtons text="ピックルボール ドリル集" />
-		<p class="builder-link"><a href={`${base}/builder/`}>メニューを作る</a></p>
+		<p class="builder-link"><a href={`${base}/builder/`}>練習メニューを作る</a></p>
 	</div>
 
 	<div id="menu-view" hidden data-base={base}>
@@ -371,8 +371,8 @@ const tiles = categories
 		transform: translateX(3px);
 		color: var(--sl-color-accent-high);
 	}
+	/* カードの幅は、トップの中身の幅（カテゴリのタイルなど）とそろえる。別の最大幅を付けない（書き手の指摘） */
 	.circle-card {
-		max-width: 48rem;
 		margin-top: 1rem;
 		padding: 1.25rem;
 		border-radius: 1.1rem;

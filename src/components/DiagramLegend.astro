@@ -10,7 +10,7 @@ import { taper } from '../lib/arm-shape';
 import LegendExample from './LegendExample.astro';
 import '../styles/court.css';
 
-const order: ShotType[] = ['speedup', 'flick', 'smash', 'punch', 'drive', 'roll', 'block', 'serve', 'return', 'reset', 'resetTrap', 'dink', 'dinkTrap', 'sliceDink', 'sliceDinkTrap', 'shortHop', 'drop', 'volleyDink', 'volleyTrap', 'lob', 'move'];
+const order: ShotType[] = ['speedup', 'flick', 'smash', 'punch', 'drive', 'roll', 'block', 'serve', 'return', 'reset', 'resetTrap', 'dink', 'dinkTrap', 'rollDink', 'sliceDink', 'sliceDinkTrap', 'shortHop', 'drop', 'volleyDink', 'volleyTrap', 'lob', 'move'];
 /** 線の形と太さ（styles/court.css の .t-* と合わせる） */
 const style: Record<ShotType, string> = {
 	speedup: '実線',
@@ -31,6 +31,7 @@ const style: Record<ShotType, string> = {
 	return: '実線',
 	reset: '点線',
 	dink: '点線',
+	rollDink: '点線',
 	drop: '点線',
 	lob: '破線',
 	move: '灰色の点線',
@@ -55,6 +56,7 @@ const width: Record<ShotType, string> = {
 	lob: 'ふつう',
 	reset: '細い',
 	dink: '細い',
+	rollDink: '細い',
 	drop: '細い',
 	move: '細い',
 };

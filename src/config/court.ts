@@ -21,13 +21,13 @@ export const TRAN = { top: 7.5, bottom: 36.5 } as const;
  */
 export const LANES = { leftSide: 1.5, leftOuter: 3, left: 5, leftInner: 7, leftCenter: 8.5, rightCenter: 11.5, rightInner: 13, right: 15, rightOuter: 17, rightSide: 18.5 } as const;
 export const DEPTHS = {
-	far: { kitchen: 14, inKitchen: 16.5, kitchenBack: 12.5, kitchenTran: 11.25, tran: TRAN.top, baseline: -2.5 },
-	near: { kitchen: 30, inKitchen: 27.5, kitchenBack: 31.5, kitchenTran: 32.75, tran: TRAN.bottom, baseline: 46.5 },
+	far: { kitchen: 14, inKitchen: 16.5, netSide: 19, kitchenBack: 12.5, kitchenTran: 11.25, tran: TRAN.top, baseline: -2.5 },
+	near: { kitchen: 30, inKitchen: 27.5, netSide: 25, kitchenBack: 31.5, kitchenTran: 32.75, tran: TRAN.bottom, baseline: 46.5 },
 } as const;
 export type Side = keyof typeof DEPTHS;
 export type Lane = keyof typeof LANES;
 export type Depth = keyof (typeof DEPTHS)['far'];
-const SPOT = /^(near|far)-(leftSide|leftOuter|left|leftInner|leftCenter|rightCenter|rightInner|right|rightOuter|rightSide)-(kitchenBack|kitchenTran|inKitchen|kitchen|tran|baseline)$/;
+const SPOT = /^(near|far)-(leftSide|leftOuter|left|leftInner|leftCenter|rightCenter|rightInner|right|rightOuter|rightSide)-(kitchenBack|kitchenTran|inKitchen|netSide|kitchen|tran|baseline)$/;
 
 /** 名前の付いた立ち位置（例: near-right-baseline）の座標。名前でなければ undefined */
 export function spotPoint(name: string): [number, number] | undefined {
@@ -107,6 +107,7 @@ export const shotLabels = {
 	punch: 'パンチボレー',
 	speedup: 'スピードアップ',
 	flick: 'フリック',
+	rollDink: 'ロールディンク',
 	sliceDink: 'スライスディンク',
 	shortHop: 'ショートホップ',
 	dinkTrap: 'ディンク（トラップ）',
@@ -145,6 +146,7 @@ export const shotCurve: Record<ShotType, number> = {
 	return: 0,
 	speedup: 0,
 	flick: 0,
+	rollDink: 0,
 	sliceDink: 0,
 	shortHop: 0,
 	dinkTrap: 0,
@@ -170,10 +172,12 @@ export const shotSpeedKmh: Record<ShotType, number> = {
 	speedup: 70,
 	flick: 65,
 	drive: 65,
-	sliceDink: 25,
-	shortHop: 25,
+	// ディンクの仲間の速さ: ロールがいちばん速く、スライスとショートホップはゆっくり（書き手の指摘 2026-11-28）
+	rollDink: 31,
+	sliceDink: 20,
+	shortHop: 20,
 	dinkTrap: 25,
-	sliceDinkTrap: 25,
+	sliceDinkTrap: 20,
 	resetTrap: 30,
 	volleyTrap: 25,
 	punch: 60,
@@ -270,6 +274,7 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
 	return: { hit: 'thigh', peak: 'aboveTape' },
 	drop: { hit: 'belowWaist', peak: 'aboveTape' },
 	dink: { hit: 'knee', peak: 'dinkArc' },
+	rollDink: { hit: 'knee', peak: 'dinkArc' },
 	sliceDink: { hit: 'knee', peak: 'dinkArc' },
 	shortHop: { hit: 'shin', peak: 'dinkArc' },
 	// リセット: 打つ高さは場面で変わる（腰の高さ〜足首、ワンバウンドさせてから打つこともある。書き手の指摘）。図の既定値は膝の高さ
@@ -295,7 +300,7 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
  * 柔らかく落とす弧（ディンクの仲間とリセット）: 打つ人の側で山になり、ネットの白帯より netClearFt 上を通って、ネットを越えたら下がっていく。
  * ネットの上の高さより、相手が打つところで低いことが大事（書き手の指摘、2026-11-28）。トラップしてから打つ打ち方も元の打ち方に従う
  */
-export const SOFT_ARC = { types: ['dink', 'sliceDink', 'shortHop', 'volleyDink', 'reset'] as ShotType[], netClearFt: 0.65 } as const;
+export const SOFT_ARC = { types: ['dink', 'rollDink', 'sliceDink', 'shortHop', 'volleyDink', 'reset'] as ShotType[], netClearFt: 0.65 } as const;
 // トラップしてから打つ打ち方は、元の打ち方と同じ高さ
 for (const [t, b] of Object.entries(TRAP_BASE) as [TrapShot, Exclude<ShotType, 'move' | TrapShot>][]) (shotHeights as Record<string, unknown>)[t] = { ...shotHeights[b], range: undefined };
 /** 次に打つ球がないときの、受ける高さ */
@@ -348,6 +353,8 @@ export interface SwingForm {
 }
 export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
 	dink: { back: [-0.1, -0.6], follow: [0.5, 0.7], turn: [-10, 25], note: '少しだけ後ろに引き、肩から振り子のように前へ。振り抜きは短く、腰の高さで目標を指す' },
+	// ロールディンク: ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。ディンクより速く、鋭いクロスを狙える
+	rollDink: { back: [-0.25, -0.5], follow: [0.6, 0.55], turn: [-15, 30], note: 'ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。振り抜きは短く、目標の方向へ' },
 	// スライスディンク: 面を少し上へ開いたまま（垂直から約30°）、手首を固めて、体の前で短く前へ運ぶ。回転は面の角度でかかる。
 	// 上から下へ切る振りはテニスのスライスで、ピックルボールではしない（書き手の指摘。コーチの記事も「チョップしない、コンパクトに前へ」）
 	sliceDink: { back: [0, -0.45], follow: [0.1, 0.6], turn: [0, 0], straight: true, note: '面を少し上へ開いたまま、手首を固めて、体の前で短く前へ運ぶ。回転は面の角度でかかる。上から下へは切らない' },

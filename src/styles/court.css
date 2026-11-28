@@ -192,6 +192,7 @@
 	stroke-width: 0.65;
 }
 .court .shot.t-dink,
+.court .shot.t-rollDink,
 .court .shot.t-drop,
 .court .shot.t-reset,
 .court .shot.t-volleyDink,

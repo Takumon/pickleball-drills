@@ -31,6 +31,8 @@ export default defineConfig({
 			],
 			// ドリルページの見出しは目次に出ない作りで、目次が役に立たないため表示しない（スマホの「目次」バーも消える）
 			tableOfContents: false,
+			// ヘッダーの検索は使わない（ドリルはカテゴリとサイドバーから押して探す。スマホで文字を打つのは手間。書き手と決めた）
+			pagefind: false,
 			// ページ下の「前へ」「次へ」は使わないので出さない
 			pagination: false,
 			customCss: ['./src/styles/custom.css'],

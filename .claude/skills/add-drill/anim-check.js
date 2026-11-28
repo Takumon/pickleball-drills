@@ -143,7 +143,8 @@
 							const line = Math.atan2(vs.reduce((t, v) => t + v[1], 0), vs.reduce((t, v) => t + v[0], 0));
 							let diff = Math.abs(((dir - line) * 180) / Math.PI) % 180;
 							diff = Math.abs(90 - diff);
-							if (diff > 25) issues.push(`${where} ${hitter}（${path.dataset.type ?? ''}）: 打つ瞬間の面の向きが、球の飛ぶ向きと ${diff.toFixed(0)}° ずれている`);
+							// 3次元で動かす打ち方（data-lateral。フリック）は、横から見た線がパドルの軸（面の幅は描かない）なので、面の向きは測らない（2026-11-28）
+							if (diff > 25 && path.dataset.lateral === undefined) issues.push(`${where} ${hitter}（${path.dataset.type ?? ''}）: 打つ瞬間の面の向きが、球の飛ぶ向きと ${diff.toFixed(0)}° ずれている`);
 						}
 					}
 					ballPrev[key] = { p, still: moving ? 0 : (prev?.still ?? 0) + 1, checked: moving ? (prev?.checked ?? false) : false };

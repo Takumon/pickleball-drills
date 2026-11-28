@@ -5,20 +5,80 @@
  * メニューの URL 形式は src/lib/menu.ts。
  */
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { getCollection } from 'astro:content';
+import Court from '../components/Court.astro';
+import { categories } from '../config/categories';
+import { circle } from '../config/circle';
 import '../styles/court.css';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+// トップページは、サークルのメンバー（B）とサークルの外の人（C）のためのページ（docs/principles.md の「読者」）。
+// 最初に「練習がたくさんあって、図が動くから分かりやすそう」と感じてもらう（書き手と決めた並び: 案A）
+const docs = await getCollection('docs', (e) => !!e.data.drill);
+const drills = docs.map((e) => e.data.drill!);
+// 最初に動かす図: 4種類の球（ディンク・スピードアップ・カウンター・リセット）があり、キッチンだけで動くので横長で収まりやすい（書き手と決めた）
+const HERO_ID = 'spd002';
+const hero = docs.find((e) => e.data.drill!.id === HERO_ID);
+if (!hero?.data.drill?.diagram) throw new Error(`トップページ: ${HERO_ID} の図がない`);
+// カテゴリのタイル: メインかサブカテゴリでそのカテゴリに入るドリルの数（ドリル一覧と同じ数え方）
+const tiles = categories
+	.map((c) => ({ ...c, count: drills.filter((d) => d.category === c.code || d.subCategories.includes(c.code)).length }))
+	.filter((c) => c.count > 0);
 ---
 
 <StarlightPage frontmatter={{ title: 'ピックルボール ドリル集', description: 'ピックルボールの練習方法を、アニメーションで理解するドリル集です。打つ順と球の行き先が図で動くので、練習中にスマホで見てすぐ確かめられます。' }}>
 	<div id="top-page">
-		<p>練習会で使うドリル（練習1つ分）の説明と、練習メニューをまとめたサイトです。</p>
-		<ul>
-			<li><a href={`${base}/drills/`}>ドリル一覧</a></li>
-			<li><a href={`${base}/legend/`}>図の見方</a></li>
-			<li><a href={`${base}/principles/`}>大原則</a></li>
-			<li><a href={`${base}/glossary/`}>用語集</a></li>
+		<section class="hero">
+			<p class="tagline">アニメーションで理解する練習方法</p>
+			<p class="lead">ピックルボールの練習を、打つ順と球の行き先が動く図で説明しています。練習中にスマホで見て、すぐ確かめられます。</p>
+			<figure class="hero-court">
+				<Court diagram={hero.data.drill.diagram} title={`見本: ${HERO_ID}`} />
+				<figcaption>例：<a href={`${base}/${hero.id}/`}>{hero.data.title}</a></figcaption>
+			</figure>
+		</section>
+
+		<ul class="stats">
+			<li><b>{drills.length}</b><span>本のドリル</span></li>
+			<li><b>{tiles.length}</b><span>のカテゴリ</span></li>
 		</ul>
+
+		<section>
+			<h2>カテゴリから探す</h2>
+			<ul class="tiles">
+				{
+					tiles.map((c) => (
+						<li>
+							<a href={`${base}/drills/#${c.code}`}>
+								<span class="name">{c.label}</span>
+								<span class="count">{c.count}本</span>
+							</a>
+						</li>
+					))
+				}
+			</ul>
+		</section>
+
+		<section>
+			<h2>練習会での使い方</h2>
+			<p>練習会の前に、その日の練習メニューの URL が届きます。ドリルを開くと、打つ順と球の行き先が図で動きます。</p>
+		</section>
+
+		<section class="circle">
+			<h2>運営しているサークル</h2>
+			<p>{circle.intro}</p>
+			<p><a class="circle-link" href={circle.url} target="_blank" rel="noopener">テニスベアの{circle.name}のページ ↗</a></p>
+		</section>
+
+		<section class="others">
+			<h2>ほかのページ</h2>
+			<ul>
+				<li><a href={`${base}/drills/`}>ドリル一覧</a></li>
+				<li><a href={`${base}/legend/`}>図の見方</a></li>
+				<li><a href={`${base}/principles/`}>大原則</a></li>
+				<li><a href={`${base}/glossary/`}>用語集</a></li>
+			</ul>
+		</section>
 		<p class="builder-link"><a href={`${base}/builder/`}>メニューを作る</a></p>
 	</div>
 
@@ -145,6 +205,92 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 </script>
 
 <style>
+	.hero .tagline {
+		font-size: var(--sl-text-2xl);
+		font-weight: 700;
+		line-height: 1.3;
+		margin: 0;
+		color: var(--sl-color-white);
+	}
+	.hero .lead {
+		margin-top: 0.5rem;
+		color: var(--sl-color-gray-2);
+	}
+	.hero-court {
+		margin: 1rem 0 0;
+	}
+	.hero-court figcaption {
+		margin-top: 0.25rem;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+	}
+	.stats {
+		display: flex;
+		gap: 0.75rem;
+		list-style: none;
+		padding: 0;
+		margin: 1.5rem 0 0;
+	}
+	.stats li {
+		flex: 1;
+		margin: 0;
+		padding: 0.75rem 1rem;
+		border-radius: 0.75rem;
+		background: var(--sl-color-gray-6);
+		display: flex;
+		align-items: baseline;
+		gap: 0.3rem;
+	}
+	.stats b {
+		font-size: var(--sl-text-3xl);
+		line-height: 1;
+		color: var(--sl-color-accent-high);
+	}
+	.stats span {
+		color: var(--sl-color-gray-2);
+		font-size: var(--sl-text-sm);
+	}
+	.tiles {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+		gap: 0.5rem;
+		list-style: none;
+		padding: 0;
+	}
+	.tiles li {
+		margin: 0;
+	}
+	.tiles a {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		gap: 0.25rem;
+		height: 100%;
+		min-height: 4.2rem;
+		padding: 0.6rem 0.75rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.75rem;
+		text-decoration: none;
+		color: var(--sl-color-white);
+		line-height: 1.35;
+	}
+	.tiles a:hover {
+		border-color: var(--sl-color-accent);
+	}
+	.tiles .name {
+		font-weight: 600;
+		font-size: var(--sl-text-sm);
+	}
+	.tiles .count {
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+	}
+	.circle-link {
+		font-weight: 600;
+	}
+	.others ul {
+		padding-left: 1.1rem;
+	}
 	/* 作り手向けの入口は目立たせない */
 	.builder-link {
 		margin-top: 3rem;

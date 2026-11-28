@@ -34,9 +34,20 @@ function setupVariantSwitch(sw: HTMLElement, root: ParentNode, key: string | und
 	const panels = [...sw.querySelectorAll<HTMLElement>('.vs-panel')];
 	const feedEl = root.querySelector<HTMLElement>('[data-variant-feed]');
 	const feeds: Record<string, string> = feedEl ? JSON.parse(feedEl.dataset.variantFeed ?? '{}') : {};
-	const choose = (k: string, updateUrl: boolean) => {
+	const thumb = sw.querySelector<HTMLElement>('.vs-thumb');
+	// 色の面を、選んでいるボタンの下へ動かす（instant: 最初に置くときは滑らせない）
+	const moveThumb = (instant: boolean) => {
+		const on = tabs.find((t) => t.getAttribute('aria-selected') === 'true');
+		if (!thumb || !on) return;
+		thumb.classList.toggle('instant', instant);
+		thumb.style.width = `${on.offsetWidth}px`;
+		thumb.style.transform = `translateX(${on.offsetLeft}px)`;
+		if (instant) requestAnimationFrame(() => thumb.classList.remove('instant'));
+	};
+	const choose = (k: string, updateUrl: boolean, instant = false) => {
 		if (!tabs.some((t) => t.dataset.v === k)) return;
 		tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.v === k)));
+		moveThumb(instant);
 		panels.forEach((p) => p.classList.toggle('off', p.dataset.v !== k));
 		if (feedEl && feeds[k]) feedEl.textContent = feeds[k];
 		if (updateUrl && root === document) {
@@ -49,6 +60,9 @@ function setupVariantSwitch(sw: HTMLElement, root: ParentNode, key: string | und
 	if (!sw.dataset.ready) {
 		sw.dataset.ready = '';
 		tabs.forEach((t) => t.addEventListener('click', () => choose(t.dataset.v!, true)));
+		// 画面の幅が変わったら、色の面の位置と幅を合わせ直す
+		window.addEventListener('resize', () => moveThumb(true));
 	}
-	if (key) choose(key.toLowerCase(), false);
+	if (key) choose(key.toLowerCase(), false, true);
+	else moveThumb(true);
 }

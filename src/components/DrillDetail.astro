@@ -77,6 +77,8 @@ const serviceOf = (url: string) => {
 					{field === 'diagram' && switchable && (
 						<div class="variant-switch" data-variant-switch data-default={defaultKey}>
 							<div class="vs-tabs" role="tablist" aria-label="打ち方">
+								{/* 選んでいるボタンの下を滑って動く色の面（書き手の希望: 選んだらスライドしてくる）。位置はスクリプトで合わせる */}
+								<span class="vs-thumb" aria-hidden="true" />
 								{drill.variants.map((v) => (
 									<button type="button" role="tab" data-v={v.key} aria-selected={v.default ? 'true' : 'false'}>
 										{v.name}
@@ -286,6 +288,7 @@ const serviceOf = (url: string) => {
 	 * 上の小さな文字の印（カテゴリ・ラリー）と違って、押して選ぶものだと分かるようにする
 	 */
 	.vs-tabs {
+		position: relative;
 		display: flex;
 		width: 100%;
 		max-width: 26rem;
@@ -311,10 +314,32 @@ const serviceOf = (url: string) => {
 		cursor: pointer;
 		margin: 0;
 	}
+	.vs-tabs button {
+		position: relative;
+		z-index: 1;
+		transition: color 0.25s ease;
+	}
 	.vs-tabs button[aria-selected='true'] {
-		background: var(--sl-color-accent);
 		color: var(--sl-color-black);
+	}
+	/* 色の面は、スクリプトが付けるまで最初のボタンの位置（選んでいる派生形）に置く。動くときは横へ滑る */
+	.vs-thumb {
+		position: absolute;
+		top: 0.2rem;
+		bottom: 0.2rem;
+		left: 0;
+		width: 0;
+		border-radius: 0.6rem;
+		background: var(--sl-color-accent);
 		box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+		transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+	.vs-thumb.instant {
+		transition: none;
+	}
+	/* スクリプトが動く前は、選んでいるボタン自体に色を付けておく（面がまだ置かれていないため） */
+	.variant-switch:not([data-ready]) .vs-tabs button[aria-selected='true'] {
+		background: var(--sl-color-accent);
 	}
 	/* 選んでいない派生形の図は、場所を取らずに隠す（アニメーションの長さの計算に要るので、display:none にはしない） */
 	.vs-panels {

@@ -335,7 +335,7 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 	const lerp = (p: number[], q: number[], t: number) => p.map((v, i) => v + (q[i] - v) * t);
 	// ?still を付けると動かさない（打つ所の形を確かめるため）
 	if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && !new URLSearchParams(location.search).has('still')) {
-		// 開発用（手元の開発サーバーだけ）: /dev/flick/ の調整画面から ?tune={"カードの名前": {swing, lateral, elbowBend, gripFront}} を受け取り、
+		// 開発用（手元の開発サーバーだけ）: /dev/stroke/ の調整画面から ?tune={"カードの名前": {swing, lateral, elbowBend, gripFront}} を受け取り、
 		// そのカードの振りの値を置きかえ、ほかのカードを隠して大きく見せる（本番のページでは動かない）
 		if (import.meta.env.DEV) {
 			const tune = new URLSearchParams(location.search).get('tune');
@@ -423,7 +423,8 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 				follow,
 				// ほかの球と同じ構えから打つ打ち方は、振りかぶった形が構え（止まっている間もその形）
 				// 振り終わりで止める打ち方（フリック）は、打ったあとも振り終わりの形のまま
-				home: card.dataset.hold !== undefined ? follow : card.dataset.setup !== undefined ? back : [0, 0, 0],
+				// 打ったあとは止まった形へ戻る（ドリルの図と同じ。court-anim.ts）。振り終わりで止める打ち方（フリック）は振り終わりのまま
+				home: card.dataset.hold !== undefined ? follow : [0, 0, 0],
 				path: swingPath(back as [number, number, number], follow as [number, number, number], via),
 				contact: swingPath(back as [number, number, number], follow as [number, number, number], via).contact,
 				// ボールの飛ぶ向き: 打球の高さの変化（打つ高さ → 山の高さ）から。振り抜く向きではない（ロールは振りが上向きでも、球は前へ飛ぶ）
@@ -443,7 +444,7 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 				})(),
 			};
 		});
-		// 開発用（手元の開発サーバーだけ）: 再生の速さを変えられる（/dev/flick/ の調整画面が window.__legendSpeed を書きかえる。0 で止まる）
+		// 開発用（手元の開発サーバーだけ）: 再生の速さを変えられる（/dev/stroke/ の調整画面が window.__legendSpeed を書きかえる。0 で止まる）
 		let clock = 0;
 		let last = 0;
 		const tick = (now: number) => {

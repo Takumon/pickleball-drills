@@ -568,6 +568,12 @@ function setup(root: HTMLElement) {
 			// 打つ動きの途中で止めたパドルと腕も元に戻す
 			frame.querySelectorAll<SVGElement>('.paddle, .side-paddle, .side-grip, .side-hand').forEach((p) => p.removeAttribute('transform'));
 			frame.querySelectorAll<SVGElement>('.side-paddle, .side-grip').forEach(restoreLine);
+			// グリップを見せるために手より前に動かしたパドル（data-grip-front）を、元の順（手が上）に戻す（コードレビューの指摘）
+			frame.querySelectorAll('[data-side-player]').forEach((g) => {
+				const hand = g.querySelector('.side-hand');
+				const face = g.querySelector('.side-paddle');
+				if (hand && face && hand.compareDocumentPosition(face) & Node.DOCUMENT_POSITION_FOLLOWING) face.after(hand);
+			});
 			frame.querySelectorAll<SVGLineElement>('.arm, .side-arm, .side-upperarm').forEach((a) => {
 				for (const k of ['x1', 'y1', 'x2', 'y2']) if (a.dataset[k]) a.setAttribute(k, a.dataset[k]!);
 			});
@@ -798,6 +804,9 @@ function setup(root: HTMLElement) {
 		const balls = [...frame.querySelectorAll<SVGElement>('.ball, .side-ball')];
 		// 最初の手で打つ人は、戻る間に振りかぶる（最初の手は振りかぶった形から始まる）
 		const preps0 = [...first.querySelectorAll<SVGPathElement>('path[data-kind="ball"]')].flatMap((nb) => hitterRig(frame, nb) ?? []);
+		// 振り終わりで止めた人（data-hold。フリック）は、戻る間に振り終わりの形から止まった形へ戻す（一瞬で切り替わって見えないように。
+		// コードレビューの指摘 2026-11-28）。最初の手で打つ人は、そのあとで振りかぶりへ動かす（preps0 が上書きする）
+		const holds0 = [...frame.querySelectorAll<SVGPathElement>('path[data-kind="ball"][data-hold]')].flatMap((nb) => hitterRig(frame, nb) ?? []);
 		// 点の目盛りは、繰り返しの最初で動かさずに一度に戻す（+2 から 0 へ流れて戻ると、点が動いたように見えるため）
 		setScore(scoreOf(first, 'scoreBefore'), true);
 		const t0 = performance.now();
@@ -806,6 +815,7 @@ function setup(root: HTMLElement) {
 			const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
 			for (const m of moves) m.g.setAttribute('transform', `translate(${m.from[0] + (m.to[0] - m.from[0]) * e} ${m.from[1] + (m.to[1] - m.from[1]) * e})`);
 			if (fade) balls.forEach((b) => (b.style.opacity = String(Math.max(0, 1 - (now - t0) / BALL_FADE_MS))));
+			holds0.forEach((r) => r.apply(r.follow, REST, e));
 			preps0.forEach((r) => r.apply(r.prepFrom, r.back, e));
 			if (t < 1) raf = requestAnimationFrame(tick);
 			else done();

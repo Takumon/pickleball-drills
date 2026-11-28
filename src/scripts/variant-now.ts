@@ -41,11 +41,16 @@ function setupVariantSwitch(sw: HTMLElement, root: ParentNode, key: string | und
 	// 色の面を、選んでいるボタンの下へ動かす（instant: 最初に置くときは滑らせない）
 	const moveThumb = (instant: boolean) => {
 		const on = tabs.find((t) => t.getAttribute('aria-selected') === 'true');
-		if (!thumb || !on) return;
+		// 見えていない（閉じた欄の中など）ときは測れないので、動かさない。見えたときに ResizeObserver が合わせ直す
+		if (!thumb || !on || on.offsetWidth === 0) return;
 		thumb.classList.toggle('instant', instant);
 		thumb.style.width = `${on.offsetWidth}px`;
 		thumb.style.transform = `translateX(${on.offsetLeft}px)`;
-		if (instant) requestAnimationFrame(() => thumb.classList.remove('instant'));
+		if (instant) {
+			// 位置を書いた直後に一度描き直させてから、滑る動きを戻す（そうしないと、最初に左端から滑って見えた。コードレビューの指摘）
+			void thumb.offsetWidth;
+			thumb.classList.remove('instant');
+		}
 	};
 	const choose = (k: string, updateUrl: boolean, instant = false) => {
 		if (!tabs.some((t) => t.dataset.v === k)) return;
@@ -72,9 +77,13 @@ function setupVariantSwitch(sw: HTMLElement, root: ParentNode, key: string | und
 	if (!sw.dataset.ready) {
 		sw.dataset.ready = '';
 		tabs.forEach((t) => t.addEventListener('click', () => choose(t.dataset.v!, true)));
-		// 画面の幅が変わったら、色の面の位置と幅を合わせ直す
-		window.addEventListener('resize', () => moveThumb(true));
+		// ボタンの大きさが変わったら（画面の幅が変わった、閉じていた欄が開いた）、色の面の位置と幅を合わせ直す
+		const tabsEl = sw.querySelector<HTMLElement>('.vs-tabs');
+		if (tabsEl && 'ResizeObserver' in window) new ResizeObserver(() => moveThumb(true)).observe(tabsEl);
+		else window.addEventListener('resize', () => moveThumb(true));
 	}
-	if (key) choose(key.toLowerCase(), false, true);
+	// ない打ち方の名前（古いリンク、ほかのドリルの名前）のときは、初めの打ち方のまま色の面を置く（コードレビューの指摘）
+	const k0 = key?.toLowerCase();
+	if (k0 && tabs.some((t) => t.dataset.v === k0)) choose(k0, false, true);
 	else moveThumb(true);
 }

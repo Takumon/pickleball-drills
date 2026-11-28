@@ -30,7 +30,14 @@ for (const file of files) {
 	);
 	d.steps.forEach((s, i) => out.push(`${i + 1}. ${s}`));
 	(d.points ?? []).forEach((p) => out.push(`- ${p}`));
-	(d.variants ?? []).forEach((v) => out.push(`派生形 ${v.name}: ${v.note ?? ''}`));
+	(d.variants ?? []).forEach((v) => {
+		out.push(`派生形 ${v.name}: ${v.note ?? ''}`);
+		// 派生形ごとの球出しと練習のコツ（打ち方の切り替えで差し替わる）
+		if (v.feed) out.push(`  球出し: ${v.feed}`);
+		(v.points ?? []).forEach((p) => out.push(`  - ${p}`));
+	});
+	// もしもの場面の見出し
+	(d.situations ?? []).forEach((s) => out.push(`もしもの場面: ${s.title}`));
 	if (d.notes) out.push(`補足: ${d.notes}`);
 	out.push('');
 }

@@ -436,7 +436,13 @@ const panels = groups.map((g) => {
 		const pt: Point = [a[0] + (b[0] - a[0]) * t, COURT.net + (a[1] < COURT.net ? -0.15 : 0.15)];
 		left -= 1;
 		// 残りの球の数は、止まった所の打った人の側に出す
-		return { shot: { ...s, to: pt, bounce: false as const, label: s.label ?? 'ミス（ネット）' }, at: [pt[0], pt[1] + (a[1] < COURT.net ? -1.6 : 1.6)] as Point, text: `残り${left}つ` };
+		// 失敗の数まで減った手では、真ん中の「失敗」と重なるので、残りの数は出さない
+		const failed = diagram.failAt !== undefined && left <= diagram.failAt;
+		return {
+			shot: { ...s, to: pt, bounce: false as const, label: s.label ?? 'ミス（ネット）' },
+			at: failed ? undefined : ([pt[0], pt[1] + (a[1] < COURT.net ? -1.6 : 1.6)] as Point),
+			text: `残り${left}つ`,
+		};
 	};
 	const lines = g.shots.map((s) => {
 		const m = missOf(s);

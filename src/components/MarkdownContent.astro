@@ -10,7 +10,8 @@ const drill = entry.data.drill;
 
 <Default>
 	{drill && <DrillDetail drill={drill} />}
-	{/* ドリルのページだけに出す（練習メニューに差し込む中身には出さない） */}
-	{drill && <ShareButtons text={`${entry.data.title} | ピックルボール ドリル集`} />}
 	<slot />
+	{/* ドリルのページだけに出す（練習メニューに差し込む中身には出さない）。ページの終わりに置く。
+	    派生形（?variant=）を付けて開いたときは、その派生形のまま共有する（current: 開いている URL を渡す） */}
+	{drill && <ShareButtons text={`${entry.data.title} | ピックルボール ドリル集`} current />}
 </Default>

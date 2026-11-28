@@ -21,7 +21,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
  * 印でトップページの中身を隠し、メニューの枠を出す。前は、ページを読み込んでからスクリプトで切り替えていたので、
  * 練習メニューを開くと一瞬トップページが見えていた（書き手の指摘）
  */
-const MENU_MODE_SCRIPT = `if (new URLSearchParams(location.search).has('m')) document.documentElement.classList.add('menu-mode');`;
+// クエリの名前は、parseMenu（src/lib/menu.ts）と同じく大文字・小文字を区別しない
+const MENU_MODE_SCRIPT = `if ([...new URLSearchParams(location.search).keys()].some((k) => k.toLowerCase() === 'm')) document.documentElement.classList.add('menu-mode');`;
 
 // トップページは、サークルのメンバー（B）とサークルの外の人（C）のためのページ（docs/principles.md の「読者」）。
 // 最初に「練習がたくさんあって、図が動くから分かりやすそう」と感じてもらう（書き手と決めた並び: 案A）
@@ -44,7 +45,8 @@ const tiles = categories
 		if (document.documentElement.classList.contains('menu-mode')) {
 			const h = document.querySelector('main h1');
 			if (h) h.textContent = '練習メニュー';
-			const t = new URLSearchParams(location.search).get('theme');
+			let t = null;
+			new URLSearchParams(location.search).forEach((v, k) => { if (k.toLowerCase() === 'theme') t = v; });
 			document.title = (t ? t + ' | ' : '') + '練習メニュー | ピックルボール ドリル集';
 		}
 	</script>
@@ -106,7 +108,13 @@ const tiles = categories
 		{/* 「ほかのページ」（ドリル一覧・図の見方・大原則・用語集）は出さない。ドリル一覧はカテゴリのタイルから、ほかはサイドバーから行ける。
 		    トップで見せても、読み手にしてほしい行動がないため（書き手の指摘） */}
 		<ShareButtons text="ピックルボール ドリル集" current />
-		<p class="builder-link"><a href={`${base}/builder/`}>練習メニューを作る</a></p>
+		{/* サイドバーのない形（splash）なので、図の見方・大原則・用語集へは、ここから小さく行けるようにする（ほぼ書き手しか見ないので目立たせない） */}
+		<p class="builder-link">
+			<a href={`${base}/legend/`}>図の見方</a>
+			<a href={`${base}/principles/`}>大原則</a>
+			<a href={`${base}/glossary/`}>用語集</a>
+			<a href={`${base}/builder/`}>練習メニューを作る</a>
+		</p>
 	</div>
 </StarlightPage>
 
@@ -127,7 +135,11 @@ const tiles = categories
 		if (h1) h1.textContent = '練習メニュー';
 		// メニューを描き終えるまで下の欄（サークル・シェア）を隠しておき、描き終えたら出す。
 		// 先に出すと、メニューが後から入ってきて下の欄が下へずれ落ちて見える（書き手の指摘）
-		render(menu).finally(() => document.documentElement.classList.add('menu-ready'));
+		render(menu)
+			.catch(() => {
+				view.querySelector('.menu-list')!.textContent = 'メニューを読み込めませんでした。ページを読み込み直してください。';
+			})
+			.finally(() => document.documentElement.classList.add('menu-ready'));
 	}
 
 	async function render(m: NonNullable<typeof menu>) {
@@ -479,6 +491,11 @@ const tiles = categories
 	.builder-link {
 		margin-top: 3rem;
 		font-size: var(--sl-text-xs);
+	}
+	.builder-link {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1rem;
 	}
 	.builder-link a {
 		color: var(--sl-color-gray-3);

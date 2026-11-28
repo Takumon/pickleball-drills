@@ -66,8 +66,13 @@ const x = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${enco
 		};
 		// 練習メニューの題名は、メニューを読み込んだあとに決まるので、押す直前にも作り直す
 		refresh();
-		[lineA, xA].forEach((a) => a.addEventListener('pointerdown', refresh));
+		// キーボードで押すとき（Enter）は pointerdown が来ないので、click でも作り直す（リンクを開く前に走る）
+		[lineA, xA].forEach((a) => {
+			a.addEventListener('pointerdown', refresh);
+			a.addEventListener('click', refresh);
+		});
 		const done = box.querySelector<HTMLElement>('[data-done]')!;
+		let doneTimer: ReturnType<typeof setTimeout> | undefined;
 		// スマホの共有の画面が使える環境では、先頭に「共有」を出す（LINE・X 以外のアプリにも送れる）
 		const native = box.querySelector<HTMLButtonElement>('[data-native]')!;
 		if (typeof navigator.share === 'function') {
@@ -84,7 +89,8 @@ const x = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${enco
 			} catch {
 				done.textContent = 'コピーできませんでした';
 			}
-			setTimeout(() => (done.textContent = ''), 2000);
+			clearTimeout(doneTimer);
+			doneTimer = setTimeout(() => (done.textContent = ''), 2000);
 		});
 	});
 </script>

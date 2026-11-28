@@ -299,9 +299,11 @@ const serviceOf = (url: string) => {
 	.vs-tabs button {
 		flex: 1;
 		font: inherit;
-		font-size: var(--sl-text-sm);
+		font-size: 0.85rem;
 		font-weight: 700;
-		padding: 0.45rem 0.5rem;
+		padding: 0.4rem 0.3rem;
+		/* スマホの幅でも1行に収める（2行になると切り替えボタンの高さがそろわない） */
+		white-space: nowrap;
 		border-radius: 0.6rem;
 		border: 0;
 		background: transparent;

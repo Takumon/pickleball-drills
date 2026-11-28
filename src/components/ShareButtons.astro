@@ -1,29 +1,46 @@
 ---
 /**
  * 共有のボタン（トップページとドリルのページ。書き手と決めた 2026-11-28）。
- * スマホなど共有の画面（Web Share API）がある環境では「共有」ボタン1つにして、押すとその人の使うアプリ（LINE・X など）から選べる。
- * ない環境（PC など）では「LINE で送る」「X でポスト」「リンクをコピー」の3つを出す。
+ * 形は日本のサイト（note・Zenn・ITmedia）にならう: ページの終わりに、小さな見出しと、丸いアイコンだけのボタンを横に並べる。
+ * 色はブランドの色にせず、白黒（文字と同じ色）にする（note・Zenn と同じ。図の色とぶつからない）。
+ * 並び: 共有（スマホの共有の画面。使える環境だけ）・LINE・X・リンクのコピー。
  * 共有する URL は公開ページの URL（開発サーバーで見ていても、公開ページの URL を渡す）。プレビューの画像は、そのページの共有の画像。
+ * LINE と X のロゴは Simple Icons（CC0）の形。
  */
 interface Props {
-	/** 見出し（例: このサイトを共有する） */
-	heading: string;
 	/** 共有するときの文（ページの題名） */
 	text: string;
 }
-const { heading, text } = Astro.props;
+const { text } = Astro.props;
 const url = new URL(Astro.url.pathname, Astro.site).href;
 const line = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`;
 const x = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
 ---
 
-<section class="share" data-share data-url={url} data-text={text}>
-	<h2>{heading}</h2>
+<section class="share" data-share data-url={url} data-text={text} aria-label="シェア">
+	<p class="label">シェアする</p>
 	<div class="buttons">
-		<button type="button" class="native" data-native hidden>共有</button>
-		<a class="line" data-fallback href={line} target="_blank" rel="noopener">LINE で送る</a>
-		<a class="x" data-fallback href={x} target="_blank" rel="noopener">X でポスト</a>
-		<button type="button" class="copy" data-fallback data-copy>リンクをコピー</button>
+		<button type="button" data-native hidden aria-label="共有" title="共有">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M12 3v12" /><path d="M8 7l4-4 4 4" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+			</svg>
+		</button>
+		<a href={line} target="_blank" rel="noopener" aria-label="LINE で送る" title="LINE で送る">
+			<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+				<path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" />
+			</svg>
+		</a>
+		<a href={x} target="_blank" rel="noopener" aria-label="X でポスト" title="X でポスト">
+			<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+				<path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z" />
+			</svg>
+		</a>
+		<button type="button" data-copy aria-label="リンクをコピー" title="リンクをコピー">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" /><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" />
+			</svg>
+		</button>
+		<span class="done" data-done role="status"></span>
 	</div>
 </section>
 
@@ -31,24 +48,21 @@ const x = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${enco
 	document.querySelectorAll<HTMLElement>('[data-share]').forEach((box) => {
 		const url = box.dataset.url!;
 		const text = box.dataset.text!;
+		const done = box.querySelector<HTMLElement>('[data-done]')!;
+		// スマホの共有の画面が使える環境では、先頭に「共有」を出す（LINE・X 以外のアプリにも送れる）
 		const native = box.querySelector<HTMLButtonElement>('[data-native]')!;
-		// 共有の画面がある環境（主にスマホ）では、ボタンを1つにする
-		if (typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches) {
+		if (typeof navigator.share === 'function') {
 			native.hidden = false;
-			box.querySelectorAll<HTMLElement>('[data-fallback]').forEach((el) => (el.hidden = true));
-			native.addEventListener('click', () => {
-				navigator.share({ title: text, text, url }).catch(() => {});
-			});
+			native.addEventListener('click', () => navigator.share({ title: text, text, url }).catch(() => {}));
 		}
-		const copy = box.querySelector<HTMLButtonElement>('[data-copy]')!;
-		copy.addEventListener('click', async () => {
+		box.querySelector<HTMLButtonElement>('[data-copy]')!.addEventListener('click', async () => {
 			try {
 				await navigator.clipboard.writeText(url);
-				copy.textContent = 'コピーしました';
+				done.textContent = 'コピーしました';
 			} catch {
-				copy.textContent = 'コピーできませんでした';
+				done.textContent = 'コピーできませんでした';
 			}
-			setTimeout(() => (copy.textContent = 'リンクをコピー'), 2000);
+			setTimeout(() => (done.textContent = ''), 2000);
 		});
 	});
 </script>
@@ -56,14 +70,20 @@ const x = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${enco
 <style>
 	.share {
 		margin-top: 2rem;
+		padding-top: 1rem;
+		border-top: 1px solid var(--sl-color-gray-6);
 	}
-	.share h2 {
-		font-size: var(--sl-text-lg);
+	.label {
+		margin: 0;
+		font-size: var(--sl-text-sm);
+		font-weight: 600;
+		color: var(--sl-color-gray-2);
 	}
 	.buttons {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.5rem;
+		align-items: center;
+		gap: 0.6rem;
 		margin-top: 0.5rem;
 	}
 	.buttons a,
@@ -71,38 +91,31 @@ const x = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${enco
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		min-height: 2.5rem;
-		padding: 0 1rem;
-		border-radius: 999px;
-		border: 1px solid transparent;
-		font: inherit;
-		font-size: var(--sl-text-sm);
-		font-weight: 600;
-		text-decoration: none;
-		cursor: pointer;
+		width: 2.75rem;
+		height: 2.75rem;
 		margin: 0;
+		padding: 0;
+		border-radius: 50%;
+		border: 1px solid var(--sl-color-gray-5);
+		background: transparent;
+		color: var(--sl-color-white);
+		cursor: pointer;
+	}
+	.buttons a:hover,
+	.buttons button:hover {
+		border-color: var(--sl-color-gray-3);
+		background: var(--sl-color-gray-6);
 	}
 	.buttons [hidden] {
 		display: none;
 	}
-	.native {
-		background: var(--sl-color-accent);
-		color: var(--sl-color-black);
-		min-width: 8rem;
+	.buttons svg {
+		width: 1.25rem;
+		height: 1.25rem;
 	}
-	/* LINE の緑（ブランドの色）。白い文字で、ライト・ダークのどちらでも読める */
-	.line {
-		background: #06c755;
-		color: #fff;
-	}
-	/* X は白黒。テーマで反転する色を使う */
-	.x {
-		background: var(--sl-color-white);
-		color: var(--sl-color-black);
-	}
-	.buttons .copy {
-		background: transparent;
-		color: var(--sl-color-white);
-		border-color: var(--sl-color-gray-4);
+	.done {
+		margin: 0;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-2);
 	}
 </style>

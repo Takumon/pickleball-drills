@@ -11,6 +11,6 @@ const drill = entry.data.drill;
 <Default>
 	{drill && <DrillDetail drill={drill} />}
 	{/* ドリルのページだけに出す（練習メニューに差し込む中身には出さない） */}
-	{drill && <ShareButtons heading="このドリルを共有する" text={`${entry.data.title} | ピックルボール ドリル集`} />}
+	{drill && <ShareButtons text={`${entry.data.title} | ピックルボール ドリル集`} />}
 	<slot />
 </Default>

@@ -21,6 +21,8 @@ export default defineConfig({
 		preact(),
 		starlight({
 			title: 'ピックルボール ドリル集',
+			// ヘッダーのサイト名の前に、サイトのアイコンと同じボールの絵を出す（題名の文字は残す）
+			logo: { src: './src/assets/logo.svg', alt: '' },
 			locales: {
 				root: { label: '日本語', lang: 'ja' },
 			},

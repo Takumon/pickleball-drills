@@ -1,6 +1,54 @@
 /* サイト全体の上書き（Starlight の customCss で読み込む） */
 
 /*
+ * Starlight のテーマの色。共有の画像とトップページ（src/config/og.ts）と同じ、深い緑・生成り・ライムにそろえる（書き手の希望）。
+ * 灰色も少し緑に寄せる。--sl-color-white は文字の色、--sl-color-black は背景の色（ライトでは逆になる）。
+ */
+:root {
+	--sl-color-accent-low: #1b4a2f;
+	--sl-color-accent: #c6df4a;
+	--sl-color-accent-high: #e2f0a2;
+	--sl-color-white: #f4f1e6;
+	--sl-color-gray-1: #e4e7dc;
+	--sl-color-gray-2: #c2c9bd;
+	--sl-color-gray-3: #8d978b;
+	--sl-color-gray-4: #5b665a;
+	--sl-color-gray-5: #3a4539;
+	--sl-color-gray-6: #24302a;
+	--sl-color-black: #121a15;
+}
+:root[data-theme='light'] {
+	--sl-color-accent-low: #dfeac0;
+	--sl-color-accent: #23663f;
+	--sl-color-accent-high: #123521;
+	--sl-color-white: #10241a;
+	--sl-color-gray-1: #1f3127;
+	--sl-color-gray-2: #3b4b41;
+	--sl-color-gray-3: #5e6d63;
+	--sl-color-gray-4: #8a978d;
+	--sl-color-gray-5: #c3ccc1;
+	--sl-color-gray-6: #e8ece0;
+	--sl-color-gray-7: #f3f5ec;
+	--sl-color-black: #fbfaf5;
+}
+
+/*
+ * ヘッダーのサイト名。Starlight の既定（アクセントの色の太字）は目立ちすぎて飾りが浮くので、
+ * 文字の色のまま少し詰めて、ボールのアイコンと並べる（書き手の指摘）
+ */
+.site-title {
+	gap: 0.5rem;
+	color: var(--sl-color-white);
+	font-size: 1.05rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+.site-title img {
+	width: 1.5rem;
+	height: 1.5rem;
+}
+
+/*
  * スマホではヘッダーを画面上部に固定せず、スクロールで流れるようにする。
  * コートの図やアニメーションに使える高さを増やすため。
  */

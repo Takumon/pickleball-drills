@@ -335,6 +335,29 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 	const lerp = (p: number[], q: number[], t: number) => p.map((v, i) => v + (q[i] - v) * t);
 	// ?still を付けると動かさない（打つ所の形を確かめるため）
 	if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && !new URLSearchParams(location.search).has('still')) {
+		// 開発用（手元の開発サーバーだけ）: /dev/flick/ の調整画面から ?tune={"カードの名前": {swing, lateral, elbowBend, gripFront}} を受け取り、
+		// そのカードの振りの値を置きかえ、ほかのカードを隠して大きく見せる（本番のページでは動かない）
+		if (import.meta.env.DEV) {
+			const tune = new URLSearchParams(location.search).get('tune');
+			if (tune) {
+				const t = JSON.parse(tune) as Record<string, { swing?: number[]; lateral?: number[]; elbowBend?: number[]; gripFront?: number[] }>;
+				document.querySelectorAll<HTMLElement>('[data-stroke]').forEach((card) => {
+					const name = card.querySelector('figcaption b')?.textContent ?? '';
+					const o = t[name];
+					if (!o) {
+						card.style.display = 'none';
+						return;
+					}
+					if (o.swing) card.dataset.swing = o.swing.join(',');
+					if (o.lateral) card.dataset.lateral = o.lateral.join(',');
+					if (o.elbowBend) card.dataset.elbowBend = o.elbowBend.join(',');
+					if (o.gripFront) card.dataset.gripFront = o.gripFront.join(',');
+					card.style.gridColumn = '1 / -1';
+					card.querySelector('svg')?.setAttribute('style', 'width:100%;max-height:70vh');
+				});
+				document.querySelectorAll<HTMLElement>('.legend-page > :not(.stroke-grid)').forEach((el) => (el.style.display = 'none'));
+			}
+		}
 		const cards = [...document.querySelectorAll<HTMLElement>('[data-stroke]')].map((card) => {
 			const v = (card.dataset.swing ?? '0,0,0,0').split(',').map(Number);
 			// [上へ, 前へ, パドルの回り（度。前から上へが +）]

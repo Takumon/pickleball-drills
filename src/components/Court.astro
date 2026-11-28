@@ -154,6 +154,13 @@ for (const s of diagram.shots) {
 	if (s.type === 'drop' && ft(s.hit ?? shotHeights.drop.hit) > WAIST_FT)
 		throw new Error(`コート図: ドロップは腰より上の球（hit: ${s.hit}）には使わない。ブロックボレーなどにする`);
 }
+/** 受けた人が次に打つ球がショートホップか */
+function nextIsShortHop(s: Shot) {
+	if (typeof s.to !== 'string') return false;
+	const rest = diagram.shots.slice(diagram.shots.indexOf(s) + 1);
+	const next = rest.find((n) => n.type !== 'move' && n.from === s.to) ?? diagram.shots.find((n) => n.type !== 'move' && n.from === s.to);
+	return next?.type === 'shortHop';
+}
 /** 受ける高さ: 受けた人が次に打つ球の打点。次がなければ既定の高さ */
 function receiveHeight(s: Shot) {
 	// ネットにかかる球は、白帯より少し下でネットに当たって止まる
@@ -269,7 +276,7 @@ const DRIVE_CLEAR_FT = 0.8;
  * 「受ける人の手前で弾む」球のバウンド位置: 受ける人（のパドル）から何 ft 手前で弾むか。
  * ベースラインの後ろで受ける球（サーブ・リターン・深い球出し）は深く弾み、キッチンやトランで受ける球は少し手前で弾む。
  */
-const BOUNCE_BEFORE = { baseline: 4.3, other: 2.1 } as const;
+const BOUNCE_BEFORE = { baseline: 4.3, other: 2.1, shortHop: 0.9 } as const;
 
 /**
  * バウンドの印の位置。at は線の長さに対する割合（アニメーションで、ボールがそこを通ったときに印を出す）。
@@ -286,7 +293,8 @@ function bouncesOf(s: Shot, toAnchor: 'paddle' | 'body' | 'point', pointAt: (t: 
 	// 受ける人の手前で弾む（bounce: front、サーブ・リターンの既定）: 受ける人の位置から決まった距離だけ手前
 	const front = () => {
 		const behindBaseline = receiverY !== undefined && (receiverY < 0 || receiverY > COURT.length);
-		const d = behindBaseline ? BOUNCE_BEFORE.baseline : BOUNCE_BEFORE.other;
+		// 受けた人が次にショートホップで打つ球は、受ける人のすぐ手前で弾む（弾んだ直後を取るため）
+		const d = behindBaseline ? BOUNCE_BEFORE.baseline : nextIsShortHop(s) ? BOUNCE_BEFORE.shortHop : BOUNCE_BEFORE.other;
 		return [at(Math.max(0, cum.findIndex((c) => c >= total - d)))];
 	};
 	if (s.bounce === 'front') return front();

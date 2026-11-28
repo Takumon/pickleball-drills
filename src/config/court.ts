@@ -108,6 +108,7 @@ export const shotLabels = {
 	speedup: 'スピードアップ',
 	flick: 'フリック',
 	sliceDink: 'スライスディンク',
+	shortHop: 'ショートホップ',
 	dinkTrap: 'ディンク（トラップ）',
 	sliceDinkTrap: 'スライスディンク（トラップ）',
 	resetTrap: 'リセット（トラップ）',
@@ -145,6 +146,7 @@ export const shotCurve: Record<ShotType, number> = {
 	speedup: 0,
 	flick: 0,
 	sliceDink: 0,
+	shortHop: 0,
 	dinkTrap: 0,
 	sliceDinkTrap: 0,
 	resetTrap: 0,
@@ -169,6 +171,7 @@ export const shotSpeedKmh: Record<ShotType, number> = {
 	flick: 65,
 	drive: 65,
 	sliceDink: 25,
+	shortHop: 25,
 	dinkTrap: 25,
 	sliceDinkTrap: 25,
 	resetTrap: 30,
@@ -223,6 +226,8 @@ export type ZoneName = keyof typeof zoneRects;
  */
 export const heightLevels = {
 	ground: { label: '地面', note: 'バウンドする位置', ft: 0 },
+	// ショートホップの打点: 弾んだ直後、球が上がりきる前の低い所（Richard の動画: 足首〜すねの高さで、体を深く沈めて打つ）
+	shin: { label: 'すねの高さ', note: 'ショートホップの打点（弾んだ直後の低い球）', ft: 0.7 },
 	knee: { label: '膝の高さ', note: 'ディンク・ドライブの打点（弾んで低くなった球を打つ）', ft: 1.3 },
 	belowWaist: { label: '腰の下', note: 'ドロップ・ロブ・ロールボレー・ボレーディンクの打点', ft: 2.0 },
 	thigh: { label: '太ももの高さ', note: 'サーブ・リターンの打点（サーブはおへそより下で打つ決まり）', ft: 2.4 },
@@ -266,6 +271,7 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
 	drop: { hit: 'belowWaist', peak: 'aboveTape' },
 	dink: { hit: 'knee', peak: 'dinkArc' },
 	sliceDink: { hit: 'knee', peak: 'dinkArc' },
+	shortHop: { hit: 'shin', peak: 'dinkArc' },
 	// リセット: 打つ高さは場面で変わる（腰の高さ〜足首、ワンバウンドさせてから打つこともある。書き手の指摘）。図の既定値は膝の高さ
 	reset: { hit: 'knee', peak: 'dinkArc', range: '腰〜足首の高さ。ワンバウンドしてから打つこともある' },
 	// ドライブ: Richard の「ドライブをマスター！」（3:38〜）では、低く弾んだ球を膝の高さで打っている
@@ -289,7 +295,7 @@ export const shotHeights: Record<Exclude<ShotType, 'move'>, { hit: HeightLevel; 
  * 柔らかく落とす弧（ディンクの仲間とリセット）: 打つ人の側で山になり、ネットの白帯より netClearFt 上を通って、ネットを越えたら下がっていく。
  * ネットの上の高さより、相手が打つところで低いことが大事（書き手の指摘、2026-11-28）。トラップしてから打つ打ち方も元の打ち方に従う
  */
-export const SOFT_ARC = { types: ['dink', 'sliceDink', 'volleyDink', 'reset'] as ShotType[], netClearFt: 0.65 } as const;
+export const SOFT_ARC = { types: ['dink', 'sliceDink', 'shortHop', 'volleyDink', 'reset'] as ShotType[], netClearFt: 0.65 } as const;
 // トラップしてから打つ打ち方は、元の打ち方と同じ高さ
 for (const [t, b] of Object.entries(TRAP_BASE) as [TrapShot, Exclude<ShotType, 'move' | TrapShot>][]) (shotHeights as Record<string, unknown>)[t] = { ...shotHeights[b], range: undefined };
 /** 次に打つ球がないときの、受ける高さ */
@@ -345,6 +351,10 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 	// スライスディンク: 面を少し上へ開いたまま（垂直から約30°）、手首を固めて、体の前で短く前へ運ぶ。回転は面の角度でかかる。
 	// 上から下へ切る振りはテニスのスライスで、ピックルボールではしない（書き手の指摘。コーチの記事も「チョップしない、コンパクトに前へ」）
 	sliceDink: { back: [0, -0.45], follow: [0.1, 0.6], turn: [0, 0], straight: true, note: '面を少し上へ開いたまま、手首を固めて、体の前で短く前へ運ぶ。回転は面の角度でかかる。上から下へは切らない' },
+	// ショートホップ（Richard「Master the Short Hop in Pickleball」8qz235sZn5w の 1:10 バックハンド・6:17 フォアハンドのコマ）:
+	// 弾んだ直後の低い球を、足を広げてひざを深く曲げ、上体を前へ倒して取る。手首は打つ前に固め、パドルの先は前下へ向けたまま、
+	// 面を狙う方向へ向けて、体の前でほとんど引かずに短く運ぶ。打つ瞬間に面を合わせにいかない（面が立つ・開くと浮く）
+	shortHop: { back: [0, -0.3], follow: [0.12, 0.45], turn: [0, 0], straight: true, note: '弾んだ直後の低い球を、ひざを深く曲げて体の前で取る。手首を固め、面を狙う方向へ向けたまま、ほとんど引かずに短く運ぶ' },
 	// ドロップ・ロブ: 引いた所はディンクと同じ形（腰を落とし、ヘッドを下げる。書き手の指摘）。ディンクより高い所で打つぶん、
 	// 打つ所のパドルはディンクより約 20° 起きているので、引く所ではそのぶん多く回してヘッドを下げる（ディンク -10° → -30°）。
 	// ドロップはさらに、引いた所でパドルを地面と垂直（ヘッドが真下）にする（書き手の指摘。打つ所の向き 約 -46° から -45° 回す）

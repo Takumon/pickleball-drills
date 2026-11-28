@@ -198,6 +198,7 @@
 .court .shot.t-volleyTrap,
 .court .shot.t-dinkTrap,
 .court .shot.t-sliceDink,
+.court .shot.t-shortHop,
 .court .shot.t-sliceDinkTrap,
 .court .shot.t-resetTrap {
 	stroke-width: 0.35;

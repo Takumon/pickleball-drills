@@ -235,8 +235,10 @@ const tiles = categories
 		background: rgba(0, 0, 0, 0.22);
 		border: 1px solid rgba(244, 241, 230, 0.12);
 	}
-	/* 帯の中の操作ボタンと番号は、帯の色の上で読める色にする */
-	.hero-court :global(button) {
+	/* 帯の中の操作ボタンは、ライト・ダークのどちらでも、帯の深い緑の上で読める色にする */
+	.hero-court :global(.anim-controls button) {
+		background: rgba(244, 241, 230, 0.12);
+		border-color: rgba(244, 241, 230, 0.25);
 		color: var(--brand-paper);
 	}
 	.block {

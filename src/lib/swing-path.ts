@@ -35,9 +35,9 @@ export function swingPath(back: SwingPt, follow: SwingPt, via: SwingPt[] = []) {
  * k: 1ft の長さ（図の座標）、toNet: 前（ネットの側）が図の +y なら 1、-y なら -1。図の x が上
  */
 /**
- * bulge を渡すと、横から見た向きを始めから終わりまで一定の速さで回し（前を通る）、見ている向き（y）へは bulge だけふくらませる。
- * bulge が小さいほど、見ている向きと上の面（y-z）での半円は小さく、ほぼ横から見た面（x-z）の中で回る（バックのフリック。書き手の指摘:
- * 「ほぼ半円を描かない」）。渡さないときは、始めと終わりの向きのあいだをまっすぐ結び、y へ大きくふくらませる（フォア）
+ * bulge: 見ている向き（y）へのふくらみ（ない時は 1）。大きいほど、横から見た面（x-z）では半円を描かず、
+ * 途中は y の側を向いて短く見え、始めの向きから終わりの向きへ移る（バックのフリック。書き手の指摘 2026-11-28:
+ * 「x-z の面で手首を軸にパドルが半円を描くことはほぼない」。x は人の向く向き、y は見ている向き、z は上）
  */
 export function flickLines(turnDeg: number, hx: number, hy: number, k: number, toNet: number, startDeg = -105, endDeg = 60, bulge?: number) {
 	const s = Math.max(0, Math.min(1, 0.5 + turnDeg / 200));
@@ -50,11 +50,7 @@ export function flickLines(turnDeg: number, hx: number, hy: number, k: number, t
 		const n = Math.hypot(v[0], v[1], v[2]) || 1;
 		return v.map((x) => x / n);
 	};
-	const th = ((startDeg + (endDeg - startDeg) * s) * Math.PI) / 180;
-	const T =
-		bulge === undefined
-			? norm([S[0] + (E[0] - S[0]) * s, Math.sin(Math.PI * s), S[2] + (E[2] - S[2]) * s])
-			: norm([Math.cos(th), bulge * Math.sin(Math.PI * s), Math.sin(th)]);
+	const T = norm([S[0] + (E[0] - S[0]) * s, (bulge ?? 1) * Math.sin(Math.PI * s), S[2] + (E[2] - S[2]) * s]);
 	// 面の向き: パドルの向きに垂直なうちで、いちばん前（ネットの側）を向く向き
 	const N = norm([1 - T[0] * T[0], -T[0] * T[1], -T[0] * T[2]]);
 	// 面の幅の向き（パドルの向きと面の向きの両方に垂直）

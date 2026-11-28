@@ -28,7 +28,7 @@ export function swingPath(back: SwingPt, follow: SwingPt, via: SwingPt[] = []) {
 
 /**
  * 3次元で動かすフォアのフリック（data-lateral）。人の向く向きを x（前）、見ている向き（体の横）を y、上を z とする。
- * パドルの先は、手首を軸に y の側を通る半円を描く: 振りかぶり（s=0）は下の少し後ろ、振り終わり（s=1）は前の少し上で、
+ * パドルの先は、手首を軸に y の側を通る半円を描く: 振りかぶり（s=0）はほぼ真下（少し後ろ）、振り終わり（s=1）は前の少し上で、
  * 途中（s=0.5、打つ瞬間）は体の横（y）を向く。横から見た図（x-z）では、先が7時から2時の向きへ動き、
  * 打つ瞬間は面の幅だけが見える（書き手の説明 2026-11-28: 横から見ると7時から2時。実際は y の側で半円を描く）。
  * turn（度）から s = 0.5 + turn / 200。返すのは、横から見た図のグリップと面の線（図の座標）。
@@ -37,7 +37,8 @@ export function swingPath(back: SwingPt, follow: SwingPt, via: SwingPt[] = []) {
 export function flickLines(turnDeg: number, hx: number, hy: number, k: number, toNet: number) {
 	const s = Math.max(0, Math.min(1, 0.5 + turnDeg / 200));
 	// [前, 横, 上]
-	const S = [Math.cos((-120 * Math.PI) / 180), 0, Math.sin((-120 * Math.PI) / 180)];
+	// 構えの向き: ほぼ真下（少し後ろ）。動画のコマでは、パドルの先はひざの近くまで真下へ下がる
+	const S = [Math.cos((-105 * Math.PI) / 180), 0, Math.sin((-105 * Math.PI) / 180)];
 	const E = [Math.cos((30 * Math.PI) / 180), 0, Math.sin((30 * Math.PI) / 180)];
 	const norm = (v: number[]) => {
 		const n = Math.hypot(v[0], v[1], v[2]) || 1;

@@ -106,15 +106,40 @@ const serviceOf = (url: string) => {
 						</p>
 					)}
 					{/* もしもの場面: 基本の図から切り離して、場面ごとに短い図を出す（書き手と決めた） */}
+					{/* 見せ方は案を見比べ中（書き手の希望 2026-11-28）: now 今の形 / a 枠の中で切り替え / b 枠の中に小さく付ける / c 隅の小窓 / d 閉じた欄。
+					    開発サーバーでは上のセレクトボックスで切り替える（本番は data-sit-ui の初めの値） */}
 					{field === 'diagram' && drill.situations.length > 0 && (
-						<div class="situations">
-							{drill.situations.map((s, i) => (
-								<div class="situation">
-									{(i === 0 || drill.situations[i - 1].when !== s.when) && <p class="situation-when">もし{s.when}</p>}
-									<p class="situation-then">→ {s.then}</p>
-									<Court diagram={s.diagram} title={`${drill.id} の図（${s.when}: ${s.then}）`} />
-								</div>
-							))}
+						<div class="situations" data-situations data-sit-ui="b">
+							{import.meta.env.DEV && (
+								<select class="sit-ui-select" aria-label="もしもの場面の見せ方（開発用）">
+									<option value="now">今の形（区切り線の下に同じ大きさ）</option>
+									<option value="a">案A 枠の中で切り替える</option>
+									<option value="b">案B 枠の中に小さく付ける</option>
+									<option value="c">案C 隅の小窓</option>
+									<option value="d">案D 閉じた欄</option>
+								</select>
+							)}
+							<div class="sit-open-row">
+								{drill.situations.map((s, i) => (
+									<button type="button" class="sit-open" data-i={i}>
+										もし{s.when} ▸
+									</button>
+								))}
+							</div>
+							<details class="sit-details" open>
+								<summary>もしもの場面（{drill.situations.length}つ）</summary>
+								{drill.situations.map((s, i) => (
+									<div class="situation" data-i={i}>
+										<div class="sit-head">
+											<span class="sit-badge">もしもの場面</span>
+											<span class="situation-when">もし{s.when}</span>
+											<span class="situation-then">→ {s.then}</span>
+											<button type="button" class="sit-back">メインに戻る</button>
+										</div>
+										<Court diagram={s.diagram} title={`${drill.id} の図（${s.when}: ${s.then}）`} />
+									</div>
+								))}
+							</details>
 						</div>
 					)}
 					{field === 'steps' && (
@@ -281,24 +306,192 @@ const serviceOf = (url: string) => {
 	.variants dd {
 		margin-inline-start: 1rem;
 	}
-	/* もしもの場面は、基本の図と切り離して見えるように、区切りの線と見出しを付ける */
-	.situations {
-		margin-top: 1.25rem;
-		padding-top: 1rem;
-		border-top: 2px dashed var(--sl-color-gray-5);
+	/* ---- もしもの場面（見せ方の案を data-sit-ui で切り替える） ---- */
+	.sit-ui-select {
+		display: block;
+		margin: 0.75rem 0 0.5rem;
+		font: inherit;
+		font-size: var(--sl-text-sm);
+		padding: 0.3rem 0.5rem;
+		border-radius: 0.4rem;
+		border: 1px solid var(--sl-color-gray-4);
+		background: var(--sl-color-black);
+		color: var(--sl-color-white);
+		max-width: 100%;
+	}
+	.sit-details > summary {
+		display: none;
+	}
+	.sit-open-row,
+	.sit-badge,
+	.sit-back {
+		display: none;
+	}
+	.sit-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.25rem 0.6rem;
+		margin: 0 0 0.35rem;
+	}
+	.situation-when {
+		font-weight: 700;
+	}
+	.situation-then {
+		font-weight: 700;
+		color: var(--sl-color-accent-high);
 	}
 	.situation + .situation {
 		margin-top: 1rem;
 	}
-	.situation-when {
-		margin: 0 0 0.25rem;
-		font-weight: 700;
+	/* 今の形: 区切りの線の下に、同じ大きさで並べる */
+	.situations[data-sit-ui='now'] {
+		margin-top: 1.25rem;
+		padding-top: 1rem;
+		border-top: 2px dashed var(--sl-color-gray-5);
+	}
+	.situations[data-sit-ui='now'] .sit-head {
+		flex-direction: column;
+	}
+	.situations[data-sit-ui='now'] .situation-when {
 		font-size: var(--sl-text-lg);
 	}
-	.situation-then {
-		margin: 0 0 0.4rem;
+	/* 案B・案D: メインの図と同じ枠（カード）に入れ、字下げした小さめの図を薄い背景で付ける */
+	.field:has(> .situations[data-sit-ui='b']),
+	.field:has(> .situations[data-sit-ui='d']) {
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.75rem;
+		padding: 0.5rem 0.75rem 0.75rem;
+	}
+	.situations[data-sit-ui='b'],
+	.situations[data-sit-ui='d'] {
+		margin: 0.5rem 0 0 1.25rem;
+		width: min(70%, 100% - 1.25rem);
+	}
+	.situations[data-sit-ui='b'] .situation,
+	.situations[data-sit-ui='d'] .situation {
+		background: var(--sl-color-gray-6);
+		border-radius: 0.6rem;
+		padding: 0.4rem 0.5rem 0.25rem;
+	}
+	.situations[data-sit-ui='b'] .situation-when::before,
+	.situations[data-sit-ui='d'] .situation-when::before {
+		content: '└ ';
+		color: var(--sl-color-gray-3);
+	}
+	.situations[data-sit-ui='b'] .situation-then,
+	.situations[data-sit-ui='d'] .situation-then {
+		font-size: var(--sl-text-sm);
+	}
+	@media (max-width: 50rem) {
+		.situations[data-sit-ui='b'],
+		.situations[data-sit-ui='d'] {
+			margin-left: 0.5rem;
+			width: calc(100% - 0.5rem);
+		}
+	}
+	.situations[data-sit-ui='d'] .sit-details > summary {
+		display: list-item;
+		cursor: pointer;
 		font-weight: 700;
-		color: var(--sl-color-accent-high);
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-2);
+		margin-bottom: 0.4rem;
+	}
+	/* 案A: メインの図の下に小さな枠線のボタン。押すと、同じ枠の中の図がもしもの場面に変わる */
+	.situations[data-sit-ui='a'] .sit-open-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin-top: 0.5rem;
+	}
+	.situations[data-sit-ui='a'] .sit-open {
+		font: inherit;
+		font-size: var(--sl-text-sm);
+		padding: 0.25rem 0.7rem;
+		border-radius: 999px;
+		border: 1px solid var(--sl-color-gray-4);
+		background: transparent;
+		color: var(--sl-color-gray-2);
+		cursor: pointer;
+	}
+	.situations[data-sit-ui='a'] .situation {
+		display: none;
+	}
+	.situations[data-sit-ui='a'].on .sit-open-row {
+		display: none;
+	}
+	.situations[data-sit-ui='a'].on .situation.on {
+		display: block;
+		border: 2px solid var(--sl-color-accent);
+		border-radius: 0.75rem;
+		padding: 0.4rem 0.6rem;
+	}
+	.situations[data-sit-ui='a'] .sit-badge,
+	.situations[data-sit-ui='c'] .sit-badge {
+		display: inline-block;
+		font-size: var(--sl-text-xs);
+		font-weight: 700;
+		padding: 0.05rem 0.5rem;
+		border-radius: 999px;
+		background: var(--sl-color-accent);
+		color: var(--sl-color-black);
+	}
+	.situations[data-sit-ui='a'] .sit-back {
+		display: inline-block;
+		margin-left: auto;
+		font: inherit;
+		font-size: var(--sl-text-xs);
+		padding: 0.15rem 0.6rem;
+		border-radius: 999px;
+		border: 1px solid var(--sl-color-gray-4);
+		background: transparent;
+		color: var(--sl-color-gray-2);
+		cursor: pointer;
+	}
+	.field.sit-main-off > :not(.situations):not(h3) {
+		display: none;
+	}
+	/* 案C: メインの図の右上に小さな窓（ワイプ）で出す。押すと大きくなる */
+	.field:has(> .situations[data-sit-ui='c']) {
+		position: relative;
+	}
+	.situations[data-sit-ui='c'] {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		width: 38%;
+		z-index: 3;
+		cursor: zoom-in;
+	}
+	.situations[data-sit-ui='c'] .sit-ui-select {
+		display: none;
+	}
+	.situations[data-sit-ui='c'] .situation {
+		background: var(--sl-color-black);
+		border: 2px solid var(--sl-color-accent);
+		border-radius: 0.6rem;
+		padding: 0.25rem;
+		box-shadow: 0 4px 14px rgb(0 0 0 / 0.45);
+	}
+	.situations[data-sit-ui='c'] .situation:not([data-i='0']) {
+		display: none;
+	}
+	.situations[data-sit-ui='c'] .situation-when,
+	.situations[data-sit-ui='c'] .situation-then {
+		display: none;
+	}
+	.situations[data-sit-ui='c'].big {
+		width: calc(100% - 1rem);
+		cursor: zoom-out;
+	}
+	.situations[data-sit-ui='c'].big .situation-when,
+	.situations[data-sit-ui='c'].big .situation-then {
+		display: inline;
+	}
+	/* 案C のときも、見せ方の切り替え（開発用）は図の上に出す */
+	.sit-ui-float {
+		margin: 0.5rem 0;
 	}
 	.variant-now {
 		margin: 0.75rem 0 0;
@@ -388,6 +581,8 @@ const serviceOf = (url: string) => {
 
 <script>
 	import { showVariant } from '../scripts/variant-now';
+	import { setupSituations } from '../scripts/situations-ui';
+	setupSituations(document);
 	// ドリルのページでは URL の ?variant= を読む（練習メニューの画面の中では、メニュー側から呼ぶ）
 	showVariant(document, new URLSearchParams(location.search).get('variant'));
 </script>

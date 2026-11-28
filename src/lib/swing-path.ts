@@ -68,5 +68,13 @@ export function flickLines(turnDeg: number, hx: number, hy: number, k: number, t
 	const ft = [C[0] + D[0] / 2, C[1] + D[1] / 2];
 	const butt = at(-T[0] * toButt, -T[2] * toButt);
 	const g2 = at(C[0] - (T[0] * faceLen) / 2, C[1] - (T[2] * faceLen) / 2);
-	return { grip: [...butt, ...g2], face: [...at(fs[0], fs[1]), ...at(ft[0], ft[1])] };
+	// 面の長方形を横から見た形（平行四辺形）: 真ん中 C、パドルの向き A（長さ faceLen）、幅の向き Wv（長さ width）。
+	// グリップは、面の手元の辺のまん中（C - A/2）につながる（前は面を1本の線で描き、幅の分だけグリップと離れて見えた。書き手の指摘 2026-11-28）
+	const A = [T[0] * faceLen, T[2] * faceLen];
+	const Wv = [W[0] * width, W[2] * width];
+	const corner = (a: number, w: number) => at(C[0] + (A[0] * a) / 2 + (Wv[0] * w) / 2, C[1] + (A[1] * a) / 2 + (Wv[1] * w) / 2);
+	const poly = [...corner(-1, -1), ...corner(1, -1), ...corner(1, 1), ...corner(-1, 1)];
+	// 面の軸（手元の辺のまん中から先の辺のまん中まで）
+	const axis = [...at(C[0] - A[0] / 2, C[1] - A[1] / 2), ...at(C[0] + A[0] / 2, C[1] + A[1] / 2)];
+	return { grip: [...butt, ...g2], face: [...at(fs[0], fs[1]), ...at(ft[0], ft[1])], poly, axis };
 }

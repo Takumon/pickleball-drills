@@ -505,13 +505,24 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 					const ln = flickLines(turn, hx + dx, hy + dy, Number(c.face.getAttribute('stroke-width')) / 0.078, 1, st, en, Number.isFinite(bu) ? bu : undefined);
 					const put = (el: Element, v: number[]) => ['x1', 'y1', 'x2', 'y2'].forEach((k, i) => el.setAttribute(k, String(v[i])));
 					put(c.grip, ln.grip);
-					put(c.face, ln.face);
+					// 面は、横から見た平行四辺形（.side-face-poly）で描き、線（.side-paddle）は面の軸にしてグリップとつなげる
+					put(c.face, ln.axis);
+					let poly = c.card.querySelector<SVGPolygonElement>('.side-face-poly');
+					if (!poly) {
+						poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+						poly.setAttribute('class', 'side-face-poly');
+						c.face.after(poly);
+					}
+					const pts = ln.poly;
+					poly.setAttribute('points', [0, 2, 4, 6].map((i) => `${pts[i]},${pts[i + 1]}`).join(' '));
+					poly.setAttribute('stroke-width', c.face.getAttribute('stroke-width') ?? '0.078');
 					// パドルが手より手前の間（data-grip-front）は、手の上にパドルを描いてグリップを見せる。ほかの間は手を上に描く
 					const gf = c.card.dataset.gripFront?.split(',').map(Number);
 					const s = 0.5 + turn / 200;
 					const front = !!gf && s >= gf[0] && s < gf[1];
 					if (front && c.hand.compareDocumentPosition(c.grip) & Node.DOCUMENT_POSITION_PRECEDING) c.grip.before(c.hand);
-					if (!front && c.hand.compareDocumentPosition(c.face) & Node.DOCUMENT_POSITION_FOLLOWING) c.face.after(c.hand);
+					const lastFace = c.card.querySelector('.side-face-poly') ?? c.face;
+					if (!front && c.hand.compareDocumentPosition(lastFace) & Node.DOCUMENT_POSITION_FOLLOWING) lastFace.after(c.hand);
 				} else c.turning.forEach((el) => el.setAttribute('transform', `translate(${dx} ${dy}) rotate(${-turn} ${hx} ${hy})`));
 				c.hand.setAttribute('transform', `translate(${dx} ${dy})`);
 				// 腕は、上腕と前腕の長さを変えずに、肩から動いた手まで曲げ直す（この図ではネットの側が +y）

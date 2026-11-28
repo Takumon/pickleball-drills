@@ -472,7 +472,7 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 					const gf = c.card.dataset.gripFront?.split(',').map(Number);
 					const s = 0.5 + turn / 200;
 					const front = !!gf && s >= gf[0] && s < gf[1];
-					if (front && c.hand.nextElementSibling !== null && c.hand.compareDocumentPosition(c.grip) & Node.DOCUMENT_POSITION_PRECEDING) c.grip.before(c.hand);
+					if (front && c.hand.compareDocumentPosition(c.grip) & Node.DOCUMENT_POSITION_PRECEDING) c.grip.before(c.hand);
 					if (!front && c.hand.compareDocumentPosition(c.face) & Node.DOCUMENT_POSITION_FOLLOWING) c.face.after(c.hand);
 				} else c.turning.forEach((el) => el.setAttribute('transform', `translate(${dx} ${dy}) rotate(${-turn} ${hx} ${hy})`));
 				c.hand.setAttribute('transform', `translate(${dx} ${dy})`);

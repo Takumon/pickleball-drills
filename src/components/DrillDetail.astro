@@ -112,11 +112,8 @@ const serviceOf = (url: string) => {
 						<div class="situations">
 							{drill.situations.map((s) => (
 								<div class="situation">
-									<div class="sit-head">
-										<span class="situation-when">もし{s.when}</span>
-										<span class="situation-then">→ {s.then}</span>
-									</div>
-									<Court diagram={s.diagram} title={`${drill.id} の図（${s.when}: ${s.then}）`} />
+									<p class="sit-head">{s.title}</p>
+									<Court diagram={s.diagram} title={`${drill.id} の図（${s.title}）`} />
 								</div>
 							))}
 						</div>
@@ -310,23 +307,12 @@ const serviceOf = (url: string) => {
 		margin-top: 0.75rem;
 	}
 	.sit-head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: baseline;
-		gap: 0.25rem 0.6rem;
 		margin: 0 0 0.35rem;
-	}
-	.situation-when {
 		font-weight: 700;
 	}
-	.situation-when::before {
+	.sit-head::before {
 		content: '└ ';
 		color: var(--sl-color-gray-3);
-	}
-	.situation-then {
-		font-weight: 700;
-		font-size: var(--sl-text-sm);
-		color: var(--sl-color-accent-high);
 	}
 	.variant-now {
 		margin: 0.75rem 0 0;

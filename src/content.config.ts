@@ -245,10 +245,8 @@ const drill = z.object({
 	situations: z
 		.array(
 			z.object({
-				/** 場面（例: 浮いた球が来たら）。同じ場面が続くときは、見出しを1回だけ出す */
-				when: z.string(),
-				/** すること（例: ボレーで攻める） */
-				then: z.string(),
+				/** 見出し（決まった形はない。「もし〜 → 〜」でも、ふつうの文でもよい。書き手と決めた 2026-11-28） */
+				title: z.string(),
 				diagram,
 			}),
 		)

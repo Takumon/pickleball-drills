@@ -227,12 +227,26 @@ const tiles = categories
 		margin-inline: auto;
 	}
 	/* 練習メニューを表示しているときは、足もともメニューと同じ幅にし、「練習メニューを作る」は出さない */
-	/* 練習メニューの下は、間を大きく空けて細い線で区切り、メニューとは別の欄だと分かるようにする（書き手の指摘） */
+	/*
+	 * 練習メニューの下は、ページの足もと（フッター）に見せる: 間を大きく空け、画面の横いっぱいに背景の色を変えた帯にする。
+	 * 細い線で区切ると、メニューの行の線や区切りと見分けがつかなかった。見出しもメニューの見出しより小さくする（書き手の指摘）
+	 */
 	:global(main:has(#menu-view:not([hidden]))) .site-foot {
+		--foot-bg: #0b110d;
 		max-width: 45rem;
-		margin-top: 4rem;
-		padding-top: 0.5rem;
-		border-top: 1px solid var(--sl-color-gray-5);
+		margin-top: 5rem;
+		padding: 0.5rem 0 3rem;
+		background: var(--foot-bg);
+		/* 中身の幅は 45rem のまま、背景だけ画面の左右の端まで広げる */
+		box-shadow: 0 0 0 100vmax var(--foot-bg);
+		clip-path: inset(0 -100vmax -100vmax);
+	}
+	:global(:root[data-theme='light'] main:has(#menu-view:not([hidden]))) .site-foot {
+		--foot-bg: #ecefe3;
+	}
+	:global(main:has(#menu-view:not([hidden]))) .site-foot h2 {
+		font-size: var(--sl-text-base);
+		color: var(--sl-color-gray-2);
 	}
 	:global(main:has(#menu-view:not([hidden]))) .builder-link {
 		display: none;

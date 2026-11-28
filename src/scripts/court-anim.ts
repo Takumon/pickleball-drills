@@ -182,8 +182,9 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	// ほかの球と同じ構えから打つ打ち方（data-setup）は、振りかぶった形が構え
 	const setup = ball.dataset.setup !== undefined;
 	// 構えから打つ打ち方（setup）は、球を待つ手の初めのうちに構え（back）へ移る。打ったあとは止まった形（REST）へ戻り、次の手の止まった形とつながる
-	// ほかの球と同じ構えから打つ打ち方（setup）は、振りかぶった形が構えなので、打ったあとはそこへ戻る（図の見方のカードと同じ）
-	return { apply, back, follow, contact: path.contact, at: path.at, home: setup ? back : REST, prepFrom: REST, setup };
+	// 打ったあとは、どの打ち方も止まった形（REST）へ戻る。前は setup の打ち方は構え（back）へ戻していたが、フリックの振り抜き
+	// （パドルの先が上）から、ヘッドを下げた構えへ戻ると、打ったあとにパドルが垂れ下がって見えた（書き手の指摘 2026-11-28）
+	return { apply, back, follow, contact: path.contact, at: path.at, home: REST, prepFrom: REST, setup };
 }
 /**
  * 決めのポーズで動かす道具: 構え（ready）→ 引き切り（back）→ 打つ瞬間（contact）→ 振り抜き（finish）→ 構え の角度のあいだを混ぜ、

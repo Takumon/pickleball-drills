@@ -227,7 +227,10 @@ function heightFn(s: Shot, bounces: { at: number }[], netAt?: number): ((t: numb
 	const arc = (ha: number, hb: number, p: number, netU?: number) => {
 		if (!soft || p <= Math.max(ha, hb)) return hop(ha, hb, p, netU, s.fall);
 		let tp = 0.45;
-		if (netU !== undefined && netU > 0 && netU < 1) {
+		// 浮いた球（山をディンクの山より高く指定した球）は、ネットの上で山になる。ネットの上で決めた低さまで下げると、
+		// 打つ人の側で大きく上がって下がる、ありえない弧になる（書き手の指摘「ディンクの軌道が変」2026-11-28）
+		if (p > ft('dinkArc') + 0.01 && netU !== undefined && netU > 0 && netU < 1) tp = netU;
+		else if (netU !== undefined && netU > 0 && netU < 1) {
 			const need = Math.min(p, ft('tape') + SOFT_ARC.netClearFt);
 			const r = Math.sqrt((p - need) / (p - hb));
 			tp = Math.min(netU, Math.max(0.15, (netU - r) / (1 - r)));

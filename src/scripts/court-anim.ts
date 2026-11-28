@@ -1,4 +1,4 @@
-import { swingPath } from '../lib/swing-path';
+import { swingPath, flickLines } from '../lib/swing-path';
 import { syncArm } from '../lib/arm-shape';
 import { blendGroup, sideBlender, snapshotGroup, snapshotSide } from '../lib/side-blend';
 import { sideFigure, type PoseAngles, type SideFigureInput } from '../lib/side-figure';
@@ -58,6 +58,21 @@ const easeInv = (c: number) => (c < 0.5 ? Math.sqrt(c / 2) : 1 - Math.sqrt((1 - 
 type Vec = [number, number];
 type Vec3 = [number, number, number];
 const REST: Vec3 = [0, 0, 0];
+/** 線を引き直す（元の端を data-o* に覚えておき、restoreLine で戻す）。3次元で動かすフリックで使う */
+function setLine(el: SVGLineElement, [x1, y1, x2, y2]: number[]) {
+	if (el.dataset.ox1 === undefined) for (const k of ['x1', 'y1', 'x2', 'y2']) el.dataset[`o${k}`] = el.getAttribute(k) ?? '0';
+	el.removeAttribute('transform');
+	el.setAttribute('x1', String(x1));
+	el.setAttribute('y1', String(y1));
+	el.setAttribute('x2', String(x2));
+	el.setAttribute('y2', String(y2));
+}
+function restoreLine(el: Element) {
+	const d = (el as SVGElement).dataset;
+	if (d.ox1 === undefined) return;
+	for (const k of ['x1', 'y1', 'x2', 'y2']) el.setAttribute(k, d[`o${k}`]!);
+	for (const k of ['ox1', 'oy1', 'ox2', 'oy2']) delete d[k];
+}
 /**
  * 打つ人のパドルと腕を、打つ所からのずれ [上へ, 前へ]（ft）だけ動かす道具。上から見た図は前へのずれだけを、打球の向きに動かす。
  * 横から見た図は、手を肩を中心にした弧で動かし、パドルを手のまわりに回し、腕は長さを変えずに曲げ直す
@@ -79,6 +94,11 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	const hy = Number(sideHand?.getAttribute('cy') ?? 0);
 	const forearm = side?.querySelector<SVGLineElement>('.side-arm');
 	const upperArm = side?.querySelector<SVGLineElement>('.side-upperarm');
+	// 3次元で動かす振り（フォアのフリック）: 横から見たグリップと面の線を、毎こま引き直す
+	const lateral = ball.dataset.lateral !== undefined;
+	const sideGrip = side?.querySelector<SVGLineElement>('.side-grip');
+	const sideFace = side?.querySelector<SVGLineElement>('.side-paddle');
+	const ftK = Number(sideFace?.getAttribute('stroke-width')) / 0.078 || 1;
 	// 線の元の端を覚えておく（途中で止めても戻せるように）
 	const keep = (el?: SVGLineElement | null) => {
 		if (!el) return;
@@ -157,7 +177,14 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 			sy = cy - ry;
 		}
 		const rot = turnSign * turn;
-		sidePaddle.forEach((el) => el.setAttribute('transform', sx || sy || rot ? `translate(${sx} ${sy}) rotate(${rot} ${hx} ${hy})` : ''));
+		if (lateral && sideGrip && sideFace) {
+			const ln = flickLines(turn, hx + sx, hy + sy, ftK, Math.sign(uy || 1));
+			setLine(sideGrip, ln.grip);
+			setLine(sideFace, ln.face);
+		} else {
+			[sideGrip, sideFace].forEach((el) => el && restoreLine(el));
+			sidePaddle.forEach((el) => el.setAttribute('transform', sx || sy || rot ? `translate(${sx} ${sy}) rotate(${rot} ${hx} ${hy})` : ''));
+		}
 		sideHand?.setAttribute('transform', sx || sy ? `translate(${sx} ${sy})` : '');
 		// 腕は、肩から動いた手まで、上腕と前腕の長さを変えずに曲げ直す
 		if (forearm && upperArm) {
@@ -525,6 +552,7 @@ function setup(root: HTMLElement) {
 			frame.querySelectorAll('[data-player-id], [data-side-player]').forEach((g) => g.setAttribute('transform', ''));
 			// 打つ動きの途中で止めたパドルと腕も元に戻す
 			frame.querySelectorAll<SVGElement>('.paddle, .side-paddle, .side-grip, .side-hand').forEach((p) => p.removeAttribute('transform'));
+			frame.querySelectorAll<SVGElement>('.side-paddle, .side-grip').forEach(restoreLine);
 			frame.querySelectorAll<SVGLineElement>('.arm, .side-arm, .side-upperarm').forEach((a) => {
 				for (const k of ['x1', 'y1', 'x2', 'y2']) if (a.dataset[k]) a.setAttribute(k, a.dataset[k]!);
 			});

@@ -345,6 +345,8 @@ export interface SwingForm {
 	setup?: boolean;
 	/** 打ったあと、振り終わりの形のまま止めて、手を戻さない（フリック。書き手の指摘 2026-11-28: フリスビーを投げた形から手を戻さない） */
 	hold?: boolean;
+	/** 3次元で動かす振り（フォアのフリック。lib/swing-path.ts の flickLines）。turn は半円の中の位置 */
+	lateral?: boolean;
 	/** 関節を軸に回す振り: 腕とパドルを1つのかたまりとして肩かひじのまわりに turn の角度だけ回す（back と follow は使わない） */
 	pivot?: 'shoulder' | 'elbow';
 	/** pivot の振りで、腕を回す角度（なければ turn と同じ）。パドルはそのうえで turn まで、振りに合わせて少しずつ回る */
@@ -353,7 +355,7 @@ export interface SwingForm {
 	straight?: boolean;
 	note: string;
 }
-export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
+export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; lateral?: boolean; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
 	dink: { back: [-0.1, -0.6], follow: [0.5, 0.7], turn: [-10, 25], note: '少しだけ後ろに引き、肩から振り子のように前へ。振り抜きは短く、腰の高さで目標を指す' },
 	// ロールディンク: ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。ディンクより速く、鋭いクロスを狙える
 	rollDink: { back: [-0.25, -0.5], follow: [0.6, 0.55], turn: [-15, 30], note: 'ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。振り抜きは短く、目標の方向へ' },
@@ -427,12 +429,13 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 	// バックはフリスビーを投げるように前へ振り出し、パドルを上へ立てずに面を目標へ向けて止める（書き手の指摘）
 	flick: {
 		// フォア（2026-11-28 に作り直した。書き手の説明と Richard の動画 nYQxmcDYgEg の 1:14〜1:16 のコマ）:
-		// 実際の動き: ヘッドを下げて待ち、手首を軸に半円を描くようにパドルを上げる。手はほとんど動かさず、少しだけ前へ押し出す。
-		// 横から見た図では（前が3時）、パドルの先が7時（真下より少し後ろ）から2時（前の少し上）へ動いて見える（書き手の説明）。この図はその見え方を描く。
-		// 打つ瞬間は5時（side-figure の paddleTip -72）。構えは 5時から -48° で7時、振り終わりは +102° で2時。振り終わりのまま止める（hold）
+		// 実際の動き: ヘッドを下げて待ち、手首を軸に、体の横（見ている向き）の側を通る半円を描くようにパドルを上げる。手は少しだけ前へ押し出す。
+		// 横から見た図では（前が3時）、パドルの先が7時から2時の向きへ動いて見え、打つ瞬間は体の横を向くので面の幅だけが見える。
+		// 3次元で動かして横から見た形にする（lateral。lib/swing-path.ts の flickLines）。turn の -100〜100 が半円の始めから終わり
 		back: [-0.05, -0.15],
 		follow: [0.1, 0.3],
-		turn: [-48, 102],
+		turn: [-100, 100],
+		lateral: true,
 		setup: true,
 		hold: true,
 		// 説明の文は実際の動き（手首を軸に半円）を書く。7時から2時は、横から見た図での見え方（書き手の指摘: 実際の動きと混ぜない）

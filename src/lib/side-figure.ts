@@ -136,9 +136,9 @@ const STANCE_BY_SHOT: Record<string, Partial<typeof STANCE>> = {
 	// 打つ瞬間のパドルの向きは決めない（paddleTip なし）。高さの規則で決め、面が球の飛ぶ向きと 20° 以内になるように回す。
 	// 前は 0°（水平）に決めていて、面が真上を向き、球の飛ぶ向き（前へほぼ水平）と 73° ずれていた
 	// （図の確かめで分かった。2026-11-28、dnk001・dnk003 で初めてフリックを描いた）
-	// フォアは、打つ瞬間にパドルの先を前下（-72°。時計の5時の向き）に決める。面は前の少し上を向き、球の飛ぶ向きとそろう。
-	// 横から見て、パドルの先は7時から2時の向きへ回る（書き手の説明 2026-11-28。shotSwing の flick の turn）
-	flick: { kneeReady: 45, kneeMax: 62, leanReady: 34, leanMax: 40, reach: 2.2, paddleTip: -72 },
+	// フォアは、打つ瞬間にパドルの先が体の横を向く（手首を軸に、体の横の側を通る半円の途中。書き手の説明 2026-11-28）。
+	// 横から見ると面の幅だけが見えるので、体の前を横切るパドル（across）と同じに描く。面は前を向く
+	flick: { kneeReady: 45, kneeMax: 62, leanReady: 34, leanMax: 40, reach: 2.2, across: 0 },
 	'flick:bh': { kneeReady: 45, kneeMax: 62, leanReady: 34, leanMax: 40, reach: 2.4, elbowHigh: true },
 };
 

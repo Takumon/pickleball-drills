@@ -13,6 +13,8 @@ import { circle } from '../config/circle';
 import { Image } from 'astro:assets';
 // 練馬ピックルのロゴ（テニスベアのサークルの画像を丸く切り出したもの。書き手が渡した画像）
 import circleLogo from '../assets/circle-logo.jpg';
+// 【一時的】長方形の画像の案（?circle=banner で表示。書き手が見比べて決めたら、選ばれなかった案を消す）
+import circleBanner from '../assets/circle-banner.jpg';
 import '../styles/court.css';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -63,7 +65,16 @@ const tiles = categories
 		    サイトと練習会のつながりは、サークル紹介の最後の一文で伝える */}
 		<section class="block circle">
 			<h2>運営しているサークル</h2>
-			<div class="circle-card">
+			{/* 【一時的】案B: 長方形の画像をカードの上に横いっぱいに置く（?circle=banner のときだけ出す） */}
+			<div class="circle-card banner-card" data-cv="banner">
+				<Image src={circleBanner} alt={`${circle.name}のロゴ`} width={816} height={426} class="banner" />
+				<div class="banner-body">
+					<p class="circle-name">{circle.name}</p>
+					<p>{circle.intro}</p>
+					<a class="circle-link" href={circle.url} target="_blank" rel="noopener">テニスベアの{circle.name}のページ ↗</a>
+				</div>
+			</div>
+			<div class="circle-card" data-cv="avatar">
 				<div class="circle-head">
 					<Image src={circleLogo} alt={`${circle.name}のロゴ`} width={64} height={64} class="avatar" />
 					<p class="circle-name">{circle.name}</p>
@@ -87,6 +98,8 @@ const tiles = categories
 </StarlightPage>
 
 <script>
+	// 【一時的】サークルの画像の案の切り替え（?circle=banner）
+	if (new URLSearchParams(location.search).get('circle') === 'banner') document.documentElement.classList.add('cv-banner');
 	import { blocks, chosenVariant, fmtMin, parseMenu, totalMinutes, type CatalogDrill, type MenuItem } from '../lib/menu';
 	import { setupCourtAnimations } from '../scripts/court-anim';
 	import { showVariant } from '../scripts/variant-now';
@@ -335,6 +348,31 @@ const tiles = categories
 		margin: 0;
 		color: inherit;
 		line-height: 1.75;
+	}
+	/* 【一時的】案の切り替え。既定は丸い画像の案、?circle=banner で長方形の画像の案 */
+	[data-cv='banner'] {
+		display: none;
+	}
+	:global(html.cv-banner) [data-cv='banner'] {
+		display: block;
+	}
+	:global(html.cv-banner) [data-cv='avatar'] {
+		display: none;
+	}
+	.banner-card {
+		padding: 0;
+		overflow: hidden;
+	}
+	.banner {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+	.banner-body {
+		padding: 1rem 1.25rem 1.25rem;
+	}
+	.banner-body .circle-name {
+		margin-bottom: 0.5rem;
 	}
 	.circle-head {
 		display: flex;

@@ -26,9 +26,7 @@ export default defineConfig({
 			locales: {
 				root: { label: '日本語', lang: 'ja' },
 			},
-			social: [
-				{ icon: 'github', label: 'GitHub', href: 'https://github.com/Takumon/pickleball-drills' },
-			],
+			// ヘッダーの GitHub のアイコンは出さない（書き手向けで、外から来た人には要らない。書き手と決めた）
 			// ドリルページの見出しは目次に出ない作りで、目次が役に立たないため表示しない（スマホの「目次」バーも消える）
 			tableOfContents: false,
 			// ヘッダーの検索は使わない（ドリルはカテゴリとサイドバーから押して探す。スマホで文字を打つのは手間。書き手と決めた）

@@ -276,6 +276,13 @@ const tiles = categories
 		clip: rect(0 0 0 0);
 		white-space: nowrap;
 	}
+	/* 見出しを隠すと、見出しの枠と本文の枠の間の線（Starlight の区切り線）だけが残るので、枠の余白と線も消す（書き手の指摘） */
+	main:has(#top-page:not([hidden])) .content-panel:has(h1#_top) {
+		padding: 0;
+	}
+	main:has(#top-page:not([hidden])) .content-panel + .content-panel {
+		border-top: 0;
+	}
 	/* メニューの行は JavaScript で作るので、スコープなしのスタイルを #menu-view の中に限って当てる */
 	#menu-view .menu-summary {
 		display: flex;

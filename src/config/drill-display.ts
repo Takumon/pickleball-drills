@@ -36,7 +36,8 @@ export const visibleFields: DrillField[] = ['diagram', 'scene', 'purpose', 'focu
  * まとまりの中が1項目で、見出しがトグルの名前と同じときは、中の見出しを省く。
  */
 export const detailGroups: { label: string; fields: DrillField[]; /** 中身がなくてもトグルを出し、「なし」と書く */ showWhenEmpty?: boolean }[] = [
-	{ label: '練習方法の詳細', fields: ['setup', 'feed', 'steps', 'variants', 'notes'] },
+	// 図で伝わる手順は書かず、図では伝わらないこと（人数・交代・失敗やゲームの決まり・球出しへの注文）だけを入れる（書き手と決めた 2026-11-28）
+	{ label: '人数・交代・決まり', fields: ['setup', 'feed', 'steps', 'variants', 'notes'] },
 	{ label: '関連リンク', fields: ['links'], showWhenEmpty: true },
 ];
 

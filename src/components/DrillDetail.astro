@@ -177,37 +177,43 @@ const serviceOf = (url: string) => {
 
 <style>
 	/* カテゴリとラリーかどうかの印（題名の下） */
+	/*
+	 * カテゴリとラリーかどうかの印（題名の下）: 押して何かを選ぶものではないので、枠のない小さな文字にする。
+	 * 派生形の切り替え（押して選ぶ）と見分けられるようにするため（書き手の指摘: 見た目が近くて紛らわしい）
+	 */
 	.tags {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.35rem;
-		margin: 0 0 0.5rem;
+		align-items: baseline;
+		gap: 0.15rem 0;
+		margin: 0 0 0.6rem;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
 	}
 	.cat-tag {
-		display: inline-block;
-		padding: 0.05rem 0.6rem;
-		border-radius: 999px;
-		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
 		text-decoration: none;
-		border: 1px solid var(--sl-color-gray-5);
-		background: var(--sl-color-gray-6);
-		color: var(--sl-color-gray-2);
+	}
+	.cat-tag:hover {
+		text-decoration: underline;
 	}
 	.cat-tag[data-main='yes'] {
-		border-color: var(--sl-color-gray-3);
-		color: var(--sl-color-white);
-		font-weight: 600;
+		color: var(--sl-color-gray-2);
+		font-weight: 700;
+	}
+	/* 印のあいだは「・」で区切る */
+	.tags > * + *::before {
+		content: '・';
+		margin: 0 0.3rem;
+		color: var(--sl-color-gray-4);
+		font-weight: 400;
+		text-decoration: none;
+		display: inline-block;
 	}
 	.rally-tag {
-		display: inline-block;
-		padding: 0.05rem 0.6rem;
-		border-radius: 999px;
-		font-size: var(--sl-text-sm);
-		border: 1px solid var(--sl-color-gray-4);
-		color: var(--sl-color-gray-2);
+		color: var(--sl-color-gray-3);
 	}
 	.rally-tag[data-rally='yes'] {
-		border-color: var(--sl-color-accent);
 		color: var(--sl-color-accent-high);
 	}
 	/* 見出しは、サイトの見出しの形（ライムの縦の線）にそろえる（custom.css の h2 と同じ形で、一回り小さく） */
@@ -275,20 +281,29 @@ const serviceOf = (url: string) => {
 	.variant-now-name {
 		margin-inline-end: 0.5em;
 	}
-	/* 派生形の切り替え: 横に並んだボタン。選んでいるものだけ色を付ける */
+	/*
+	 * 派生形の切り替え: 1つの枠の中にボタンをつなげて並べ（スマホの切り替えボタンの形）、選んでいるものだけ色を付ける。
+	 * 上の小さな文字の印（カテゴリ・ラリー）と違って、押して選ぶものだと分かるようにする
+	 */
 	.vs-tabs {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.35rem;
-		margin-bottom: 0.5rem;
+		width: 100%;
+		max-width: 26rem;
+		margin: 0 0 0.6rem;
+		padding: 0.2rem;
+		gap: 0.2rem;
+		border-radius: 0.8rem;
+		background: var(--sl-color-gray-6);
+		border: 1px solid var(--sl-color-gray-5);
 	}
 	.vs-tabs button {
+		flex: 1;
 		font: inherit;
 		font-size: var(--sl-text-sm);
 		font-weight: 700;
-		padding: 0.3rem 0.9rem;
-		border-radius: 999px;
-		border: 1px solid var(--sl-color-gray-4);
+		padding: 0.45rem 0.5rem;
+		border-radius: 0.6rem;
+		border: 0;
 		background: transparent;
 		color: var(--sl-color-gray-2);
 		cursor: pointer;
@@ -296,8 +311,8 @@ const serviceOf = (url: string) => {
 	}
 	.vs-tabs button[aria-selected='true'] {
 		background: var(--sl-color-accent);
-		border-color: var(--sl-color-accent);
 		color: var(--sl-color-black);
+		box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
 	}
 	/* 選んでいない派生形の図は、場所を取らずに隠す（アニメーションの長さの計算に要るので、display:none にはしない） */
 	.vs-panels {

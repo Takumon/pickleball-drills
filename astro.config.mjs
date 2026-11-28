@@ -19,6 +19,16 @@ export default defineConfig({
 	integrations: [
 		// ビルダー（/builder/）の画面部品にだけ使う
 		preact(),
+		// 開発用の画面（src/dev-pages/）は、開発サーバーのときだけ道をつける。本番のビルド（GitHub Pages）には入らない
+		// /dev/flick/: フリックの振りの値をスライダーで調整する画面（書き手の希望 2026-11-28）
+		{
+			name: 'dev-pages',
+			hooks: {
+				'astro:config:setup': ({ command, injectRoute }) => {
+					if (command === 'dev') injectRoute({ pattern: '/dev/flick', entrypoint: './src/dev-pages/flick.astro' });
+				},
+			},
+		},
 		starlight({
 			title: 'ピックルボール ドリル集',
 			// ヘッダーのサイト名の前に、サイトのアイコンと同じボールの絵を出す（題名の文字は残す）

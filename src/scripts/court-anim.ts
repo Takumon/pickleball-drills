@@ -97,6 +97,9 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	// 3次元で動かす振り（フォアのフリック）: 横から見たグリップと面の線を、毎こま引き直す
 	const lateral = ball.dataset.lateral !== undefined;
 	const [latStart, latEnd, latBulge] = (ball.dataset.lateral ?? '-105,60').split(',').map(Number);
+	// 振りの中でひじの曲げ方を変える（data-elbow-bend）・グリップが見える間（data-grip-front）。図の見方のカードと同じ
+	const elbowBend = ball.dataset.elbowBend?.split(',').map(Number);
+	const gripFront = ball.dataset.gripFront?.split(',').map(Number);
 	const sideGrip = side?.querySelector<SVGLineElement>('.side-grip');
 	const sideFace = side?.querySelector<SVGLineElement>('.side-paddle');
 	const ftK = Number(sideFace?.getAttribute('stroke-width')) / 0.078 || 1;
@@ -180,10 +183,19 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 		const rot = turnSign * turn;
 		if (lateral && sideGrip && sideFace) {
 			const ln = flickLines(turn, hx + sx, hy + sy, ftK, Math.sign(uy || 1), latStart, latEnd, Number.isFinite(latBulge) ? latBulge : undefined);
-			setLine(sideGrip, ln.grip);
-			setLine(sideFace, ln.face);
+			// 図の見方のカードと同じ描き方: 面の幅は描かず、パドルの軸の線（グリップとつながる。35% より短くしない）
+			setLine(sideGrip, ln.gripAxis);
+			setLine(sideFace, ln.axis);
+			// パドルが手より手前の間（data-grip-front）は、手の上にパドルを描いてグリップを見せる
+			const s01 = 0.5 + turn / 200;
+			const front = !!gripFront && s01 >= gripFront[0] && s01 < gripFront[1];
+			if (sideHand) {
+				if (front && sideHand.compareDocumentPosition(sideGrip) & Node.DOCUMENT_POSITION_PRECEDING) sideGrip.before(sideHand);
+				if (!front && sideHand.compareDocumentPosition(sideFace) & Node.DOCUMENT_POSITION_FOLLOWING) sideFace.after(sideHand);
+			}
 		} else {
 			[sideGrip, sideFace].forEach((el) => el && restoreLine(el));
+			if (sideHand && sideFace && sideHand.compareDocumentPosition(sideFace) & Node.DOCUMENT_POSITION_FOLLOWING) sideFace.after(sideHand);
 			sidePaddle.forEach((el) => el.setAttribute('transform', sx || sy || rot ? `translate(${sx} ${sy}) rotate(${rot} ${hx} ${hy})` : ''));
 		}
 		sideHand?.setAttribute('transform', sx || sy ? `translate(${sx} ${sy})` : '');
@@ -192,7 +204,9 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 			const n = (el: SVGLineElement, k: string) => Number(el.dataset[k]);
 			const hxx = n(forearm, 'x2') + sx;
 			const hyy = n(forearm, 'y2') + sy;
-			const [ex, ey] = solveElbow(n(upperArm, 'x1'), n(upperArm, 'y1'), hxx, hyy, armLen.upper, armLen.lower, armSide);
+			const bendS = Math.max(0, Math.min(1, 0.5 + turn / 200));
+			const bend = lateral && elbowBend ? elbowBend[0] + (elbowBend[1] - elbowBend[0]) * bendS : 1;
+			const [ex, ey] = solveElbow(n(upperArm, 'x1'), n(upperArm, 'y1'), hxx, hyy, armLen.upper, armLen.lower, armSide * bend);
 			forearm.setAttribute('x2', String(hxx));
 			forearm.setAttribute('y2', String(hyy));
 			forearm.setAttribute('x1', String(ex));

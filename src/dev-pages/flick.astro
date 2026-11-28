@@ -1,0 +1,163 @@
+---
+/**
+ * 開発用の調整画面（開発サーバーのときだけ出る。astro.config.mjs の dev-pages。本番のビルドには入らない）: フリックの振りの値をスライダーで変え、「図の見方」のカードで動きを見る。
+ * 右の図は /legend/?tune=... を読み込み直して描く（DiagramLegend.astro の開発用の置きかえ）。決まった値は書き手が伝え、config/court.ts に入れる
+ */
+import { shotSwing } from '../config/court';
+const fh = shotSwing.flick;
+const bh = shotSwing.flick.bh!;
+const init = {
+	'フリック（フォア）': { swing: [...fh.back, ...fh.follow, ...fh.turn], lateral: [...(fh.lateral ?? [-105, 60]), (fh.lateral as number[])?.[2] ?? 1].slice(0, 3), elbowBend: fh.elbowBend ?? [1, 1], gripFront: fh.gripFront ?? [0, 0] },
+	'フリック（バック）': { swing: [...bh.back, ...bh.follow, ...bh.turn], lateral: [...(bh.lateral ?? [-135, 30]), (bh.lateral as number[])?.[2] ?? 1].slice(0, 3), elbowBend: bh.elbowBend ?? [1, 1], gripFront: bh.gripFront ?? [0, 0] },
+};
+---
+<!doctype html>
+<html lang="ja">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>フリックの調整</title>
+		<style is:global>
+			:root { color-scheme: dark; --bg: #0f1f16; --panel: #16291e; --ink: #eef0e8; --muted: #a9b3a5; --accent: #c8e26b; }
+			* { box-sizing: border-box; }
+			body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, sans-serif; }
+			.wrap { display: grid; grid-template-columns: minmax(420px, 40vw) 1fr; gap: 12px; padding: 12px; height: 100vh; }
+			@media (max-width: 800px) { .wrap { grid-template-columns: 1fr; height: auto; } iframe { height: 70vh; } }
+			.panel { background: var(--panel); border-radius: 10px; padding: 12px; overflow: auto; }
+			h1 { font-size: 16px; margin: 0 0 8px; }
+			.tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+			.tabs button { flex: 1; padding: 6px; border: 1px solid var(--muted); background: transparent; color: var(--ink); border-radius: 6px; }
+			.tabs button[aria-pressed='true'] { background: var(--accent); color: #10241a; border-color: var(--accent); }
+			fieldset { border: 1px solid #2c4434; border-radius: 8px; margin: 0 0 10px; padding: 6px 10px 8px; }
+			legend { color: var(--accent); font-weight: 700; padding: 0 4px; }
+			label { display: grid; grid-template-columns: 1fr 56px; align-items: center; gap: 2px 8px; margin: 4px 0; }
+			label span { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+			input[type='range'] { width: 100%; }
+			output { text-align: right; font-variant-numeric: tabular-nums; }
+			textarea { width: 100%; height: 120px; background: #0b1710; color: var(--ink); border: 1px solid #2c4434; border-radius: 6px; font: 12px/1.4 ui-monospace, monospace; }
+			.row { display: flex; gap: 6px; margin-top: 6px; }
+			.row button { flex: 1; padding: 6px; border-radius: 6px; border: 0; background: var(--accent); color: #10241a; font-weight: 700; }
+			iframe { width: 100%; height: calc(100vh - 24px); border: 0; border-radius: 10px; background: var(--panel); }
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<div class="panel">
+				<h1>フリックの調整</h1>
+				<div class="tabs"><button data-k="フリック（フォア）" aria-pressed="false">フォア</button><button data-k="フリック（バック）" aria-pressed="true">バック</button></div>
+				<fieldset>
+					<legend>再生の速さ</legend>
+					<label><span>1 がふつう、0.25 で4分の1、0 で止める</span><input id="speed" type="range" min="0" max="3" step="0.05" value="1" /><output id="speedOut">1</output></label>
+					<div class="row"><button type="button" data-sp="1">1</button><button type="button" data-sp="0.5">0.5</button><button type="button" data-sp="0.25">0.25</button><button type="button" data-sp="0.1">0.1</button><button type="button" data-sp="0">止める</button></div>
+				</fieldset>
+				<div id="controls"></div>
+				<fieldset>
+					<legend>今の値（config/court.ts 用）</legend>
+					<textarea id="out" readonly></textarea>
+					<div class="row"><button id="copy" type="button">値をコピー</button><button id="reset" type="button">元に戻す</button></div>
+				</fieldset>
+			</div>
+			<iframe id="view" title="図の見方のカード"></iframe>
+		</div>
+		<script define:vars={{ init }}>
+			const state = JSON.parse(JSON.stringify(init));
+			const defs = [
+				{ g: '構え（振り始め）の手', items: [
+					['swing', 0, '上下（ft。マイナスで下）', -3, 2, 0.05],
+					['swing', 1, '前後（ft。マイナスで体の側）', -3, 3, 0.05],
+				] },
+				{ g: '振り終わりの手', items: [
+					['swing', 2, '上下（ft）', -2, 4, 0.05],
+					['swing', 3, '前後（ft）', -2, 4, 0.05],
+				] },
+				{ g: '横から見たパドルの先の向き（前が 0°、上が 90°）', items: [
+					['lateral', 0, '振り始め（-90 が6時、-120 が7時、-150 が8時）', -270, 90, 5],
+					['lateral', 1, '振り終わり（0 が3時、30 が2時、60 が1時）', -120, 210, 5],
+					['lateral', 2, '見ている向き（y）へのふくらみ（大きいほど横から見た面で半円を描かない）', 0, 15, 0.1],
+				] },
+				{ g: 'ひじの曲げ（1 は「へ」、-1 は逆の「へ」、0 はまっすぐ）', items: [
+					['elbowBend', 0, '振り始め', -3, 3, 0.05],
+					['elbowBend', 1, '振り終わり', -3, 3, 0.05],
+				] },
+				{ g: 'グリップが見える間（0 が振り始め、1 が振り終わり）', items: [
+					['gripFront', 0, 'ここから', 0, 1, 0.05],
+					['gripFront', 1, 'ここまで', 0, 1, 0.05],
+				] },
+			];
+			let cur = 'フリック（バック）';
+			const box = document.getElementById('controls');
+			const out = document.getElementById('out');
+			const view = document.getElementById('view');
+			let timer = 0;
+			// 右の図には、選んでいるカードだけを出す
+			const url = () => `/pickleball-drills/legend/?tune=${encodeURIComponent(JSON.stringify({ [cur]: state[cur] }))}`;
+			const reload = () => {
+				clearTimeout(timer);
+				timer = setTimeout(() => {
+					view.src = url();
+				}, 250);
+			};
+			const r2 = (v) => Math.round(v * 100) / 100;
+			const show = () => {
+				const fmt = (k) => {
+					const s = state[k];
+					return `// ${k}\nback: [${r2(s.swing[0])}, ${r2(s.swing[1])}],\nfollow: [${r2(s.swing[2])}, ${r2(s.swing[3])}],\nturn: [${s.swing[4]}, ${s.swing[5]}],\nlateral: [${s.lateral.map(r2).join(', ')}],\nelbowBend: [${s.elbowBend.map(r2).join(', ')}],\ngripFront: [${s.gripFront.map(r2).join(', ')}],`;
+				};
+				out.value = Object.keys(state).map(fmt).join('\n\n');
+			};
+			const build = () => {
+				box.innerHTML = '';
+				for (const d of defs) {
+					const fs = document.createElement('fieldset');
+					fs.innerHTML = `<legend>${d.g}</legend>`;
+					for (const [key, i, label, min, max, step] of d.items) {
+						const l = document.createElement('label');
+						const v = state[cur][key][i];
+						l.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${v}"><output>${r2(v)}</output>`;
+						const inp = l.querySelector('input');
+						const o = l.querySelector('output');
+						inp.addEventListener('input', () => {
+							state[cur][key][i] = Number(inp.value);
+							o.textContent = r2(Number(inp.value));
+							show();
+							reload();
+						});
+						fs.append(l);
+					}
+					box.append(fs);
+				}
+			};
+			document.querySelectorAll('.tabs button').forEach((b) =>
+				b.addEventListener('click', () => {
+					cur = b.dataset.k;
+					document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+					build();
+					view.src = url();
+				}),
+			);
+			document.getElementById('copy').addEventListener('click', () => navigator.clipboard?.writeText(out.value));
+			document.getElementById('reset').addEventListener('click', () => {
+				Object.assign(state, JSON.parse(JSON.stringify(init)));
+				build();
+				show();
+				reload();
+			});
+			// 再生の速さ: 図（iframe）の window.__legendSpeed を書きかえる。図を読み込み直したときも同じ速さにする
+			let speed = 1;
+			const speedIn = document.getElementById('speed');
+			const speedOut = document.getElementById('speedOut');
+			const setSpeed = (v) => {
+				speed = v;
+				speedIn.value = String(v);
+				speedOut.textContent = String(v);
+				try { view.contentWindow.__legendSpeed = v; } catch {}
+			};
+			speedIn.addEventListener('input', () => setSpeed(Number(speedIn.value)));
+			document.querySelectorAll('[data-sp]').forEach((b) => b.addEventListener('click', () => setSpeed(Number(b.dataset.sp))));
+			view.addEventListener('load', () => setSpeed(speed));
+			build();
+			show();
+			view.src = url();
+		</script>
+	</body>
+</html>

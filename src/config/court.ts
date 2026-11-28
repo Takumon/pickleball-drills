@@ -345,8 +345,6 @@ export interface SwingForm {
 	setup?: boolean;
 	/** 打ったあと、振り終わりの形のまま止めて、手を戻さない（フリック。書き手の指摘 2026-11-28: フリスビーを投げた形から手を戻さない） */
 	hold?: boolean;
-	/** 体の横へ回す振り（フォアのフリック）。turn は体の正面の面の中の回りで、横から見た図ではパドルが上下に伸び縮みする（lib/swing-path.ts の lateralMatrix） */
-	lateral?: boolean;
 	/** 関節を軸に回す振り: 腕とパドルを1つのかたまりとして肩かひじのまわりに turn の角度だけ回す（back と follow は使わない） */
 	pivot?: 'shoulder' | 'elbow';
 	/** pivot の振りで、腕を回す角度（なければ turn と同じ）。パドルはそのうえで turn まで、振りに合わせて少しずつ回る */
@@ -355,7 +353,7 @@ export interface SwingForm {
 	straight?: boolean;
 	note: string;
 }
-export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; lateral?: boolean; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
+export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
 	dink: { back: [-0.1, -0.6], follow: [0.5, 0.7], turn: [-10, 25], note: '少しだけ後ろに引き、肩から振り子のように前へ。振り抜きは短く、腰の高さで目標を指す' },
 	// ロールディンク: ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。ディンクより速く、鋭いクロスを狙える
 	rollDink: { back: [-0.25, -0.5], follow: [0.6, 0.55], turn: [-15, 30], note: 'ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。振り抜きは短く、目標の方向へ' },
@@ -429,14 +427,12 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 	// バックはフリスビーを投げるように前へ振り出し、パドルを上へ立てずに面を目標へ向けて止める（書き手の指摘）
 	flick: {
 		// フォア（2026-11-28 に作り直した。書き手の説明と Richard の動画 nYQxmcDYgEg の 1:14〜1:16 のコマ）:
-		// ヘッドを真下へ下げて待ち、手首を軸にパドルを、体の横を通って下から上へ半円を描くように回し上げる（体の正面の面の中で回る）。
-		// 手はほとんど動かさず、少しだけ前へ押し出す。振り終わり（パドルの先が上）のまま止める（hold）。
-		// 横から見ると、パドルは前へ倒れず、面をネットへ向けたまま、下へ伸びた形から縮み、上へ伸びて見える
-		// （書き手の指摘「横から見ると、そういう軌道にならない」。前は前を通って回していた）
+		// ヘッドを真下へ下げて待ち、手首を軸にパドルを半円を描くように下から前、上へ回し上げる。手はほとんど動かさず、少しだけ前へ押し出す。
+		// 振り終わり（パドルの先が上、手は体の前の腰の高さ）のまま止める（hold）。back・follow は手の動き、turn はパドルの回り（手が軸）
 		back: [-0.05, -0.15],
 		follow: [0.1, 0.3],
-		turn: [-180, 0],
-		lateral: true,
+		// 打つ瞬間はパドルの先が真上（side-figure の paddleTip 90）。構えは真下より少し前（-170°）、振り終わりは真上より少し後ろ（+5°）
+		turn: [-170, 5],
 		setup: true,
 		hold: true,
 		note: 'パドルのヘッドを真下へ下げて体の前で待つ。手首を軸に、パドルを下から前、上へ半円を描くように回し上げ、手は少しだけ前へ押し出す。パドルの先が上を向いた形で止め、手を戻さない',

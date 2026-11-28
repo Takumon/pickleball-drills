@@ -288,9 +288,11 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 							<path class="side-upperarm-shape" data-w1={fig.widths.arm.shoulder} data-w2={fig.widths.arm.elbowUpper} d={taper(fig.upperArm[0], fig.upperArm[1], fig.upperArm[2], fig.upperArm[3], fig.widths.arm.shoulder, fig.widths.arm.elbowUpper)} />
 							<path class="side-forearm-shape" data-w1={fig.widths.arm.elbowFore} data-w2={fig.widths.arm.wrist} d={taper(fig.forearm[0], fig.forearm[1], fig.forearm[2], fig.forearm[3], fig.widths.arm.elbowFore, fig.widths.arm.wrist)} />
 							<circle class="side-elbow" cx={fig.upperArm[2]} cy={fig.upperArm[3]} r={fig.widths.arm.elbowFore / 2} />
+							{/* 3次元で動かすフリック（lateral）は、パドルが手より手前（見ている人の側）にあるので、手の上にパドルを描き、グリップが見えるようにする（書き手の指摘 2026-11-28） */}
+							{sw.lateral && <circle class="side-hand" cx={fig.hand.cx} cy={fig.hand.cy} r={fig.hand.r} />}
 							<line class="side-grip" stroke-width={fig.widths.grip} x1={fig.grip[0]} y1={fig.grip[1]} x2={fig.grip[2]} y2={fig.grip[3]} />
 							<line class="side-paddle" stroke-width={fig.widths.face} x1={fig.face[0]} y1={fig.face[1]} x2={fig.face[2]} y2={fig.face[3]} />
-							<circle class="side-hand" cx={fig.hand.cx} cy={fig.hand.cy} r={fig.hand.r} />
+							{!sw.lateral && <circle class="side-hand" cx={fig.hand.cx} cy={fig.hand.cy} r={fig.hand.r} />}
 						</g>
 						<circle class="stroke-ball" cx={ballAt.cx} cy={ballAt.cy} r="0.22" data-cx={ballAt.cx} data-cy={ballAt.cy} />
 						<path class="swing-arrow" d={arrow} marker-end={`url(#sw-${key})`} />

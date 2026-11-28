@@ -86,6 +86,25 @@ const GROUND_MARK = 0.6;
 // 線を伸ばして見せるマスクの範囲。図の表示範囲（viewBox）に余白を足して、どこに引いた線も切れないようにする
 const [vbX, vbY, vbW, vbH] = viewBox.split(/\s+/).map(Number);
 const maskBox = { x: vbX - 10, y: vbY - 10, width: vbW + 20, height: vbH + 20 };
+/**
+ * 角を選んで丸くした長方形の形（path の d）。r: 丸める半径、round: [左上, 右上, 右下, 左下] を丸くするか。
+ * 上から見た図と横から見た帯は、2つで1枚に見えるよう、向かい合う内側の角を四角にする（書き手と決めた）
+ */
+const roundRect = (x: number, y: number, w: number, h: number, r: number, [tl, tr, br, bl]: [boolean, boolean, boolean, boolean]) => {
+	const a = (on: boolean) => (on ? r : 0);
+	return [
+		`M${x + a(tl)},${y}`,
+		`H${x + w - a(tr)}`,
+		tr ? `A${r},${r} 0 0 1 ${x + w},${y + r}` : '',
+		`V${y + h - a(br)}`,
+		br ? `A${r},${r} 0 0 1 ${x + w - r},${y + h}` : '',
+		`H${x + a(bl)}`,
+		bl ? `A${r},${r} 0 0 1 ${x},${y + h - r}` : '',
+		`V${y + a(tl)}`,
+		tl ? `A${r},${r} 0 0 1 ${x + r},${y}` : '',
+		'Z',
+	].join('');
+};
 /* 横から見た図の人（棒人間）は src/lib/side-figure.ts で組み立てる */
 /** 弾んだ位置の輪の半径（控えめに小さく） */
 const MARK = 0.45;
@@ -128,7 +147,7 @@ const isSub = (t: string) => t === 'move';
 	</defs>
 
 	{/* コートの外まわり（ベースラインの後ろなど）も地面として塗る。人がコートの外に立っても、ページの背景に溶けないようにする */}
-	<rect class="apron" x={vbX} y={vbY} width={side ? side.x0 - 0.9 - vbX : vbW} height={vbH} rx="0.6" />
+	<path class="apron" d={roundRect(vbX, vbY, side ? side.x0 - 0.9 - vbX : vbW, vbH, 0.6, side ? [true, false, false, true] : [true, true, true, true])} />
 	<rect class="surface" x="0" y="0" width={COURT.width} height={COURT.length} />
 	<rect class="kitchen" x="0" y={k1} width={COURT.width} height={COURT.kitchen * 2} />
 	{
@@ -287,7 +306,7 @@ const isSub = (t: string) => t === 'move';
 			<g class="side">
 				{/* 横から見た帯の枠は、上から見たコートの枠（.apron）と上下をそろえる（書き手の指摘: 上下が少しずれていた）。
 				    右の端も図の右端（viewBox の右端）にそろえ、角丸が切れないようにする */}
-				<rect class="side-panel" x={side.x0 - 0.7} y={vbY} width={vbX + vbW - (side.x0 - 0.7)} height={vbH} rx="0.6" />
+				<path class="side-panel" d={roundRect(side.x0 - 0.7, vbY, vbX + vbW - (side.x0 - 0.7), vbH, 0.6, [false, true, true, false])} />
 				{/* 地面の線（補助の図なので1色）。ベースラインとキッチンラインの位置だけ、同じ太さのまま色を変える */}
 				<line class="side-ground" x1={side.x0} y1={side.top + 2.2} x2={side.x0} y2={side.bottom - 0.6} />
 				{[0, k1, k2, COURT.length]

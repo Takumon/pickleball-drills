@@ -39,7 +39,6 @@
 	/* 横から見た図の地面の線は、人（--side-ink）より薄く細くして、足や靴と見分けられるようにする */
 	--side-ground: #dde1e5;
 	margin: 1rem auto;
-	max-width: 340px;
 }
 .court.multi {
 	max-width: none;
@@ -63,8 +62,9 @@
 	--side-mark: #5f6873;
 	--side-ground: #34403a;
 }
+/* 図は本文の幅いっぱいに見せる（前は幅 340px が上限。図がいちばん大事なので広げた。書き手と決めた 2026-11-28）。
+   縦長の図は、下の max-height（60vh）で高さが決まり、幅もそれに合わせて縮む */
 .court .anim {
-	max-width: 340px;
 	margin: 0 auto 1.25rem;
 }
 /* 縦長の図でも、コートと操作ボタンがスマホの1画面に収まるようにする */

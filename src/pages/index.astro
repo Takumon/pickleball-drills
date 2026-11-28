@@ -27,7 +27,7 @@ const tiles = categories
 	.filter((c) => c.count > 0);
 ---
 
-<StarlightPage frontmatter={{ title: 'ピックルボール ドリル集', description: 'ピックルボールの練習方法を、アニメーションで理解するドリル集です。打つ順と球の行き先が図で動くので、練習中にスマホで見てすぐ確かめられます。' }}>
+<StarlightPage frontmatter={{ title: 'ピックルボール ドリル集', head: [{ tag: 'title', content: 'ピックルボール ドリル集' }], description: 'ピックルボールの練習方法を、アニメーションで理解するドリル集です。打つ順と球の行き先が図で動くので、練習中にスマホで見てすぐ確かめられます。' }}>
 	<div id="top-page">
 		<section class="hero">
 			<p class="tagline">アニメーションで理解する練習方法</p>
@@ -302,6 +302,16 @@ const tiles = categories
 </style>
 
 <style is:global>
+	/* トップページでは、ページの見出し（サイト名と同じ）を画面に出さない。画面の上のサイト名と2回続いてうるさいため（書き手の指摘）。
+	   読み上げのために見出しは残す。練習メニューを表示するとき（#top-page を隠すとき）は、見出し「練習メニュー」を出す */
+	main:has(#top-page:not([hidden])) h1#_top {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
 	/* メニューの行は JavaScript で作るので、スコープなしのスタイルを #menu-view の中に限って当てる */
 	#menu-view .menu-summary {
 		display: flex;

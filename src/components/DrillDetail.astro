@@ -180,9 +180,21 @@ const serviceOf = (url: string) => {
 		border-color: var(--sl-color-accent);
 		color: var(--sl-color-accent-high);
 	}
+	/* 見出しは、サイトの見出しの形（ライムの縦の線）にそろえる（custom.css の h2 と同じ形で、一回り小さく） */
 	.field h3 {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
 		font-size: var(--sl-text-lg);
 		margin-top: 1.25rem;
+	}
+	.field h3::before {
+		content: '';
+		flex: none;
+		width: 0.3rem;
+		height: 1.05em;
+		border-radius: 999px;
+		background: #c6df4a;
 	}
 	.more {
 		margin-top: 1rem;

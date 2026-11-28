@@ -1,0 +1,22 @@
+---
+title: ページが見つかりません
+template: splash
+editUrl: false
+head:
+  - tag: meta
+    attrs:
+      name: robots
+      content: noindex
+---
+
+{/* 見つからないページ（404）。Starlight の既定は「検索バーを使って」と案内するが、検索は外したので、トップとドリル一覧へ案内する（書き手と決めた） */}
+
+export const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+<div class="not-found">
+	<p>お探しのページは見つかりませんでした。URL が変わったか、ページがなくなった可能性があります。</p>
+	<p class="actions">
+		<a class="btn primary" href={`${base}/`}>トップページへ</a>
+		<a class="btn" href={`${base}/drills/`}>ドリル一覧へ</a>
+	</p>
+</div>

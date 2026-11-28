@@ -9,7 +9,7 @@ import Builder from '../components/builder/Builder';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
-<StarlightPage frontmatter={{ title: 'メニューを作る', template: 'splash', pagefind: false, head: [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex' } }] }}>
+<StarlightPage frontmatter={{ title: '練習メニューを作る', template: 'splash', pagefind: false, head: [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex' } }] }}>
 	<div class="not-content">
 		<Builder client:only="preact" base={base} />
 	</div>

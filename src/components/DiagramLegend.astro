@@ -266,7 +266,7 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 	<div class="stroke-grid">
 		{
 			strokes.map(({ t, key, name, hitH, fig, sw, arrow, launch, kp, poseInput, bodyBack, ballAt, head, level, range }) => (
-				<figure class="stroke-card" data-trap={t in TRAP_BASE ? (TRAP_NO_BOUNCE.has(t) ? 'pop' : 'bounce') : undefined} data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ?? []).flat()].join(',')} data-setup={sw.setup ? '' : undefined} data-hold={sw.hold ? '' : undefined} data-lateral={sw.lateral?.join(',')} data-grip-front={sw.gripFront?.join(',')} data-pivot={sw.pivot} data-straight={sw.straight ? '' : undefined} data-pivot-turn={sw.pivotTurn?.join(',')} data-launch={launch} data-keyposes={kp ? JSON.stringify(kp.poses) : undefined} data-pose-input={kp ? JSON.stringify(poseInput) : undefined} data-body-back={bodyBack}>
+				<figure class="stroke-card" data-trap={t in TRAP_BASE ? (TRAP_NO_BOUNCE.has(t) ? 'pop' : 'bounce') : undefined} data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ?? []).flat()].join(',')} data-setup={sw.setup ? '' : undefined} data-hold={sw.hold ? '' : undefined} data-lateral={sw.lateral?.join(',')} data-grip-front={sw.gripFront?.join(',')} data-elbow-bend={sw.elbowBend?.join(',')} data-pivot={sw.pivot} data-straight={sw.straight ? '' : undefined} data-pivot-turn={sw.pivotTurn?.join(',')} data-launch={launch} data-keyposes={kp ? JSON.stringify(kp.poses) : undefined} data-pose-input={kp ? JSON.stringify(poseInput) : undefined} data-body-back={bodyBack}>
 					<svg class="court-svg stroke" viewBox="-2.9 -10 6.5 10.6" aria-hidden="true">
 						<defs>
 							<marker id={`sw-${key}`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth={head} markerHeight={head} orient="auto">
@@ -479,7 +479,11 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 				// 腕は、上腕と前腕の長さを変えずに、肩から動いた手まで曲げ直す（この図ではネットの側が +y）
 				const hx2 = c.f[2] + dx;
 				const hy2 = c.f[3] + dy;
-				const [ex, ey] = solveElbow(c.s0[0], c.s0[1], hx2, hy2, c.len[0], c.len[1], c.side);
+				// ひじの曲げ方を振りの中で変える打ち方（data-elbow-bend）は、半円の中の位置で曲げの向きと量を決める
+				const eb = c.card.dataset.elbowBend?.split(',').map(Number);
+				const bendS = Math.max(0, Math.min(1, 0.5 + turn / 200));
+				const bend = eb ? eb[0] + (eb[1] - eb[0]) * bendS : 1;
+				const [ex, ey] = solveElbow(c.s0[0], c.s0[1], hx2, hy2, c.len[0], c.len[1], c.side * bend);
 				c.forearm.setAttribute('x1', String(ex));
 				c.forearm.setAttribute('y1', String(ey));
 				c.forearm.setAttribute('x2', String(hx2));

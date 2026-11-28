@@ -352,6 +352,11 @@ export interface SwingForm {
 	 * この間は手の上にパドルを描く。ほかの間は手の下（グリップが手に隠れる）。フォアは始めも終わりも見えない、バックは始めだけ見える（書き手の説明 2026-11-28）
 	 */
 	gripFront?: [number, number];
+	/**
+	 * 3次元で動かす振りで、ひじの曲げ方を変える: 半円の始め（0）と終わり（1）での、ひじの曲がる向きと量（1 は打つ瞬間の形の向きのまま、
+	 * -1 は逆の向きにいっぱい、0 は腕をまっすぐ）。途中はそのあいだ。バックのフリックは、振り始めはひじを落とし、振り終わりは逆の「へ」の字（書き手の指摘 2026-11-28）
+	 */
+	elbowBend?: [number, number];
 	/** 関節を軸に回す振り: 腕とパドルを1つのかたまりとして肩かひじのまわりに turn の角度だけ回す（back と follow は使わない） */
 	pivot?: 'shoulder' | 'elbow';
 	/** pivot の振りで、腕を回す角度（なければ turn と同じ）。パドルはそのうえで turn まで、振りに合わせて少しずつ回る */
@@ -360,7 +365,7 @@ export interface SwingForm {
 	straight?: boolean;
 	note: string;
 }
-export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; lateral?: [number, number] | [number, number, number]; gripFront?: [number, number]; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
+export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; lateral?: [number, number] | [number, number, number]; gripFront?: [number, number]; elbowBend?: [number, number]; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
 	dink: { back: [-0.1, -0.6], follow: [0.5, 0.7], turn: [-10, 25], note: '少しだけ後ろに引き、肩から振り子のように前へ。振り抜きは短く、腰の高さで目標を指す' },
 	// ロールディンク: ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。ディンクより速く、鋭いクロスを狙える
 	rollDink: { back: [-0.25, -0.5], follow: [0.6, 0.55], turn: [-15, 30], note: 'ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。振り抜きは短く、目標の方向へ' },
@@ -466,6 +471,8 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 			lateral: [-135, 30, 4],
 			// 構えから打つ瞬間までは、パドルが手より手前でグリップが見える。手首を返したあと（振り終わり）は見えない
 			gripFront: [0, 0.5],
+			// 振り始めはひじを落とし（曲げを半分に）、振り終わりは逆の「へ」の字（ひじが下）
+			elbowBend: [0.5, -1],
 			setup: true,
 			hold: true,
 			note: 'ひじを手首より高く上げてネットへ向け、手首を折ってヘッドを下げ、体の前の低い所で待つ。フリスビーを投げるように、手首を軸に半円を描いてパドルを上げながら、ひじを伸ばして腕を目標へまっすぐ振り出す。振り終わりはパドルが腕と一直線（横から見ると、パドルの先が7時と8時のあいだから2時の向きへ動いて見える）',

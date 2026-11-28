@@ -322,12 +322,7 @@
 	stroke: var(--side-paddle);
 	stroke-linecap: butt;
 }
-/* 3次元で動かすフリックの面（横から見た平行四辺形）。面の色で塗り、角が尖らないように同じ色の細い線で縁取る */
-.court .side-face-poly {
-	fill: var(--side-paddle);
-	stroke: var(--side-paddle);
-	stroke-linejoin: round;
-}
+
 .court .side-trace {
 	fill: none;
 	stroke: var(--side-ink);

@@ -68,13 +68,15 @@ export function flickLines(turnDeg: number, hx: number, hy: number, k: number, t
 	const ft = [C[0] + D[0] / 2, C[1] + D[1] / 2];
 	const butt = at(-T[0] * toButt, -T[2] * toButt);
 	const g2 = at(C[0] - (T[0] * faceLen) / 2, C[1] - (T[2] * faceLen) / 2);
-	// 面の長方形を横から見た形（平行四辺形）: 真ん中 C、パドルの向き A（長さ faceLen）、幅の向き Wv（長さ width）。
-	// グリップは、面の手元の辺のまん中（C - A/2）につながる（前は面を1本の線で描き、幅の分だけグリップと離れて見えた。書き手の指摘 2026-11-28）
-	const A = [T[0] * faceLen, T[2] * faceLen];
-	const Wv = [W[0] * width, W[2] * width];
-	const corner = (a: number, w: number) => at(C[0] + (A[0] * a) / 2 + (Wv[0] * w) / 2, C[1] + (A[1] * a) / 2 + (Wv[1] * w) / 2);
-	const poly = [...corner(-1, -1), ...corner(1, -1), ...corner(1, 1), ...corner(-1, 1)];
-	// 面の軸（手元の辺のまん中から先の辺のまん中まで）
-	const axis = [...at(C[0] - A[0] / 2, C[1] - A[1] / 2), ...at(C[0] + A[0] / 2, C[1] + A[1] / 2)];
-	return { grip: [...butt, ...g2], face: [...at(fs[0], fs[1]), ...at(ft[0], ft[1])], poly, axis };
+	// 図の見方のカードの描き方（書き手の指摘 2026-11-28）: 面の幅は描かず、パドルの軸（グリップから面の先まで1本）で描く。
+	// 面を平行四辺形で描くと太く見える瞬間があり、そこまで3次元にしなくてよい。見ている向きを向いて短くなるときも、
+	// 長さの割合は MIN_K より短くしない（消えて見えないように）
+	const MIN_K = 0.35;
+	const pl = Math.hypot(T[0], T[2]);
+	const kk = pl < MIN_K && pl > 1e-6 ? MIN_K / pl : pl <= 1e-6 ? 0 : 1;
+	const P = [T[0] * kk, T[2] * kk];
+	const Cs = [P[0] * toFace, P[1] * toFace];
+	const axis = [...at(Cs[0] - (P[0] * faceLen) / 2, Cs[1] - (P[1] * faceLen) / 2), ...at(Cs[0] + (P[0] * faceLen) / 2, Cs[1] + (P[1] * faceLen) / 2)];
+	const gripAxis = [...at(-P[0] * toButt, -P[1] * toButt), ...axis.slice(0, 2)];
+	return { grip: [...butt, ...g2], face: [...at(fs[0], fs[1]), ...at(ft[0], ft[1])], axis, gripAxis };
 }

@@ -2,11 +2,15 @@
 // Starlight の MarkdownContent を差し替え、ドリルページでは frontmatter の drill から本文を組み立てる。
 import Default from '@astrojs/starlight/components/MarkdownContent.astro';
 import DrillDetail from './DrillDetail.astro';
+import ShareButtons from './ShareButtons.astro';
 
-const drill = Astro.locals.starlightRoute.entry.data.drill;
+const { entry } = Astro.locals.starlightRoute;
+const drill = entry.data.drill;
 ---
 
 <Default>
 	{drill && <DrillDetail drill={drill} />}
+	{/* ドリルのページだけに出す（練習メニューに差し込む中身には出さない） */}
+	{drill && <ShareButtons heading="このドリルを共有する" text={`${entry.data.title} | ピックルボール ドリル集`} />}
 	<slot />
 </Default>

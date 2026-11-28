@@ -7,6 +7,7 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { getCollection } from 'astro:content';
 import Court from '../components/Court.astro';
+import ShareButtons from '../components/ShareButtons.astro';
 import { categories } from '../config/categories';
 import { circle } from '../config/circle';
 import '../styles/court.css';
@@ -64,6 +65,7 @@ const tiles = categories
 
 		{/* 「ほかのページ」（ドリル一覧・図の見方・大原則・用語集）は出さない。ドリル一覧はカテゴリのタイルから、ほかはサイドバーから行ける。
 		    トップで見せても、読み手にしてほしい行動がないため（書き手の指摘） */}
+		<ShareButtons heading="このサイトを共有する" text="ピックルボール ドリル集" />
 		<p class="builder-link"><a href={`${base}/builder/`}>メニューを作る</a></p>
 	</div>
 

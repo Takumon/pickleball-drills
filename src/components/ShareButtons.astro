@@ -1,0 +1,108 @@
+---
+/**
+ * 共有のボタン（トップページとドリルのページ。書き手と決めた 2026-11-28）。
+ * スマホなど共有の画面（Web Share API）がある環境では「共有」ボタン1つにして、押すとその人の使うアプリ（LINE・X など）から選べる。
+ * ない環境（PC など）では「LINE で送る」「X でポスト」「リンクをコピー」の3つを出す。
+ * 共有する URL は公開ページの URL（開発サーバーで見ていても、公開ページの URL を渡す）。プレビューの画像は、そのページの共有の画像。
+ */
+interface Props {
+	/** 見出し（例: このサイトを共有する） */
+	heading: string;
+	/** 共有するときの文（ページの題名） */
+	text: string;
+}
+const { heading, text } = Astro.props;
+const url = new URL(Astro.url.pathname, Astro.site).href;
+const line = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`;
+const x = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+---
+
+<section class="share" data-share data-url={url} data-text={text}>
+	<h2>{heading}</h2>
+	<div class="buttons">
+		<button type="button" class="native" data-native hidden>共有</button>
+		<a class="line" data-fallback href={line} target="_blank" rel="noopener">LINE で送る</a>
+		<a class="x" data-fallback href={x} target="_blank" rel="noopener">X でポスト</a>
+		<button type="button" class="copy" data-fallback data-copy>リンクをコピー</button>
+	</div>
+</section>
+
+<script>
+	document.querySelectorAll<HTMLElement>('[data-share]').forEach((box) => {
+		const url = box.dataset.url!;
+		const text = box.dataset.text!;
+		const native = box.querySelector<HTMLButtonElement>('[data-native]')!;
+		// 共有の画面がある環境（主にスマホ）では、ボタンを1つにする
+		if (typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches) {
+			native.hidden = false;
+			box.querySelectorAll<HTMLElement>('[data-fallback]').forEach((el) => (el.hidden = true));
+			native.addEventListener('click', () => {
+				navigator.share({ title: text, text, url }).catch(() => {});
+			});
+		}
+		const copy = box.querySelector<HTMLButtonElement>('[data-copy]')!;
+		copy.addEventListener('click', async () => {
+			try {
+				await navigator.clipboard.writeText(url);
+				copy.textContent = 'コピーしました';
+			} catch {
+				copy.textContent = 'コピーできませんでした';
+			}
+			setTimeout(() => (copy.textContent = 'リンクをコピー'), 2000);
+		});
+	});
+</script>
+
+<style>
+	.share {
+		margin-top: 2rem;
+	}
+	.share h2 {
+		font-size: var(--sl-text-lg);
+	}
+	.buttons {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+	}
+	.buttons a,
+	.buttons button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 2.5rem;
+		padding: 0 1rem;
+		border-radius: 999px;
+		border: 1px solid transparent;
+		font: inherit;
+		font-size: var(--sl-text-sm);
+		font-weight: 600;
+		text-decoration: none;
+		cursor: pointer;
+		margin: 0;
+	}
+	.buttons [hidden] {
+		display: none;
+	}
+	.native {
+		background: var(--sl-color-accent);
+		color: var(--sl-color-black);
+		min-width: 8rem;
+	}
+	/* LINE の緑（ブランドの色）。白い文字で、ライト・ダークのどちらでも読める */
+	.line {
+		background: #06c755;
+		color: #fff;
+	}
+	/* X は白黒。テーマで反転する色を使う */
+	.x {
+		background: var(--sl-color-white);
+		color: var(--sl-color-black);
+	}
+	.copy {
+		background: transparent;
+		color: var(--sl-color-white);
+		border-color: var(--sl-color-gray-4);
+	}
+</style>

@@ -391,7 +391,7 @@ const serviceOf = (url: string) => {
 		}
 	}
 	.situations[data-sit-ui='d'] .sit-details > summary {
-		display: list-item;
+		display: block;
 		cursor: pointer;
 		font-weight: 700;
 		font-size: var(--sl-text-sm);
@@ -449,7 +449,8 @@ const serviceOf = (url: string) => {
 		color: var(--sl-color-gray-2);
 		cursor: pointer;
 	}
-	.field.sit-main-off > :not(.situations):not(h3) {
+	/* メインの図（Court の部品なので :global）を隠す */
+	.field.sit-main-off > :global(figure) {
 		display: none;
 	}
 	/* 案C: メインの図の右上に小さな窓（ワイプ）で出す。押すと大きくなる */

@@ -431,7 +431,8 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 		// 振り終わり（パドルの先が上、手は体の前の腰の高さ）のまま止める（hold）。back・follow は手の動き、turn はパドルの回り（手が軸）
 		back: [-0.05, -0.15],
 		follow: [0.1, 0.3],
-		turn: [-160, 20],
+		// 打つ瞬間はパドルの先が真上（side-figure の paddleTip 90）。構えは真下より少し前（-170°）、振り終わりは真上より少し後ろ（+5°）
+		turn: [-170, 5],
 		setup: true,
 		hold: true,
 		note: 'パドルのヘッドを真下へ下げて体の前で待つ。手首を軸に、パドルを下から前、上へ半円を描くように回し上げ、手は少しだけ前へ押し出す。パドルの先が上を向いた形で止め、手を戻さない',

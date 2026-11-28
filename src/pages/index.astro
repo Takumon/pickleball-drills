@@ -65,15 +65,8 @@ const tiles = categories
 			<p><a class="circle-link" href={circle.url} target="_blank" rel="noopener">テニスベアの{circle.name}のページ ↗</a></p>
 		</section>
 
-		<section class="others">
-			<h2>ほかのページ</h2>
-			<ul>
-				<li><a href={`${base}/drills/`}>ドリル一覧</a></li>
-				<li><a href={`${base}/legend/`}>図の見方</a></li>
-				<li><a href={`${base}/principles/`}>大原則</a></li>
-				<li><a href={`${base}/glossary/`}>用語集</a></li>
-			</ul>
-		</section>
+		{/* 「ほかのページ」（ドリル一覧・図の見方・大原則・用語集）は出さない。ドリル一覧はカテゴリのタイルから、ほかはサイドバーから行ける。
+		    トップで見せても、読み手にしてほしい行動がないため（書き手の指摘） */}
 		<p class="builder-link"><a href={`${base}/builder/`}>メニューを作る</a></p>
 	</div>
 
@@ -251,9 +244,6 @@ const tiles = categories
 	}
 	.circle-link {
 		font-weight: 600;
-	}
-	.others ul {
-		padding-left: 1.1rem;
 	}
 	/* 作り手向けの入口は目立たせない */
 	.builder-link {

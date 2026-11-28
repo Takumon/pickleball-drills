@@ -49,7 +49,7 @@ const toMenu = (s: State): Menu => ({
 const fromMenu = (m: Menu): State => ({ theme: m.theme ?? '', total: m.total, rows: m.items.map(withUid) });
 
 function loadInitial(): State {
-	// URL にメニューがあれば、それを読み込む（メニュー表示の「このメニューを編集」から来たとき）
+	// URL にメニューがあれば、それを読み込む（メニューの URL の /? を /builder/? に変えて開いたとき）
 	const fromUrl = parseMenu(location.search);
 	if (fromUrl) {
 		// 読み込んだら URL からメニューを外す（そのまま再読み込みすると、編集した内容が URL の内容に戻ってしまうため）

@@ -8,6 +8,12 @@ interface Props {
 	drill: Drill;
 }
 const { drill } = Astro.props;
+/**
+ * 派生形ごとに図があるドリルは、一番上の図の上に派生形の切り替えボタンを出し、押すと図・「今回」の1行・球出しの文が切り替わる（書き手と決めた 2026-11-28）。
+ * 図のない派生形は、上の図（drill.diagram）を使う。図がある派生形が1つもないドリルでは出さない（押しても図が変わらないため）
+ */
+const switchable = drill.diagram && drill.variants.some((v) => v.diagram);
+const defaultKey = drill.variants.find((v) => v.default)?.key;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 /** カテゴリの印: メインのカテゴリ、サブカテゴリの順。押すとドリル一覧のそのカテゴリへ飛ぶ */
 const catTags = [drill.category, ...(drill.subCategories ?? [])].map((code, i) => ({
@@ -56,12 +62,36 @@ const serviceOf = (url: string) => {
 				<section class="field">
 					{showHeading(field) && <h3>{fieldLabels[field]}</h3>}
 					{field === 'setup' && <p>{drill.setup}</p>}
-					{field === 'feed' && <p>{drill.feed}</p>}
+					{field === 'feed' && (
+						<p
+							data-variant-feed={switchable ? JSON.stringify(Object.fromEntries(drill.variants.map((v) => [v.key, v.feed ?? drill.feed]))) : undefined}
+						>
+							{(switchable && drill.variants.find((v) => v.default)?.feed) || drill.feed}
+						</p>
+					)}
 					{field === 'scene' && <p>{drill.scene}</p>}
 					{field === 'purpose' && <p>{drill.purpose}</p>}
 					{field === 'focus' && <p>{drill.focus}</p>}
 					{field === 'notes' && <p>{drill.notes}</p>}
-					{field === 'diagram' && drill.diagram && <Court diagram={drill.diagram} title={`${drill.id} の図`} />}
+					{field === 'diagram' && drill.diagram && !switchable && <Court diagram={drill.diagram} title={`${drill.id} の図`} />}
+					{field === 'diagram' && switchable && (
+						<div class="variant-switch" data-variant-switch data-default={defaultKey}>
+							<div class="vs-tabs" role="tablist" aria-label="打ち方">
+								{drill.variants.map((v) => (
+									<button type="button" role="tab" data-v={v.key} aria-selected={v.default ? 'true' : 'false'}>
+										{v.name}
+									</button>
+								))}
+							</div>
+							<div class="vs-panels">
+								{drill.variants.map((v) => (
+									<div class:list={['vs-panel', { off: !v.default }]} data-v={v.key}>
+										<Court diagram={v.diagram ?? drill.diagram!} title={`${drill.id}.${v.key} の図`} />
+									</div>
+								))}
+							</div>
+						</div>
+					)}
 					{/* 今回の派生形（練習メニューで選んだもの）。中身はスクリプトで入れる（src/scripts/variant-now.ts） */}
 					{field === 'diagram' && drill.variants.length > 0 && (
 						<p
@@ -105,7 +135,7 @@ const serviceOf = (url: string) => {
 								<>
 									<dt>
 										{v.name}
-										{v.default && <span class="diagram-tag">（図はこれ）</span>}
+										{v.default && !switchable && <span class="diagram-tag">（図はこれ）</span>}
 									</dt>
 									<dd>
 										{v.setup && <p>人数・配置: {v.setup}</p>}
@@ -125,7 +155,7 @@ const serviceOf = (url: string) => {
 											</ul>
 										)}
 										{v.note && <p>{v.note}</p>}
-										{v.diagram && <Court diagram={v.diagram} title={`${drill.id}.${v.key} の図`} />}
+										{v.diagram && !switchable && <Court diagram={v.diagram} title={`${drill.id}.${v.key} の図`} />}
 									</dd>
 								</>
 							))}
@@ -244,6 +274,40 @@ const serviceOf = (url: string) => {
 	}
 	.variant-now-name {
 		margin-inline-end: 0.5em;
+	}
+	/* 派生形の切り替え: 横に並んだボタン。選んでいるものだけ色を付ける */
+	.vs-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+		margin-bottom: 0.5rem;
+	}
+	.vs-tabs button {
+		font: inherit;
+		font-size: var(--sl-text-sm);
+		font-weight: 700;
+		padding: 0.3rem 0.9rem;
+		border-radius: 999px;
+		border: 1px solid var(--sl-color-gray-4);
+		background: transparent;
+		color: var(--sl-color-gray-2);
+		cursor: pointer;
+		margin: 0;
+	}
+	.vs-tabs button[aria-selected='true'] {
+		background: var(--sl-color-accent);
+		border-color: var(--sl-color-accent);
+		color: var(--sl-color-black);
+	}
+	/* 選んでいない派生形の図は、場所を取らずに隠す（アニメーションの長さの計算に要るので、display:none にはしない） */
+	.vs-panels {
+		position: relative;
+	}
+	.vs-panel.off {
+		position: absolute;
+		inset: 0 0 auto 0;
+		visibility: hidden;
+		pointer-events: none;
 	}
 </style>
 

@@ -158,6 +158,7 @@ for (const s of diagram.shots) {
 function receiveHeight(s: Shot) {
 	// ネットにかかる球は、白帯より少し下でネットに当たって止まる
 	if (s.miss === 'net') return ft('underTape');
+	if (s.miss === 'out') return 0;
 	if (typeof s.to !== 'string') return ft(defaultReceiveHeight);
 	const rest = diagram.shots.slice(diagram.shots.indexOf(s) + 1);
 	const next = rest.find((n) => n.type !== 'move' && n.from === s.to);
@@ -427,22 +428,33 @@ const panels = groups.map((g) => {
 		// 人のネット側に出す（奥の人の上に出すと、図の上の端で切れるため）
 		return f ? ([f.x, f.y + (f.y < COURT.net ? 1 : -1) * (PLAYER_R + 1.2)] as Point) : undefined;
 	};
-	// ネットにかかる球（miss: net）: 受ける人のパドルへ向かう線の、ネットを越える所で止める（ボールはそこで消える）
+	// 失敗した球（miss）: net はネットで止める。out は受ける人の外へそれて、コートの外に落ちる
 	let left = ballsLeft[groups.indexOf(g)].before;
 	const missOf = (s: Shot) => {
-		if (s.miss !== 'net' || typeof s.from !== 'string' || typeof s.to !== 'string') return undefined;
+		if (!s.miss || typeof s.from !== 'string' || typeof s.to !== 'string') return undefined;
 		const a = byId.get(s.from)!.face;
 		const b = byIdTo.get(s.to)!.face;
-		const t = (COURT.net - a[1]) / (b[1] - a[1]);
-		const pt: Point = [a[0] + (b[0] - a[0]) * t, COURT.net + (a[1] < COURT.net ? -0.15 : 0.15)];
+		const full = Math.hypot(b[0] - a[0], b[1] - a[1]);
+		let pt: Point;
+		if (s.miss === 'net') {
+			const t = (COURT.net - a[1]) / (b[1] - a[1]);
+			pt = [a[0] + (b[0] - a[0]) * t, COURT.net + (a[1] < COURT.net ? -0.15 : 0.15)];
+		} else {
+			// 受ける人の側のサイドラインの外（コートの外）、受ける人より少しネット寄りに落ちる
+			pt = [b[0] < COURT.width / 2 ? -1.1 : COURT.width + 1.1, b[1] + (b[1] > COURT.net ? -1.5 : 1.5)];
+		}
 		left -= 1;
-		// 残りの球の数は、止まった所の打った人の側に出す
 		// 失敗の数まで減った手では、真ん中の「失敗」と重なるので、残りの数は出さない
 		const failed = diagram.failAt !== undefined && left <= diagram.failAt;
+		// ほかの球と同じ速さで飛ぶように、線の長さの割合（span）を持つ（同じ手の球は同じ時間で動くため、短い線はゆっくりに見えていた）
+		const span = Math.min(1, Math.hypot(pt[0] - a[0], pt[1] - a[1]) / full);
+		const toward = s.miss === 'net' ? (a[1] < COURT.net ? -1.6 : 1.6) : b[1] > COURT.net ? 1.4 : -1.4;
 		return {
-			shot: { ...s, to: pt, bounce: false as const, label: s.label ?? 'ミス（ネット）' },
-			at: failed ? undefined : ([pt[0], pt[1] + (a[1] < COURT.net ? -1.6 : 1.6)] as Point),
+			shot: { ...s, to: pt, bounce: s.miss === 'net' ? (false as const) : undefined, label: s.label ?? (s.miss === 'net' ? 'ミス（ネット）' : 'ミス（アウト）') },
+			at: failed ? undefined : ([s.miss === 'net' ? pt[0] : COURT.width / 2 + (pt[0] < 0 ? -4 : 4), pt[1] + toward] as Point),
 			text: `残り${left}つ`,
+			span,
+			end: pt,
 		};
 	};
 	const lines = g.shots.map((s) => {
@@ -452,6 +464,9 @@ const panels = groups.map((g) => {
 		fresh: freshShots.has(s),
 		lostAt: m ? m.at : loserOf(s),
 		lostText: m?.text,
+		miss: s.miss,
+		span: m && m.span < 0.999 ? m.span : undefined,
+		missAt: m?.end,
 		// 相手の打球を見て動く人は、反応する時間だけ遅れて動き出す（自分で打ちながら動くときは遅れない）
 		delay:
 			s.type === 'move' && g.shots.some((o) => o.type !== 'move' && o.from !== s.from) ? reactionMs : undefined,

@@ -650,8 +650,11 @@ function setup(root: HTMLElement) {
 			showMarks(eb);
 			drawTrace(eb);
 			balls.forEach((b, k) => {
-				setReveal(k, eb);
-				drawBall(ballAt(b, eb), k);
+				// 失敗した球（data-span）: ほかの球と同じ速さで進むので、線が短いぶん早く端に着き、そこで止まる
+				const span = Number(b.dataset.span) || 1;
+				const e = Math.min(1, eb / span);
+				setReveal(k, e);
+				drawBall(ballAt(b, e), k);
 
 			});
 			movers.forEach(({ g, sg, dx, dy, delay, run }) => {

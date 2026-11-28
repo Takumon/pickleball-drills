@@ -53,6 +53,12 @@ interface Line {
 	lostAt?: Point;
 	/** lostAt に出す文（省略時は「失点」。ミスの球では「残りNつ」） */
 	lostText?: string;
+	/** 失敗した球（miss）。名前と「×」を、ほかと違う色で出す */
+	miss?: 'net' | 'out';
+	/** 失敗した球の線の長さの割合（ほかの球と同じ速さで飛ばすため） */
+	span?: number;
+	/** 失敗した球が止まった所・落ちた所（「×」を出す） */
+	missAt?: Point;
 	/** 人の動きで、体の中心が動く量（線の長さではなく、動く前と後の位置の差） */
 	shift?: Point;
 	/** ロブに下がる人: 後ろを向いて走り、最後に前足を踏み込んで前を向き直る（横から見た図） */
@@ -215,6 +221,7 @@ const isSub = (t: string) => t === 'move';
 						data-pivot-turn={animated && l.type !== 'move' && l.type in shotSwing ? swingOf(l.type as keyof typeof shotSwing, handOf(l.from), hitOf(l)).pivotTurn?.join(',') : undefined}
 						data-shift={animated && l.shift ? l.shift.join(',') : undefined}
 						data-ms={animated ? l.ms : undefined}
+						data-span={animated && l.span ? l.span : undefined}
 						data-pre={animated && l.pre ? `${l.pre[0]},${l.pre[1]}` : undefined}
 						data-pre-from-h={animated && l.preFromH !== undefined ? l.preFromH : undefined}
 						data-pre-pop={animated && l.prePop ? '' : undefined}
@@ -266,7 +273,7 @@ const isSub = (t: string) => t === 'move';
 		lines.map(
 			(l) =>
 				l.label && (
-					<text class="shot-label" x={l.mid[0]} y={l.mid[1]}>
+					<text class:list={['shot-label', { miss: !!l.miss }]} x={l.mid[0]} y={l.mid[1]}>
 						{l.label}
 					</text>
 				),
@@ -307,11 +314,22 @@ const isSub = (t: string) => t === 'move';
 		)
 	}
 	{
+		/* 失敗した球（miss）: 止まった所・落ちた所に「×」。アニメーションでは、その手が終わったときに出す */
+		lines.map(
+			(l) =>
+				l.missAt && (
+					<text class:list={['miss-x', 'lost-label', { on: !animated }]} x={l.missAt[0]} y={l.missAt[1]} data-lost>
+						×
+					</text>
+				),
+		)
+	}
+	{
 		/* ゲーム形式: 点を失った人の上に「失点」。アニメーションでは、その手が終わったときにふわっと出す */
 		lines.map(
 			(l) =>
 				l.lostAt && (
-					<text class:list={['lost-label', { on: !animated }]} x={l.lostAt[0]} y={l.lostAt[1]} data-lost>
+					<text class:list={['lost-label', { miss: !!l.miss, on: !animated }]} x={l.lostAt[0]} y={l.lostAt[1]} data-lost>
 						{l.lostText ?? '失点'}
 					</text>
 				),

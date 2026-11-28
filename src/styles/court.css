@@ -579,3 +579,18 @@
 .court svg.won .shot-label {
 	opacity: 0;
 }
+
+/*
+ * 失敗した球（miss）: 線の名前と「残りNつ」と「×」を、ほかの線の名前と違う色（警告の赤）で出す。
+ * テーマの色からは外れるが、「失敗した」ことが一目で分かるように、ここだけ例外にする（書き手の指摘: ほかと同じ見た目で分かりにくい）
+ */
+.court .shot-label.miss,
+.court .lost-label.miss,
+.court .miss-x {
+	fill: #ff7a6b;
+}
+.court .miss-x {
+	font-size: 2.6px;
+	font-weight: 800;
+}
+

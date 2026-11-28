@@ -133,10 +133,11 @@ const STANCE_BY_SHOT: Record<string, Partial<typeof STANCE>> = {
 	// フリック: ひじを軸に前腕を回すので、ひじは体の前で直角近くに曲げ、手は伸ばしきらない。少し低く構える。
 	// バックはひじを手首より高く上げる（elbowHigh: ひじを、肩と手を結ぶ線より上の側に曲げる）
 	// 打点は遠く（書き手の指摘）: 上体を前に倒し、手を前へ伸ばす。顔は前へ向けたまま、あごを引く（頭の傾きの規則）
-	// 打つ瞬間のパドルの先は前上 70°（面はネットの側の少し上を向く）。前は 0°（水平）で、面が真上を向き、
-	// 球の飛ぶ向き（前へほぼ水平）と 73° ずれていた（図の確かめで分かった。2026-11-28、dnk001・dnk003 で初めてフリックを描いた）
-	flick: { kneeReady: 45, kneeMax: 62, leanReady: 34, leanMax: 40, reach: 2.2, paddleTip: 70 },
-	'flick:bh': { kneeReady: 45, kneeMax: 62, leanReady: 34, leanMax: 40, reach: 2.4, paddleTip: 70, elbowHigh: true },
+	// 打つ瞬間のパドルの向きは決めない（paddleTip なし）。高さの規則で決め、面が球の飛ぶ向きと 20° 以内になるように回す。
+	// 前は 0°（水平）に決めていて、面が真上を向き、球の飛ぶ向き（前へほぼ水平）と 73° ずれていた
+	// （図の確かめで分かった。2026-11-28、dnk001・dnk003 で初めてフリックを描いた）
+	flick: { kneeReady: 45, kneeMax: 62, leanReady: 34, leanMax: 40, reach: 2.2 },
+	'flick:bh': { kneeReady: 45, kneeMax: 62, leanReady: 34, leanMax: 40, reach: 2.4, elbowHigh: true },
 };
 
 /** ボレー（弾む前に打つ）打ち方。キッチンの中から打てない */

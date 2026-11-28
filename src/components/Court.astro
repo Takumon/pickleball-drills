@@ -462,7 +462,8 @@ const panels = groups.map((g) => {
 		const toward = s.miss === 'net' ? (a[1] < COURT.net ? -1.6 : 1.6) : b[1] > COURT.net ? 1.4 : -1.4;
 		return {
 			shot: { ...s, to: pt, bounce: s.miss === 'net' ? (false as const) : undefined, label: s.label ?? (s.miss === 'net' ? 'ミス（ネット）' : 'ミス（アウト）') },
-			at: failed ? undefined : ([s.miss === 'net' ? pt[0] : COURT.width / 2 + (pt[0] < 0 ? -4 : 4), pt[1] + toward] as Point),
+			// 残りの球の数は、球の数で失敗を決めるドリル（failAt）だけに出す。ほかはミスの名前だけ（書き手の指摘 2026-11-28: 「残り0つ」はいらない）
+			at: failed || diagram.failAt === undefined ? undefined : ([s.miss === 'net' ? pt[0] : COURT.width / 2 + (pt[0] < 0 ? -4 : 4), pt[1] + toward] as Point),
 			text: `残り${left}つ`,
 			span,
 			// 「×」はボールと重ならないよう、止まった所の少し横（コートの外側寄り）に出す

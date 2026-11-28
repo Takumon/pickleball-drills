@@ -1,0 +1,184 @@
+---
+/**
+ * 開発用の調整画面（開発サーバーのときだけ出る。astro.config.mjs の dev-pages。本番のビルドには入らない）:
+ * 「図の見方」の打ち方のカードを1つ選び、振りの値をスライダーで変えて動きを見る（書き手の希望 2026-11-28。最初はフリックだけだった）。
+ * 右の図は /legend/?tune=... を読み込み直して描く（DiagramLegend.astro の開発用の置きかえ）。決まった値は書き手が伝え、config/court.ts に入れる。
+ * 決めのポーズ（keyPoses）で動くカードは、振りの値ではなく関節の角度で動くので、ここでは変えられない
+ */
+const first = Astro.url.searchParams.get('card') ?? (Astro.url.pathname.includes('/dev/flick') ? 'フリック（バック）' : '');
+---
+<!doctype html>
+<html lang="ja">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>打ち方の調整</title>
+		<style is:global>
+			:root { color-scheme: dark; --bg: #0f1f16; --panel: #16291e; --ink: #eef0e8; --muted: #a9b3a5; --accent: #c8e26b; }
+			* { box-sizing: border-box; }
+			body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, sans-serif; }
+			.wrap { display: grid; grid-template-columns: minmax(420px, 40vw) 1fr; gap: 12px; padding: 12px; height: 100vh; }
+			@media (max-width: 800px) { .wrap { grid-template-columns: 1fr; height: auto; } iframe { height: 70vh; } }
+			.panel { background: var(--panel); border-radius: 10px; padding: 12px; overflow: auto; }
+			h1 { font-size: 16px; margin: 0 0 8px; }
+			select { width: 100%; padding: 6px; background: #0b1710; color: var(--ink); border: 1px solid #2c4434; border-radius: 6px; font-size: 14px; margin-bottom: 10px; }
+			fieldset { border: 1px solid #2c4434; border-radius: 8px; margin: 0 0 10px; padding: 6px 10px 8px; }
+			legend { color: var(--accent); font-weight: 700; padding: 0 4px; }
+			label { display: grid; grid-template-columns: 1fr 56px; align-items: center; gap: 2px 8px; margin: 4px 0; }
+			label span { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+			input[type='range'] { width: 100%; }
+			output { text-align: right; font-variant-numeric: tabular-nums; }
+			textarea { width: 100%; height: 130px; background: #0b1710; color: var(--ink); border: 1px solid #2c4434; border-radius: 6px; font: 12px/1.4 ui-monospace, monospace; }
+			.row { display: flex; gap: 6px; margin-top: 6px; }
+			.row button { flex: 1; padding: 6px; border-radius: 6px; border: 0; background: var(--accent); color: #10241a; font-weight: 700; }
+			.note { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+			iframe { width: 100%; height: calc(100vh - 24px); border: 0; border-radius: 10px; background: var(--panel); }
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<div class="panel">
+				<h1>打ち方の調整</h1>
+				<select id="card"></select>
+				<p class="note" id="note"></p>
+				<fieldset>
+					<legend>再生の速さ</legend>
+					<label><span>1 がふつう、0.25 で4分の1、0 で止める</span><input id="speed" type="range" min="0" max="3" step="0.05" value="1" /><output id="speedOut">1</output></label>
+					<div class="row"><button type="button" data-sp="1">1</button><button type="button" data-sp="0.5">0.5</button><button type="button" data-sp="0.25">0.25</button><button type="button" data-sp="0.1">0.1</button><button type="button" data-sp="0">止める</button></div>
+				</fieldset>
+				<div id="controls"></div>
+				<fieldset>
+					<legend>今の値（config/court.ts の shotSwing 用）</legend>
+					<textarea id="out" readonly></textarea>
+					<div class="row"><button id="copy" type="button">値をコピー</button><button id="reset" type="button">元に戻す</button></div>
+				</fieldset>
+			</div>
+			<iframe id="view" title="図の見方のカード"></iframe>
+		</div>
+		<script define:vars={{ first }}>
+			const view = document.getElementById('view');
+			const sel = document.getElementById('card');
+			const box = document.getElementById('controls');
+			const out = document.getElementById('out');
+			const note = document.getElementById('note');
+			const nums = (s) => (s ? s.split(',').map(Number) : undefined);
+			// 図の見方のページから、カードの名前と今の値を読む
+			const cards = {};
+			const orig = {};
+			let cur = '';
+			const r2 = (v) => Math.round(v * 100) / 100;
+			const url = () => `/pickleball-drills/legend/?tune=${encodeURIComponent(JSON.stringify({ [cur]: cards[cur] }))}`;
+			let timer = 0;
+			const reload = () => {
+				clearTimeout(timer);
+				timer = setTimeout(() => (view.src = url()), 250);
+			};
+			const defsFor = (c) => {
+				const d = [
+					{ g: '振りかぶり（構え）の手（打つ所からのずれ）', items: [['swing', 0, '上下（ft。マイナスで下）', -3, 3, 0.05], ['swing', 1, '前後（ft。マイナスで後ろ）', -3, 3, 0.05]] },
+					{ g: '振り終わりの手（打つ所からのずれ）', items: [['swing', 2, '上下（ft）', -4, 4, 0.05], ['swing', 3, '前後（ft）', -3, 4, 0.05]] },
+				];
+				if (c.lateral) {
+					d.push({ g: '半円の中の位置（ふつうは -100 と 100 のまま）', items: [['swing', 4, '振りかぶり', -200, 0, 5], ['swing', 5, '振り終わり', 0, 200, 5]] });
+					d.push({ g: '横から見たパドルの先の向き（前が 0°、上が 90°）', items: [['lateral', 0, '振り始め（-90 が6時、-120 が7時、-150 が8時）', -270, 90, 5], ['lateral', 1, '振り終わり（0 が3時、30 が2時、60 が1時）', -120, 210, 5], ['lateral', 2, '見ている向き（y）へのふくらみ', 0, 15, 0.1]] });
+					d.push({ g: 'グリップが見える間（0 が振り始め、1 が振り終わり）', items: [['gripFront', 0, 'ここから', 0, 1, 0.05], ['gripFront', 1, 'ここまで', 0, 1, 0.05]] });
+				} else {
+					d.push({ g: 'パドルの回り（打つ瞬間からの角度。+ はヘッドが前から上へ）', items: [['swing', 4, '振りかぶり', -200, 200, 5], ['swing', 5, '振り終わり', -200, 200, 5]] });
+				}
+				d.push({ g: 'ひじの曲げ（1 がそのまま、-1 は逆向き、0 はまっすぐ）', items: [['elbowBend', 0, '振り始め', -3, 3, 0.05], ['elbowBend', 1, '振り終わり', -3, 3, 0.05]] });
+				return d;
+			};
+			const show = () => {
+				const s = cards[cur];
+				if (!s) return;
+				const v = s.swing;
+				const via = v.length > 6 ? `\nvia: [${v.slice(6).map(r2).join(', ')}],` : '';
+				out.value = `// ${cur}\nback: [${r2(v[0])}, ${r2(v[1])}],\nfollow: [${r2(v[2])}, ${r2(v[3])}],\nturn: [${r2(v[4])}, ${r2(v[5])}],${via}` +
+					(s.lateral ? `\nlateral: [${s.lateral.map(r2).join(', ')}],\ngripFront: [${s.gripFront.map(r2).join(', ')}],` : '') +
+					(s.elbowBend[0] !== 1 || s.elbowBend[1] !== 1 ? `\nelbowBend: [${s.elbowBend.map(r2).join(', ')}],` : '');
+			};
+			const build = () => {
+				box.innerHTML = '';
+				const c = cards[cur];
+				if (!c) return;
+				if (c.keyposes) {
+					note.textContent = 'このカードは決めのポーズ（関節の角度）で動くので、ここでは変えられません。';
+					return;
+				}
+				note.textContent = c.lateral ? '3次元で動かす打ち方です（フリック）。' : '';
+				for (const d of defsFor(c)) {
+					const fs = document.createElement('fieldset');
+					fs.innerHTML = `<legend>${d.g}</legend>`;
+					for (const [key, i, label, min, max, step] of d.items) {
+						const l = document.createElement('label');
+						const v = c[key][i];
+						l.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${v}"><output>${r2(v)}</output>`;
+						const inp = l.querySelector('input');
+						const o = l.querySelector('output');
+						inp.addEventListener('input', () => {
+							c[key][i] = Number(inp.value);
+							o.textContent = r2(Number(inp.value));
+							show();
+							reload();
+						});
+						fs.append(l);
+					}
+					box.append(fs);
+				}
+			};
+			const choose = (name) => {
+				cur = name;
+				sel.value = name;
+				history.replaceState(null, '', `?card=${encodeURIComponent(name)}`);
+				build();
+				show();
+				view.src = url();
+			};
+			sel.addEventListener('change', () => choose(sel.value));
+			document.getElementById('copy').addEventListener('click', () => navigator.clipboard?.writeText(out.value));
+			document.getElementById('reset').addEventListener('click', () => {
+				cards[cur] = JSON.parse(JSON.stringify(orig[cur]));
+				build();
+				show();
+				reload();
+			});
+			// 再生の速さ: 図（iframe）の window.__legendSpeed を書きかえる
+			let speed = 1;
+			const speedIn = document.getElementById('speed');
+			const speedOut = document.getElementById('speedOut');
+			const setSpeed = (v) => {
+				speed = v;
+				speedIn.value = String(v);
+				speedOut.textContent = String(v);
+				try { view.contentWindow.__legendSpeed = v; } catch {}
+			};
+			speedIn.addEventListener('input', () => setSpeed(Number(speedIn.value)));
+			document.querySelectorAll('[data-sp]').forEach((b) => b.addEventListener('click', () => setSpeed(Number(b.dataset.sp))));
+			view.addEventListener('load', () => setSpeed(speed));
+			fetch('/pickleball-drills/legend/')
+				.then((r) => r.text())
+				.then((html) => {
+					const doc = new DOMParser().parseFromString(html, 'text/html');
+					for (const card of doc.querySelectorAll('[data-stroke]')) {
+						const name = card.querySelector('figcaption b')?.textContent ?? '';
+						if (!name || cards[name]) continue;
+						const lat = nums(card.dataset.lateral);
+						cards[name] = {
+							swing: nums(card.dataset.swing) ?? [0, 0, 0, 0, 0, 0],
+							lateral: lat ? [lat[0], lat[1], lat[2] ?? 1] : undefined,
+							elbowBend: nums(card.dataset.elbowBend) ?? [1, 1],
+							gripFront: nums(card.dataset.gripFront) ?? [0, 0],
+							keyposes: card.dataset.keyposes !== undefined,
+						};
+						const o = document.createElement('option');
+						o.value = name;
+						o.textContent = name + (card.dataset.keyposes !== undefined ? '（決めのポーズ）' : '');
+						sel.append(o);
+					}
+					Object.assign(orig, JSON.parse(JSON.stringify(cards)));
+					const want = new URLSearchParams(location.search).get('card') || first;
+					choose(cards[want] ? want : Object.keys(cards)[0]);
+				});
+		</script>
+	</body>
+</html>

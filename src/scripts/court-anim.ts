@@ -184,7 +184,9 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	// 構えから打つ打ち方（setup）は、球を待つ手の初めのうちに構え（back）へ移る。打ったあとは止まった形（REST）へ戻り、次の手の止まった形とつながる
 	// 打ったあとは、どの打ち方も止まった形（REST）へ戻る。前は setup の打ち方は構え（back）へ戻していたが、フリックの振り抜き
 	// （パドルの先が上）から、ヘッドを下げた構えへ戻ると、打ったあとにパドルが垂れ下がって見えた（書き手の指摘 2026-11-28）
-	return { apply, back, follow, contact: path.contact, at: path.at, home: REST, prepFrom: REST, setup };
+	// 振り終わりで止める打ち方（data-hold。フリック）は、打ったあとも振り終わりの形のまま（手を戻さない）
+	const hold = ball.dataset.hold !== undefined;
+	return { apply, back, follow, contact: path.contact, at: path.at, home: hold ? follow : REST, prepFrom: REST, setup };
 }
 /**
  * 決めのポーズで動かす道具: 構え（ready）→ 引き切り（back）→ 打つ瞬間（contact）→ 振り抜き（finish）→ 構え の角度のあいだを混ぜ、

@@ -343,6 +343,8 @@ export interface SwingForm {
 	turn: [number, number];
 	via?: [number, number, number][];
 	setup?: boolean;
+	/** 打ったあと、振り終わりの形のまま止めて、手を戻さない（フリック。書き手の指摘 2026-11-28: フリスビーを投げた形から手を戻さない） */
+	hold?: boolean;
 	/** 関節を軸に回す振り: 腕とパドルを1つのかたまりとして肩かひじのまわりに turn の角度だけ回す（back と follow は使わない） */
 	pivot?: 'shoulder' | 'elbow';
 	/** pivot の振りで、腕を回す角度（なければ turn と同じ）。パドルはそのうえで turn まで、振りに合わせて少しずつ回る */
@@ -351,7 +353,7 @@ export interface SwingForm {
 	straight?: boolean;
 	note: string;
 }
-export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
+export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
 	dink: { back: [-0.1, -0.6], follow: [0.5, 0.7], turn: [-10, 25], note: '少しだけ後ろに引き、肩から振り子のように前へ。振り抜きは短く、腰の高さで目標を指す' },
 	// ロールディンク: ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。ディンクより速く、鋭いクロスを狙える
 	rollDink: { back: [-0.25, -0.5], follow: [0.6, 0.55], turn: [-15, 30], note: 'ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。振り抜きは短く、目標の方向へ' },
@@ -429,6 +431,7 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 		follow: [0.7, 0.5],
 		turn: [-70, 60],
 		setup: true,
+		hold: true,
 		note: 'ひじを体の前に置き、手首を後ろへ折ってヘッドを下げて待つ（前腕は動かさない）。打つ瞬間に前腕を前上へ振り上げながら手首を戻してはじき、パドルの先を上へ向けて短く止める',
 		// バック: ヘッドは手首で下げる（前腕は動かさず、手首を折ってパドルを下へ向ける。ひじを曲げて下げるのではない。書き手の指摘）。
 		// 打つときは、前腕を前へ振り出しながら手首を戻し、面を目標へ向けて止める
@@ -439,6 +442,7 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 			follow: [0.9, 1.4],
 			turn: [-70, 0],
 			setup: true,
+			hold: true,
 			note: 'ひじを手首より高く上げてネットへ向け、手首を折ってヘッドを下げて待つ（前腕は動かさない）。フリスビーを投げるように、ひじを伸ばして腕を目標へまっすぐ振り出す。振り終わりはパドルが腕と一直線（手首で返さない）',
 		},
 	},

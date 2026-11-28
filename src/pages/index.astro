@@ -487,6 +487,11 @@ const tiles = categories
 
 <style is:global>
 	/* 練習メニューのとき（html.menu-mode）は、トップページの中身を隠し、メニューの枠を出す。画面を描く前から効く */
+	/* #top-page の前に、練習メニューの見出しを変える小さなスクリプトを置いているので、Starlight の本文の「2つ目以降の要素に上の余白を付ける」決まりが効いて、
+	   ヘッダーと緑の帯の間に 16px の隙間ができていた。#top-page は本文の最初の要素なので、上の余白を付けない */
+	#top-page {
+		margin-top: 0;
+	}
 	html.menu-mode #top-page {
 		display: none;
 	}

@@ -1,0 +1,151 @@
+---
+/* 【一時的に公開】書き手が外出先で配色を見比べるため（2026-11-28）。決まったら、このファイル（src/pages/tmp/）ごと消す。検索には載せない（noindex） */
+/**
+ * 【一時的】図の配色の見比べ（手元だけ。書き手が配色を決めたら、このページは消す）。
+ * 上のボタンで案を切り替える。ライト・ダークはヘッダーのテーマの切り替えで見る。
+ */
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { getCollection } from 'astro:content';
+import Court from '../../components/Court.astro';
+import '../../styles/court.css';
+
+import { categories } from '../../config/categories';
+// 全部のドリルを、カテゴリの順・表示順に並べる（案ごとに全部の図を見比べる。書き手の希望）
+const docs = await getCollection('docs', (e) => !!e.data.drill?.diagram);
+const catIndex = (c: string) => categories.findIndex((k) => k.code === c);
+const drills = docs.sort((a, b) => catIndex(a.data.drill!.category) - catIndex(b.data.drill!.category) || (a.data.sidebar?.order ?? 999) - (b.data.sidebar?.order ?? 999));
+const variants = [
+	{ key: 'now', name: '今のまま' },
+	{ key: 'v1', name: '案1 打球シアン・パドル ライム' },
+	{ key: 'v2', name: '案2 打球 生成り・パドル ライム' },
+	{ key: 'v3', name: '案3 打球 水色・パドル ライム' },
+	{ key: 'v4', name: '案4 打球シアン・パドル 生成り' },
+	{ key: 'v5', name: '案5 打球ライム・パドル 生成り' },
+	{ key: 'v6', name: '案6 打球 生成り・パドル 白（案2のパドルを白に）' },
+];
+---
+
+<StarlightPage frontmatter={{ title: '図の配色の見比べ（一時的）', template: 'splash', head: [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex, nofollow' } }] }}>
+	<div class="switch">
+		<select aria-label="配色の案">
+			{variants.map((v) => <option value={v.key}>{v.name}</option>)}
+		</select>
+	</div>
+	<p class="note">案1〜5は、土台（コート・灰色・人・横から見た帯）をテーマにそろえ、打球の線とパドルの色だけを変えています。?p=v1 のように付けると、その案で開きます。</p>
+	<div class="pal pal-now" id="pal">
+		{
+			drills.map((e) => (
+				<section>
+					<h2>{e.data.drill!.id} {e.data.title}</h2>
+					<Court diagram={e.data.drill!.diagram!} title={`見比べ: ${e.data.drill!.id}`} />
+				</section>
+			))
+		}
+	</div>
+</StarlightPage>
+
+<script>
+	const pal = document.getElementById('pal')!;
+	const choose = (key: string) => {
+		pal.className = `pal pal-${key}`;
+		const u = new URL(location.href);
+		u.searchParams.set('p', key);
+		history.replaceState(null, '', u);
+	};
+	const sel = document.querySelector<HTMLSelectElement>('.switch select')!;
+	sel.addEventListener('change', () => choose(sel.value));
+	const start = new URLSearchParams(location.search).get('p');
+	if (start && [...sel.options].some((o) => o.value === start)) {
+		sel.value = start;
+		choose(start);
+	}
+</script>
+
+<style is:global>
+	.switch select {
+		font: inherit;
+		font-size: var(--sl-text-sm);
+		padding: 0.35rem 0.6rem;
+		border-radius: 0.5rem;
+		border: 1px solid var(--sl-color-gray-4);
+		background: var(--sl-color-black);
+		color: var(--sl-color-white);
+		max-width: 100%;
+	}
+	.note {
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+	}
+	.pal {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+		gap: 0 1.5rem;
+	}
+	.pal section {
+		margin-top: 1.5rem;
+	}
+	.pal h2 {
+		font-size: var(--sl-text-base);
+	}
+	/* 選んでいる案のボタンを、スクロールしても見えるようにする */
+	.switch {
+		position: sticky;
+		top: var(--sl-nav-height, 3.5rem);
+		z-index: 5;
+		padding: 0.5rem 0;
+		background: var(--sl-color-black);
+	}
+	/* ---- 土台（案1〜5で共通）: コートはライトでもダークでも同じ。サイトの緑・生成り・緑がかった灰色 ---- */
+	.pal:not(.pal-now) .court,
+	[data-theme='dark'] .pal:not(.pal-now) .court {
+		--court-surface: #23663f;
+		--court-apron: #1b4a2f;
+		--court-kitchen: #2e7a4c;
+		--court-zone: rgb(198 223 74 / 0.16);
+		--court-line: #f4f1e6;
+		--court-net: #f4f1e6;
+		--ball: #facc15;
+		--sub: #c2c9bd;
+		--label: #f4f1e6;
+		--person: #10241a;
+		--person-ink: #f4f1e6;
+		--me: #f4f1e6;
+		--me-ink: #10241a;
+		--paddle: #f4f1e6;
+		--fence: #a9b3a5;
+		--side-panel: #f4f1e6;
+		--side-ink: #5e6d63;
+		--side-hair: #3b4b41;
+		--side-grip: #10241a;
+		--side-mark: #a9b3a5;
+		--side-ground: #dcd8c8;
+	}
+	[data-theme='dark'] .pal:not(.pal-now) .court {
+		--side-panel: #123521;
+		--side-ink: #8d978b;
+		--side-hair: #3a4539;
+		--side-grip: #3a4539;
+		--side-mark: #5b665a;
+		--side-ground: #2a3d30;
+	}
+	/* ---- 打球の線とパドル ---- */
+	.pal.pal-v1 .court { --shot: #67e8f9; --paddle-face: #c6df4a; --side-paddle: #9fbf2a; }
+	.pal.pal-v2 .court { --shot: #f4f1e6; --paddle-face: #c6df4a; --side-paddle: #9fbf2a; }
+	.pal.pal-v3 .court { --shot: #8fd3ff; --paddle-face: #c6df4a; --side-paddle: #9fbf2a; }
+	.pal.pal-v4 .court { --shot: #67e8f9; --paddle-face: #f4f1e6; --side-paddle: #5e6d63; }
+	.pal.pal-v5 .court { --shot: #c6df4a; --paddle-face: #f4f1e6; --side-paddle: #5e6d63; }
+	/* 案6: 案2のパドルを白に。横から見た図は、ライトでは帯の生成りの上で見えないので、濃い灰色の面にする */
+	.pal.pal-v6 .court { --shot: #f4f1e6; --paddle-face: #ffffff; --side-paddle: #5e6d63; }
+	[data-theme='dark'] .pal.pal-v6 .court { --side-paddle: #ffffff; }
+	[data-theme='dark'] .pal.pal-v1 .court,
+	[data-theme='dark'] .pal.pal-v2 .court,
+	[data-theme='dark'] .pal.pal-v3 .court { --side-paddle: #c6df4a; }
+	[data-theme='dark'] .pal.pal-v4 .court,
+	[data-theme='dark'] .pal.pal-v5 .court { --side-paddle: #f4f1e6; }
+	/* スマホではヘッダーが画面に残らないので、画面の一番上に残す */
+	@media (max-width: 50rem) {
+		.switch {
+			top: 0;
+		}
+	}
+</style>

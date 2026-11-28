@@ -10,6 +10,9 @@ import Court from '../components/Court.astro';
 import ShareButtons from '../components/ShareButtons.astro';
 import { categories } from '../config/categories';
 import { circle } from '../config/circle';
+import { Image } from 'astro:assets';
+// 練馬ピックルのロゴ（テニスベアのサークルの画像を丸く切り出したもの。書き手が渡した画像）
+import circleLogo from '../assets/circle-logo.jpg';
 import '../styles/court.css';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -61,7 +64,10 @@ const tiles = categories
 		<section class="block circle">
 			<h2>運営しているサークル</h2>
 			<div class="circle-card">
-				<p class="circle-name">{circle.name}</p>
+				<div class="circle-head">
+					<Image src={circleLogo} alt={`${circle.name}のロゴ`} width={64} height={64} class="avatar" />
+					<p class="circle-name">{circle.name}</p>
+				</div>
 				<p>{circle.intro}</p>
 				<a class="circle-link" href={circle.url} target="_blank" rel="noopener">テニスベアの{circle.name}のページ ↗</a>
 			</div>
@@ -330,9 +336,21 @@ const tiles = categories
 		color: inherit;
 		line-height: 1.75;
 	}
+	.circle-head {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 0.75rem;
+	}
+	.avatar {
+		width: 4rem;
+		height: 4rem;
+		border-radius: 50%;
+		flex: none;
+		box-shadow: 0 0 0 2px rgba(244, 241, 230, 0.6);
+	}
 	.circle-card .circle-name {
-		margin-bottom: 0.4rem;
-		font-size: var(--sl-text-lg);
+		font-size: var(--sl-text-xl);
 		font-weight: 800;
 	}
 	.circle-link {

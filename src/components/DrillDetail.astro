@@ -105,6 +105,18 @@ const serviceOf = (url: string) => {
 							<span class="variant-now-note" />
 						</p>
 					)}
+					{/* もしもの場面: 基本の図から切り離して、場面ごとに短い図を出す（書き手と決めた） */}
+					{field === 'diagram' && drill.situations.length > 0 && (
+						<div class="situations">
+							{drill.situations.map((s, i) => (
+								<div class="situation">
+									{(i === 0 || drill.situations[i - 1].when !== s.when) && <p class="situation-when">もし{s.when}</p>}
+									<p class="situation-then">→ {s.then}</p>
+									<Court diagram={s.diagram} title={`${drill.id} の図（${s.when}: ${s.then}）`} />
+								</div>
+							))}
+						</div>
+					)}
 					{field === 'steps' && (
 						<ol>
 							{drill.steps.map((s) => (
@@ -268,6 +280,25 @@ const serviceOf = (url: string) => {
 	}
 	.variants dd {
 		margin-inline-start: 1rem;
+	}
+	/* もしもの場面は、基本の図と切り離して見えるように、区切りの線と見出しを付ける */
+	.situations {
+		margin-top: 1.25rem;
+		padding-top: 1rem;
+		border-top: 2px dashed var(--sl-color-gray-5);
+	}
+	.situation + .situation {
+		margin-top: 1rem;
+	}
+	.situation-when {
+		margin: 0 0 0.25rem;
+		font-weight: 700;
+		font-size: var(--sl-text-lg);
+	}
+	.situation-then {
+		margin: 0 0 0.4rem;
+		font-weight: 700;
+		color: var(--sl-color-accent-high);
 	}
 	.variant-now {
 		margin: 0.75rem 0 0;

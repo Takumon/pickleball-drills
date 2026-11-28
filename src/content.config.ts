@@ -238,6 +238,21 @@ const drill = z.object({
 	steps: z.array(z.string()).min(1),
 	points: z.array(z.string()).max(5).default([]),
 	diagram: diagram.optional(),
+	/**
+	 * もしもの場面: 基本の図（ラリーを続ける形）とは別に、「もし〜が来たら、こうする」を短い図で見せる。
+	 * 基本の図に混ぜると、ラリーの続きなのか別の場面なのかが分かりにくいため、切り離して図の下に出す（書き手と決めた 2026-11-28）
+	 */
+	situations: z
+		.array(
+			z.object({
+				/** 場面（例: 浮いた球が来たら）。同じ場面が続くときは、見出しを1回だけ出す */
+				when: z.string(),
+				/** すること（例: ボレーで攻める） */
+				then: z.string(),
+				diagram,
+			}),
+		)
+		.default([]),
 	variants: z.array(variant).default([]),
 	/** ビルダーでこのドリルを足したときの初期値（何分×何セット）。その日の実際の時間はメニューの URL が持つ。ドリルのページには出さない */
 	builderDefault: z.object({ min: z.number(), sets: z.number().int() }).optional(),

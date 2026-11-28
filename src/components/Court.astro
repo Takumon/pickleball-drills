@@ -240,11 +240,15 @@ function heightFn(s: Shot, bounces: { at: number }[], netAt?: number): ((t: numb
 	const b = bounces[0]?.at;
 	// ドライブ（ストローク）: 低く打ち出して少しだけ弧を描き、ネットの白帯を越える手前で山になり、
 	// トップスピンでネットを越えたあとにぐっと沈む（前半はゆるやかに上がり、後半は加速して下がる）
-	if (s.type === 'drive' || s.type === 'roll') {
+	// フリック: 打った高さからほぼ水平に出て、順回転で弧を描いて少しずつ下がる（下から上へは打ち上げない。書き手の指摘 2026-11-28）
+	const flick = baseShot(s.type) === 'flick';
+	if (s.type === 'drive' || s.type === 'roll' || flick) {
 		const end = b !== undefined && b < 0.999 ? b : 1;
-		const hEnd = b !== undefined ? 0 : recv;
-		const ta = Math.min(0.8, Math.max(0.2, (netAt ?? 0.5) * 0.9)) * end;
-		const hA = Math.max(h0, hEnd, ft('tape')) + DRIVE_CLEAR_FT;
+		// フリックは受ける人の所でも上がらない（打った高さより少し下で受ける）
+		const hEnd = b !== undefined ? 0 : flick ? Math.min(recv, Math.max(h0, ft('tape') + NET_CLEAR_FT) - 0.6) : recv;
+		const ta = flick ? 0.12 * end : Math.min(0.8, Math.max(0.2, (netAt ?? 0.5) * 0.9)) * end;
+		// フリックの山は打った高さ（ネットの白帯より少し上を通るときだけ、そこまで上げる）
+		const hA = flick ? Math.max(h0, ft('tape') + NET_CLEAR_FT) : Math.max(h0, hEnd, ft('tape')) + DRIVE_CLEAR_FT;
 		const dip = (t: number) => {
 			if (t <= ta) return h0 + (hA - h0) * (1 - (1 - t / ta) ** 2);
 			return hA + (hEnd - hA) * ((t - ta) / (end - ta)) ** 2.4;

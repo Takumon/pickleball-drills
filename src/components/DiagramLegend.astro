@@ -297,7 +297,8 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 					<figcaption>
 						<b>{name}</b>
 						<span>{range ?? level}</span>
-						<span>{sw.note}</span>
+						{/* 打ち方の説明（shotSwing の note）はページに出さない。読む人はみな打ち方を知っているため（書き手の指示 2026-11-28）。
+						    note は、形を作り直すときの手がかりとして config/court.ts に残す */}
 					</figcaption>
 				</figure>
 			))

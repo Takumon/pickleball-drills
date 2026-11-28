@@ -10,14 +10,19 @@
 interface Props {
 	/** 共有するときの文（ページの題名） */
 	text: string;
+	/**
+	 * 見ているページの URL（クエリも含む）と題名を、押した時点で使う。練習メニュー（/?v=1&m=…）はトップページと同じページで
+	 * 中身をクエリで持つので、組み立てたときの URL ではなく、開いている URL を共有する
+	 */
+	current?: boolean;
 }
-const { text } = Astro.props;
+const { text, current = false } = Astro.props;
 const url = new URL(Astro.url.pathname, Astro.site).href;
 const line = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`;
 const x = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
 ---
 
-<section class="share" data-share data-url={url} data-text={text} aria-label="シェア">
+<section class="share" data-share data-url={url} data-text={text} data-current={current ? '' : undefined} aria-label="シェア">
 	<p class="label">シェアする</p>
 	<div class="buttons">
 		<button type="button" data-native hidden aria-label="共有" title="共有">
@@ -25,12 +30,12 @@ const x = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${enco
 				<path d="M12 3v12" /><path d="M8 7l4-4 4 4" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
 			</svg>
 		</button>
-		<a href={line} target="_blank" rel="noopener" aria-label="LINE で送る" title="LINE で送る">
+		<a href={line} data-line target="_blank" rel="noopener" aria-label="LINE で送る" title="LINE で送る">
 			<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 				<path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" />
 			</svg>
 		</a>
-		<a href={x} target="_blank" rel="noopener" aria-label="X でポスト" title="X でポスト">
+		<a href={x} data-x target="_blank" rel="noopener" aria-label="X でポスト" title="X でポスト">
 			<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 				<path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z" />
 			</svg>
@@ -46,18 +51,35 @@ const x = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${enco
 
 <script>
 	document.querySelectorAll<HTMLElement>('[data-share]').forEach((box) => {
-		const url = box.dataset.url!;
-		const text = box.dataset.text!;
+		// 開いているページを共有するとき: 公開ページの場所（data-url の場所）に、開いているパスとクエリを付ける（開発サーバーで見ていても公開の URL にする）
+		const target = () => {
+			if (!('current' in box.dataset)) return { url: box.dataset.url!, text: box.dataset.text! };
+			const u = new URL(box.dataset.url!);
+			return { url: `${u.origin}${location.pathname}${location.search}`, text: document.title };
+		};
+		const lineA = box.querySelector<HTMLAnchorElement>('[data-line]')!;
+		const xA = box.querySelector<HTMLAnchorElement>('[data-x]')!;
+		const refresh = () => {
+			const { url, text } = target();
+			lineA.href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`;
+			xA.href = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+		};
+		// 練習メニューの題名は、メニューを読み込んだあとに決まるので、押す直前にも作り直す
+		refresh();
+		[lineA, xA].forEach((a) => a.addEventListener('pointerdown', refresh));
 		const done = box.querySelector<HTMLElement>('[data-done]')!;
 		// スマホの共有の画面が使える環境では、先頭に「共有」を出す（LINE・X 以外のアプリにも送れる）
 		const native = box.querySelector<HTMLButtonElement>('[data-native]')!;
 		if (typeof navigator.share === 'function') {
 			native.hidden = false;
-			native.addEventListener('click', () => navigator.share({ title: text, text, url }).catch(() => {}));
+			native.addEventListener('click', () => {
+				const { url, text } = target();
+				navigator.share({ title: text, text, url }).catch(() => {});
+			});
 		}
 		box.querySelector<HTMLButtonElement>('[data-copy]')!.addEventListener('click', async () => {
 			try {
-				await navigator.clipboard.writeText(url);
+				await navigator.clipboard.writeText(target().url);
 				done.textContent = 'コピーしました';
 			} catch {
 				done.textContent = 'コピーできませんでした';

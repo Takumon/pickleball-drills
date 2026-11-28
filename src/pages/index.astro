@@ -60,6 +60,20 @@ const tiles = categories
 			</ul>
 		</section>
 
+	</div>
+
+	<div id="menu-view" hidden data-base={base}>
+		<p class="menu-summary"><span class="menu-theme"></span><span class="menu-total"></span></p>
+		<div class="menu-list"></div>
+		<p class="menu-edit"><a href="#">このメニューを編集</a></p>
+	</div>
+
+	{/*
+	  トップページと練習メニューの両方の一番下に出す: 運営しているサークルとシェア（書き手と決めた）。
+	  練習メニューの URL はサークルの外に転送されることもあるので、そこからもサークルを知ってもらう。
+	  シェアは、見ているページの URL（練習メニューならそのメニューの URL）を渡す。「練習メニューを作る」はトップページだけ
+	*/}
+	<div class="site-foot">
 		{/* 「練習会での使い方」は出さない。外の人には通じず、メンバーは周知で知っていて、当日の参加者はメニューのページに直接着くため（書き手の指摘）。
 		    サイトと練習会のつながりは、サークル紹介の最後の一文で伝える */}
 		<section class="block circle">
@@ -76,14 +90,8 @@ const tiles = categories
 
 		{/* 「ほかのページ」（ドリル一覧・図の見方・大原則・用語集）は出さない。ドリル一覧はカテゴリのタイルから、ほかはサイドバーから行ける。
 		    トップで見せても、読み手にしてほしい行動がないため（書き手の指摘） */}
-		<ShareButtons text="ピックルボール ドリル集" />
+		<ShareButtons text="ピックルボール ドリル集" current />
 		<p class="builder-link"><a href={`${base}/builder/`}>練習メニューを作る</a></p>
-	</div>
-
-	<div id="menu-view" hidden data-base={base}>
-		<p class="menu-summary"><span class="menu-theme"></span><span class="menu-total"></span></p>
-		<div class="menu-list"></div>
-		<p class="menu-edit"><a href="#">このメニューを編集</a></p>
 	</div>
 </StarlightPage>
 
@@ -204,7 +212,8 @@ const tiles = categories
 
 <style>
 	/* 配色は共有の画像（src/config/og.ts）と同じ: 深い緑・生成り・ライム */
-	#top-page {
+	#top-page,
+	.site-foot {
 		--brand-bg: #123521;
 		--brand-tile: #1b4a2f;
 		--brand-paper: #f4f1e6;
@@ -212,9 +221,17 @@ const tiles = categories
 		--brand-lime: #c6df4a;
 	}
 	/* サイドバーがないので、広い画面では中身の幅を決めて真ん中に置く */
-	#top-page {
+	#top-page,
+	.site-foot {
 		max-width: 64rem;
 		margin-inline: auto;
+	}
+	/* 練習メニューを表示しているときは、足もともメニューと同じ幅にし、「練習メニューを作る」は出さない */
+	:global(main:has(#menu-view:not([hidden]))) .site-foot {
+		max-width: 45rem;
+	}
+	:global(main:has(#menu-view:not([hidden]))) .builder-link {
+		display: none;
 	}
 	.hero {
 		margin: 0.5rem 0 0;

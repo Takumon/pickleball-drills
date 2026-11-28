@@ -443,8 +443,14 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 				})(),
 			};
 		});
+		// 開発用（手元の開発サーバーだけ）: 再生の速さを変えられる（/dev/flick/ の調整画面が window.__legendSpeed を書きかえる。0 で止まる）
+		let clock = 0;
+		let last = 0;
 		const tick = (now: number) => {
-			const t0 = now % PERIOD_MS;
+			const sp = import.meta.env.DEV ? ((window as unknown as { __legendSpeed?: number }).__legendSpeed ?? 1) : 1;
+			clock += (last ? now - last : 0) * sp;
+			last = now;
+			const t0 = clock % PERIOD_MS;
 			for (const c of cards) {
 				// トラップの間は構えたまま、ボールだけ動かす。そのあとは、ふつうの打ち方と同じ動きを TRAP_MS 遅らせて動かす
 				// 振りは、ボールが打点に戻る瞬間（TRAP_MS）に打つ所を通るように早めて始める（打点に来てから打つまで間を空けない。書き手の指摘）

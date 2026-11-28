@@ -67,6 +67,14 @@
 .court .anim {
 	margin: 0 auto 1.25rem;
 }
+/*
+ * アニメーションの手（コマ）は全部 .anim-stage に並べて出力し、スクリプト（court-anim.ts）が1つずつ切り替える。
+ * スクリプトが動くまでは全部の手が縦に並んで見え、そのあと1枚に切り替わってちらついていた（書き手の指摘）。
+ * スクリプトが動く前（data-court-ready が付く前）から、最初の手だけを見せる
+ */
+.court .anim:not([data-court-ready]) .anim-stage > svg.frame:not(:first-of-type) {
+	display: none;
+}
 /* 縦長の図でも、コートと操作ボタンがスマホの1画面に収まるようにする */
 .court .anim svg.court-svg {
 	max-height: 60vh;

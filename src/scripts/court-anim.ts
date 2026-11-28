@@ -1,4 +1,4 @@
-import { swingPath } from '../lib/swing-path';
+import { swingPath, lateralMatrix, paddleAxis } from '../lib/swing-path';
 import { syncArm } from '../lib/arm-shape';
 import { blendGroup, sideBlender, snapshotGroup, snapshotSide } from '../lib/side-blend';
 import { sideFigure, type PoseAngles, type SideFigureInput } from '../lib/side-figure';
@@ -79,6 +79,8 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	const hy = Number(sideHand?.getAttribute('cy') ?? 0);
 	const forearm = side?.querySelector<SVGLineElement>('.side-arm');
 	const upperArm = side?.querySelector<SVGLineElement>('.side-upperarm');
+	const lateral = ball.dataset.lateral !== undefined;
+	const axis = paddleAxis(side?.querySelector('.side-paddle'), hx, hy);
 	// 線の元の端を覚えておく（途中で止めても戻せるように）
 	const keep = (el?: SVGLineElement | null) => {
 		if (!el) return;
@@ -157,7 +159,9 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 			sy = cy - ry;
 		}
 		const rot = turnSign * turn;
-		sidePaddle.forEach((el) => el.setAttribute('transform', sx || sy || rot ? `translate(${sx} ${sy}) rotate(${rot} ${hx} ${hy})` : ''));
+		// 体の横へ回す振り（フォアのフリック）は、回さずに、パドルの向きに伸び縮みさせる
+		if (lateral) sidePaddle.forEach((el) => el.setAttribute('transform', `translate(${sx} ${sy}) ${lateralMatrix(turn, axis[0], axis[1], hx, hy)}`));
+		else sidePaddle.forEach((el) => el.setAttribute('transform', sx || sy || rot ? `translate(${sx} ${sy}) rotate(${rot} ${hx} ${hy})` : ''));
 		sideHand?.setAttribute('transform', sx || sy ? `translate(${sx} ${sy})` : '');
 		// 腕は、肩から動いた手まで、上腕と前腕の長さを変えずに曲げ直す
 		if (forearm && upperArm) {

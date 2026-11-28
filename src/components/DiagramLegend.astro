@@ -266,7 +266,7 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 	<div class="stroke-grid">
 		{
 			strokes.map(({ t, key, name, hitH, fig, sw, arrow, launch, kp, poseInput, bodyBack, ballAt, head, level, range }) => (
-				<figure class="stroke-card" data-trap={t in TRAP_BASE ? (TRAP_NO_BOUNCE.has(t) ? 'pop' : 'bounce') : undefined} data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ?? []).flat()].join(',')} data-setup={sw.setup ? '' : undefined} data-hold={sw.hold ? '' : undefined} data-pivot={sw.pivot} data-straight={sw.straight ? '' : undefined} data-pivot-turn={sw.pivotTurn?.join(',')} data-launch={launch} data-keyposes={kp ? JSON.stringify(kp.poses) : undefined} data-pose-input={kp ? JSON.stringify(poseInput) : undefined} data-body-back={bodyBack}>
+				<figure class="stroke-card" data-trap={t in TRAP_BASE ? (TRAP_NO_BOUNCE.has(t) ? 'pop' : 'bounce') : undefined} data-stroke data-swing={[...sw.back, ...sw.follow, ...sw.turn, ...(sw.via ?? []).flat()].join(',')} data-setup={sw.setup ? '' : undefined} data-hold={sw.hold ? '' : undefined} data-lateral={sw.lateral ? '' : undefined} data-pivot={sw.pivot} data-straight={sw.straight ? '' : undefined} data-pivot-turn={sw.pivotTurn?.join(',')} data-launch={launch} data-keyposes={kp ? JSON.stringify(kp.poses) : undefined} data-pose-input={kp ? JSON.stringify(poseInput) : undefined} data-body-back={bodyBack}>
 					<svg class="court-svg stroke" viewBox="-2.9 -10 6.5 10.6" aria-hidden="true">
 						<defs>
 							<marker id={`sw-${key}`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth={head} markerHeight={head} orient="auto">
@@ -307,7 +307,7 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 </div>
 
 <script>
-	import { swingPath } from '../lib/swing-path';
+	import { swingPath, lateralMatrix, paddleAxis } from '../lib/swing-path';
 	import { arcLerp, bendSide, clampReach, limitShoulder, solveElbow } from '../lib/arm-ik';
 	import { syncArm } from '../lib/arm-shape';
 	import { sideFigure, type PoseAngles, type SideFigureInput } from '../lib/side-figure';
@@ -372,6 +372,8 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 			const num = (el: Element, a: string) => Number(el.getAttribute(a));
 			return {
 				turning: [...card.querySelectorAll<SVGElement>('.side-paddle, .side-grip')],
+				lateral: card.dataset.lateral !== undefined,
+				axis: paddleAxis(card.querySelector('.side-paddle'), Number(card.querySelector('.side-hand')?.getAttribute('cx')), Number(card.querySelector('.side-hand')?.getAttribute('cy'))),
 				hand: card.querySelector<SVGCircleElement>('.side-hand')!,
 				forearm,
 				upper,
@@ -458,7 +460,9 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 				const turn = p[2] + (q[2] - p[2]) * tt;
 				const hx = Number(c.hand.getAttribute('cx'));
 				const hy = Number(c.hand.getAttribute('cy'));
-				c.turning.forEach((el) => el.setAttribute('transform', `translate(${dx} ${dy}) rotate(${-turn} ${hx} ${hy})`));
+				// 体の横へ回す振り（フォアのフリック）は、回さずに、パドルの向きに伸び縮みさせる
+				if (c.lateral) c.turning.forEach((el) => el.setAttribute('transform', `translate(${dx} ${dy}) ${lateralMatrix(turn, c.axis[0], c.axis[1], hx, hy)}`));
+				else c.turning.forEach((el) => el.setAttribute('transform', `translate(${dx} ${dy}) rotate(${-turn} ${hx} ${hy})`));
 				c.hand.setAttribute('transform', `translate(${dx} ${dy})`);
 				// 腕は、上腕と前腕の長さを変えずに、肩から動いた手まで曲げ直す（この図ではネットの側が +y）
 				const hx2 = c.f[2] + dx;

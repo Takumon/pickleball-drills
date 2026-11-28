@@ -156,6 +156,8 @@ for (const s of diagram.shots) {
 }
 /** 受ける高さ: 受けた人が次に打つ球の打点。次がなければ既定の高さ */
 function receiveHeight(s: Shot) {
+	// ネットにかかる球は、白帯より少し下でネットに当たって止まる
+	if (s.miss === 'net') return ft('underTape');
 	if (typeof s.to !== 'string') return ft(defaultReceiveHeight);
 	const rest = diagram.shots.slice(diagram.shots.indexOf(s) + 1);
 	const next = rest.find((n) => n.type !== 'move' && n.from === s.to);
@@ -331,6 +333,15 @@ const freshShots = new Set<Shot>();
 		if (hits.length > 1 && prev.point) freshShots.add(s);
 	});
 }
+// 失敗の決まり（failAt）: 各手のあとに残っている球の数。最初の手の球の数から、ミス（miss）のたびに1つ減る
+const ballsLeft = (() => {
+	let now = groups[0]?.shots.filter((s) => s.type !== 'move').length ?? 0;
+	return groups.map((g) => {
+		const before = now;
+		now -= g.shots.filter((s) => s.miss).length;
+		return { before, after: now };
+	});
+})();
 // ゲーム形式の点: 各手の前と後の点（打球の point で動く）
 const scores = (() => {
 	const sc = diagram.score;
@@ -415,17 +426,33 @@ const panels = groups.map((g) => {
 		// 人のネット側に出す（奥の人の上に出すと、図の上の端で切れるため）
 		return f ? ([f.x, f.y + (f.y < COURT.net ? 1 : -1) * (PLAYER_R + 1.2)] as Point) : undefined;
 	};
-	const lines = g.shots.map((s) => ({
-		...lineOf(s, byId, groups.length > 1, byIdTo),
+	// ネットにかかる球（miss: net）: 受ける人のパドルへ向かう線の、ネットを越える所で止める（ボールはそこで消える）
+	let left = ballsLeft[groups.indexOf(g)].before;
+	const missOf = (s: Shot) => {
+		if (s.miss !== 'net' || typeof s.from !== 'string' || typeof s.to !== 'string') return undefined;
+		const a = byId.get(s.from)!.face;
+		const b = byIdTo.get(s.to)!.face;
+		const t = (COURT.net - a[1]) / (b[1] - a[1]);
+		const pt: Point = [a[0] + (b[0] - a[0]) * t, COURT.net + (a[1] < COURT.net ? -0.15 : 0.15)];
+		left -= 1;
+		// 残りの球の数は、止まった所の打った人の側に出す
+		return { shot: { ...s, to: pt, bounce: false as const, label: s.label ?? 'ミス（ネット）' }, at: [pt[0], pt[1] + (a[1] < COURT.net ? -1.6 : 1.6)] as Point, text: `残り${left}つ` };
+	};
+	const lines = g.shots.map((s) => {
+		const m = missOf(s);
+		return {
+		...lineOf(m ? m.shot : s, byId, groups.length > 1, byIdTo),
 		fresh: freshShots.has(s),
-		lostAt: loserOf(s),
+		lostAt: m ? m.at : loserOf(s),
+		lostText: m?.text,
 		// 相手の打球を見て動く人は、反応する時間だけ遅れて動き出す（自分で打ちながら動くときは遅れない）
 		delay:
 			s.type === 'move' && g.shots.some((o) => o.type !== 'move' && o.from !== s.from) ? reactionMs : undefined,
 		// ロブに下がって、弾んでから打つ人は、後ろを向いて走り、弾んだら前足を踏み込んで前を向き直る（横から見た図。書き手と決めた）。
 		// 弾む前に打つ（スマッシュ・ボレー）ときは、ボールのほうを向いたまま下がる
 		run: s.type === 'move' && g.shots.some((o) => o.type === 'lob' && o.to === s.from && o.bounce === 'front'),
-	})).map((l) => {
+	};
+	}).map((l) => {
 		if (l.type === 'move' || !l.label) return l;
 		if (seenLabels.has(l.label)) return { ...l, label: undefined };
 		seenLabels.add(l.label);
@@ -582,6 +609,9 @@ if (stillPanel) {
 							side={side}
 							step={i}
 							score={scores?.[i]}
+							banner={diagram.failAt !== undefined && ballsLeft[i].after <= diagram.failAt && ballsLeft[i].before > diagram.failAt
+								? `失敗 → ${ballsLeft[0].before}つから出し直し`
+								: undefined}
 							win={diagram.score && scores && Math.abs(scores[i].after) >= diagram.score.to && Math.abs(scores[i].before) < diagram.score.to
 								? (scores[i].after > 0 ? diagram.score.plus : diagram.score.minus)
 								: undefined}

@@ -16,6 +16,12 @@ import circleLogo from '../assets/circle-logo.jpg';
 import '../styles/court.css';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+/**
+ * 練習メニュー（URL に m がある）なら、画面を描く前に html に印（menu-mode）を付ける。
+ * 印でトップページの中身を隠し、メニューの枠を出す。前は、ページを読み込んでからスクリプトで切り替えていたので、
+ * 練習メニューを開くと一瞬トップページが見えていた（書き手の指摘）
+ */
+const MENU_MODE_SCRIPT = `if (new URLSearchParams(location.search).has('m')) document.documentElement.classList.add('menu-mode');`;
 
 // トップページは、サークルのメンバー（B）とサークルの外の人（C）のためのページ（docs/principles.md の「読者」）。
 // 最初に「練習がたくさんあって、図が動くから分かりやすそう」と感じてもらう（書き手と決めた並び: 案A）
@@ -33,7 +39,15 @@ const tiles = categories
 ---
 
 {/* トップページ（と練習メニュー）はサイドバーを出さない（splash）。広い画面でもトップの中身に目が行くようにする（書き手の指摘） */}
-<StarlightPage frontmatter={{ title: 'ピックルボール ドリル集', template: 'splash', head: [{ tag: 'title', content: 'ピックルボール ドリル集' }], description: 'ピックルボールの練習方法を、アニメーションで理解するドリル集です。打つ順と球の行き先が図で動くので、練習中にスマホで見てすぐ確かめられます。' }}>
+<StarlightPage frontmatter={{ title: 'ピックルボール ドリル集', template: 'splash', head: [{ tag: 'title', content: 'ピックルボール ドリル集' }, { tag: 'script', content: MENU_MODE_SCRIPT }], description: 'ピックルボールの練習方法を、アニメーションで理解するドリル集です。打つ順と球の行き先が図で動くので、練習中にスマホで見てすぐ確かめられます。' }}>
+	<script is:inline>
+		if (document.documentElement.classList.contains('menu-mode')) {
+			const h = document.querySelector('main h1');
+			if (h) h.textContent = '練習メニュー';
+			const t = new URLSearchParams(location.search).get('theme');
+			document.title = (t ? t + ' | ' : '') + '練習メニュー | ピックルボール ドリル集';
+		}
+	</script>
 	<div id="top-page">
 		{/* デザイン: 深い緑の帯（練馬ピックルのロゴの緑。共有の画像と同じ配色）に、大きな見出しと動く図を載せる */}
 		<section class="hero">
@@ -231,7 +245,7 @@ const tiles = categories
 	 * 練習メニューの下は、ページの足もと（フッター）に見せる: 間を大きく空け、画面の横いっぱいに背景の色を変えた帯にする。
 	 * 細い線で区切ると、メニューの行の線や区切りと見分けがつかなかった。見出しもメニューの見出しより小さくする（書き手の指摘）
 	 */
-	:global(main:has(#menu-view:not([hidden]))) .site-foot {
+	:global(html.menu-mode main) .site-foot {
 		--foot-bg: #0b110d;
 		max-width: 45rem;
 		margin-top: 5rem;
@@ -241,14 +255,14 @@ const tiles = categories
 		box-shadow: 0 0 0 100vmax var(--foot-bg);
 		clip-path: inset(0 -100vmax -100vmax);
 	}
-	:global(:root[data-theme='light'] main:has(#menu-view:not([hidden]))) .site-foot {
-		--foot-bg: #ecefe3;
+	:global(html.menu-mode[data-theme='light'] main) .site-foot {
+		--foot-bg: #e3e8d5;
 	}
-	:global(main:has(#menu-view:not([hidden]))) .site-foot h2 {
+	:global(html.menu-mode main) .site-foot h2 {
 		font-size: var(--sl-text-base);
 		color: var(--sl-color-gray-2);
 	}
-	:global(main:has(#menu-view:not([hidden]))) .builder-link {
+	:global(html.menu-mode main) .builder-link {
 		display: none;
 	}
 	.hero {
@@ -470,18 +484,25 @@ const tiles = categories
 </style>
 
 <style is:global>
+	/* 練習メニューのとき（html.menu-mode）は、トップページの中身を隠し、メニューの枠を出す。画面を描く前から効く */
+	html.menu-mode #top-page {
+		display: none;
+	}
+	html.menu-mode #menu-view {
+		display: block;
+	}
 	/* 練習メニューも サイドバーなし（splash）で表示するので、広い画面では読みやすい幅にして真ん中に置く */
 	#menu-view {
 		max-width: 45rem;
 		margin-inline: auto;
 	}
-	main:has(#menu-view:not([hidden])) h1#_top {
+	html.menu-mode main h1#_top {
 		max-width: 45rem;
 		margin-inline: auto;
 	}
 	/* トップページでは、ページの見出し（サイト名と同じ）を画面に出さない。画面の上のサイト名と2回続いてうるさいため（書き手の指摘）。
 	   読み上げのために見出しは残す。練習メニューを表示するとき（#top-page を隠すとき）は、見出し「練習メニュー」を出す */
-	main:has(#top-page:not([hidden])) h1#_top {
+	html:not(.menu-mode) main h1#_top {
 		position: absolute;
 		width: 1px;
 		height: 1px;
@@ -490,15 +511,15 @@ const tiles = categories
 		white-space: nowrap;
 	}
 	/* 見出しを隠すと、見出しの枠と本文の枠の間の線（Starlight の区切り線）だけが残るので、枠の余白と線も消す（書き手の指摘） */
-	main:has(#top-page:not([hidden])) .content-panel:has(h1#_top) {
+	html:not(.menu-mode) main .content-panel:has(h1#_top) {
 		padding: 0;
 	}
-	main:has(#top-page:not([hidden])) .content-panel + .content-panel {
+	html:not(.menu-mode) main .content-panel + .content-panel {
 		border-top: 0;
 	}
 	/* スマホでは、緑の帯をヘッダーのすぐ下にくっつける（ヘッダーと帯の間の細い隙間がノイズになるため。書き手の指摘） */
 	@media (max-width: 49.99rem) {
-		main:has(#top-page:not([hidden])) .content-panel {
+		html:not(.menu-mode) main .content-panel {
 			padding-top: 0;
 		}
 		#top-page .hero {

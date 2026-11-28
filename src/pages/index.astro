@@ -449,6 +449,15 @@ const tiles = categories
 	main:has(#top-page:not([hidden])) .content-panel + .content-panel {
 		border-top: 0;
 	}
+	/* スマホでは、緑の帯をヘッダーのすぐ下にくっつける（ヘッダーと帯の間の細い隙間がノイズになるため。書き手の指摘） */
+	@media (max-width: 49.99rem) {
+		main:has(#top-page:not([hidden])) .content-panel {
+			padding-top: 0;
+		}
+		#top-page .hero {
+			margin-top: 0;
+		}
+	}
 	/* メニューの行は JavaScript で作るので、スコープなしのスタイルを #menu-view の中に限って当てる */
 	#menu-view .menu-summary {
 		display: flex;

@@ -1,44 +1,15 @@
 ---
 /**
- * 開発用の調整画面（開発サーバーのときだけ出る。astro.config.mjs の dev-pages。本番のビルドには入らない）:
- * 「図の見方」の打ち方のカードを1つ選び、振りの値をスライダーで変えて動きを見る（書き手の希望 2026-11-28。最初はフリックだけだった）。
+ * 打ち方の調整画面（開発用。src/content/docs/dev/stroke.mdx の draft: true のページから使う。本番のビルドには入らない）:
+ * 「図の見方」の打ち方のカードを1つ選び、振りの値をスライダーで変えて動きを見る（書き手の希望 2026-11-28）。
  * 右の図は /legend/?tune=... を読み込み直して描く（DiagramLegend.astro の開発用の置きかえ）。決まった値は書き手が伝え、config/court.ts に入れる。
  * 決めのポーズ（keyPoses）で動くカードは、振りの値ではなく関節の角度で動くので、ここでは変えられない
  */
-const first = Astro.url.searchParams.get('card') ?? (Astro.url.pathname.includes('/dev/flick') ? 'フリック（バック）' : '');
 ---
-<!doctype html>
-<html lang="ja">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>打ち方の調整</title>
-		<style is:global>
-			:root { color-scheme: dark; --bg: #0f1f16; --panel: #16291e; --ink: #eef0e8; --muted: #a9b3a5; --accent: #c8e26b; }
-			* { box-sizing: border-box; }
-			body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, sans-serif; }
-			.wrap { display: grid; grid-template-columns: minmax(420px, 40vw) 1fr; gap: 12px; padding: 12px; height: 100vh; }
-			@media (max-width: 800px) { .wrap { grid-template-columns: 1fr; height: auto; } iframe { height: 70vh; } }
-			.panel { background: var(--panel); border-radius: 10px; padding: 12px; overflow: auto; }
-			h1 { font-size: 16px; margin: 0 0 8px; }
-			select { width: 100%; padding: 6px; background: #0b1710; color: var(--ink); border: 1px solid #2c4434; border-radius: 6px; font-size: 14px; margin-bottom: 10px; }
-			fieldset { border: 1px solid #2c4434; border-radius: 8px; margin: 0 0 10px; padding: 6px 10px 8px; }
-			legend { color: var(--accent); font-weight: 700; padding: 0 4px; }
-			label { display: grid; grid-template-columns: 1fr 56px; align-items: center; gap: 2px 8px; margin: 4px 0; }
-			label span { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
-			input[type='range'] { width: 100%; }
-			output { text-align: right; font-variant-numeric: tabular-nums; }
-			textarea { width: 100%; height: 130px; background: #0b1710; color: var(--ink); border: 1px solid #2c4434; border-radius: 6px; font: 12px/1.4 ui-monospace, monospace; }
-			.row { display: flex; gap: 6px; margin-top: 6px; }
-			.row button { flex: 1; padding: 6px; border-radius: 6px; border: 0; background: var(--accent); color: #10241a; font-weight: 700; }
-			.note { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
-			iframe { width: 100%; height: calc(100vh - 24px); border: 0; border-radius: 10px; background: var(--panel); }
-		</style>
-	</head>
-	<body>
-		<div class="wrap">
+<div class="stroke-tuner not-content">
+	<div class="wrap">
 			<div class="panel">
-				<h1>打ち方の調整</h1>
+				
 				<select id="card"></select>
 				<p class="note" id="note"></p>
 				<fieldset>
@@ -55,7 +26,9 @@ const first = Astro.url.searchParams.get('card') ?? (Astro.url.pathname.includes
 			</div>
 			<iframe id="view" title="図の見方のカード"></iframe>
 		</div>
-		<script define:vars={{ first }}>
+</div>
+<script>
+			const first = 'フリック（バック）';
 			const view = document.getElementById('view');
 			const sel = document.getElementById('card');
 			const box = document.getElementById('controls');
@@ -180,5 +153,24 @@ const first = Astro.url.searchParams.get('card') ?? (Astro.url.pathname.includes
 					choose(cards[want] ? want : Object.keys(cards)[0]);
 				});
 		</script>
-	</body>
-</html>
+<style is:global>
+	.stroke-tuner { --bg: #0f1f16; --panel: #16291e; --ink: #eef0e8; --muted: #a9b3a5; --accent: #c8e26b; color: var(--ink); font: 14px/1.5 system-ui, sans-serif; }
+	.stroke-tuner * { box-sizing: border-box; }
+	.stroke-tuner .wrap { display: grid; grid-template-columns: minmax(360px, 38%) 1fr; gap: 12px; height: 80vh; }
+	@media (max-width: 800px) { .stroke-tuner .wrap { grid-template-columns: 1fr; height: auto; } .stroke-tuner iframe { height: 70vh; } }
+	.stroke-tuner .panel { background: var(--panel); border-radius: 10px; padding: 12px; overflow: auto; }
+	.stroke-tuner h1 { font-size: 16px; margin: 0 0 8px; color: var(--ink); }
+	.stroke-tuner select { width: 100%; padding: 6px; background: #0b1710; color: var(--ink); border: 1px solid #2c4434; border-radius: 6px; font-size: 14px; margin-bottom: 10px; }
+	.stroke-tuner fieldset { border: 1px solid #2c4434; border-radius: 8px; margin: 0 0 10px; padding: 6px 10px 8px; }
+	.stroke-tuner legend { color: var(--accent); font-weight: 700; padding: 0 4px; }
+	.stroke-tuner label { display: grid; grid-template-columns: 1fr 56px; align-items: center; gap: 2px 8px; margin: 4px 0; }
+	.stroke-tuner label span { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+	.stroke-tuner input[type='range'] { width: 100%; }
+	.stroke-tuner output { text-align: right; font-variant-numeric: tabular-nums; }
+	.stroke-tuner textarea { width: 100%; height: 130px; background: #0b1710; color: var(--ink); border: 1px solid #2c4434; border-radius: 6px; font: 12px/1.4 ui-monospace, monospace; }
+	.stroke-tuner .row { display: flex; gap: 6px; margin-top: 6px; }
+	.stroke-tuner .row button { flex: 1; padding: 6px; border-radius: 6px; border: 0; background: var(--accent); color: #10241a; font-weight: 700; }
+	.stroke-tuner .note { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+	.stroke-tuner iframe { width: 100%; height: 100%; border: 0; border-radius: 10px; background: var(--panel); }
+	.stroke-tuner p, .stroke-tuner fieldset, .stroke-tuner label { margin-top: 0; }
+</style>

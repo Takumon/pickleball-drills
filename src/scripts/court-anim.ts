@@ -96,7 +96,7 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 	const upperArm = side?.querySelector<SVGLineElement>('.side-upperarm');
 	// 3次元で動かす振り（フォアのフリック）: 横から見たグリップと面の線を、毎こま引き直す
 	const lateral = ball.dataset.lateral !== undefined;
-	const [latStart, latEnd] = (ball.dataset.lateral ?? '-105,60').split(',').map(Number);
+	const [latStart, latEnd, latBulge] = (ball.dataset.lateral ?? '-105,60').split(',').map(Number);
 	const sideGrip = side?.querySelector<SVGLineElement>('.side-grip');
 	const sideFace = side?.querySelector<SVGLineElement>('.side-paddle');
 	const ftK = Number(sideFace?.getAttribute('stroke-width')) / 0.078 || 1;
@@ -179,7 +179,7 @@ function hitterRig(frame: SVGSVGElement, ball: SVGPathElement) {
 		}
 		const rot = turnSign * turn;
 		if (lateral && sideGrip && sideFace) {
-			const ln = flickLines(turn, hx + sx, hy + sy, ftK, Math.sign(uy || 1), latStart, latEnd);
+			const ln = flickLines(turn, hx + sx, hy + sy, ftK, Math.sign(uy || 1), latStart, latEnd, Number.isFinite(latBulge) ? latBulge : undefined);
 			setLine(sideGrip, ln.grip);
 			setLine(sideFace, ln.face);
 		} else {

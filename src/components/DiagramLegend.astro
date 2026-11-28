@@ -463,8 +463,8 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 				const hy = Number(c.hand.getAttribute('cy'));
 				// 3次元で動かす振り（フォアのフリック）は、横から見たグリップと面の線を引き直す（この図では前が +y）
 				if (c.card.dataset.lateral !== undefined) {
-					const [st, en] = c.card.dataset.lateral!.split(',').map(Number);
-					const ln = flickLines(turn, hx + dx, hy + dy, Number(c.face.getAttribute('stroke-width')) / 0.078, 1, st, en);
+					const [st, en, bu] = c.card.dataset.lateral!.split(',').map(Number);
+					const ln = flickLines(turn, hx + dx, hy + dy, Number(c.face.getAttribute('stroke-width')) / 0.078, 1, st, en, Number.isFinite(bu) ? bu : undefined);
 					const put = (el: Element, v: number[]) => ['x1', 'y1', 'x2', 'y2'].forEach((k, i) => el.setAttribute(k, String(v[i])));
 					put(c.grip, ln.grip);
 					put(c.face, ln.face);

@@ -346,7 +346,7 @@ export interface SwingForm {
 	/** 打ったあと、振り終わりの形のまま止めて、手を戻さない（フリック。書き手の指摘 2026-11-28: フリスビーを投げた形から手を戻さない） */
 	hold?: boolean;
 	/** 3次元で動かす振り（フリック。lib/swing-path.ts の flickLines）: 横から見たパドルの先の、始めと終わりの向き（度。前が 0、上が 90）。turn は半円の中の位置 */
-	lateral?: [number, number];
+	lateral?: [number, number] | [number, number, number];
 	/**
 	 * 3次元で動かす振りで、パドルが手より手前（見ている人の側）にあり、グリップが見える間（半円の中の位置 0〜1 の範囲）。
 	 * この間は手の上にパドルを描く。ほかの間は手の下（グリップが手に隠れる）。フォアは始めも終わりも見えない、バックは始めだけ見える（書き手の説明 2026-11-28）
@@ -360,7 +360,7 @@ export interface SwingForm {
 	straight?: boolean;
 	note: string;
 }
-export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; lateral?: [number, number]; gripFront?: [number, number]; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
+export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, number]; follow: [number, number]; turn: [number, number]; via?: [number, number, number][]; setup?: boolean; hold?: boolean; lateral?: [number, number] | [number, number, number]; gripFront?: [number, number]; pivot?: 'shoulder' | 'elbow'; pivotTurn?: [number, number]; straight?: boolean; note: string; bh?: SwingForm; high?: SwingForm }> = {
 	dink: { back: [-0.1, -0.6], follow: [0.5, 0.7], turn: [-10, 25], note: '少しだけ後ろに引き、肩から振り子のように前へ。振り抜きは短く、腰の高さで目標を指す' },
 	// ロールディンク: ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。ディンクより速く、鋭いクロスを狙える
 	rollDink: { back: [-0.25, -0.5], follow: [0.6, 0.55], turn: [-15, 30], note: 'ヘッドを下げた所から、球の後ろを下から上へこすり上げて順回転をかける。振り抜きは短く、目標の方向へ' },
@@ -460,8 +460,9 @@ export const shotSwing: Record<Exclude<ShotType, 'move'>, { back: [number, numbe
 			// 手を肩より上まで上げ、前へは伸ばしすぎない（伸ばしきると、ひじが手首より上のまま終わる）
 			follow: [1.1, 0.5],
 			turn: [-100, 100],
-			// 横から見て、振り始めは7時と8時のあいだ（-135°）、振り終わりは2時（30°。書き手の指示 2026-11-28）
-			lateral: [-135, 30],
+			// 横から見て、振り始めは7時と8時のあいだ（-135°）、振り終わりは2時（30°。書き手の指示 2026-11-28）。
+			// 3つ目は、見ている向き（y）へのふくらみ。バックはほぼ半円を描かず、横から見た面の中で回る（書き手の指摘）
+			lateral: [-135, 30, 0.15],
 			// 構えから打つ瞬間までは、パドルが手より手前でグリップが見える。手首を返したあと（振り終わり）は見えない
 			gripFront: [0, 0.5],
 			setup: true,

@@ -41,14 +41,15 @@ export default defineConfig({
 			},
 			sidebar: [
 				{ label: 'ドリル一覧', slug: 'drills' },
-				{ label: '図の見方', slug: 'legend' },
-				{ label: '大原則', slug: 'principles' },
 				...categories.map((c) => ({
 					label: c.label,
 					badge: { text: String(drillCount(c.code)), class: 'drill-count' },
 					collapsed: true,
 					items: [{ autogenerate: { directory: `drills/${c.code}` } }],
 				})),
+				// 図の見方・大原則・用語集は、ほぼ書き手しか見ないので、カテゴリのあとに置く（書き手と決めた）
+				{ label: '図の見方', slug: 'legend' },
+				{ label: '大原則', slug: 'principles' },
 				{ label: '用語集', slug: 'glossary' },
 			],
 		}),

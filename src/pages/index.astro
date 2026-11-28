@@ -32,8 +32,8 @@ const tiles = categories
 <StarlightPage frontmatter={{ title: 'ピックルボール ドリル集', head: [{ tag: 'title', content: 'ピックルボール ドリル集' }], description: 'ピックルボールの練習方法を、アニメーションで理解するドリル集です。打つ順と球の行き先が図で動くので、練習中にスマホで見てすぐ確かめられます。' }}>
 	<div id="top-page">
 		<section class="hero">
-			<p class="tagline">アニメーションで理解する練習方法</p>
-			<p class="lead">ピックルボールの練習を、打つ順と球の行き先が動く図で説明しています。練習中にスマホで見て、すぐ確かめられます。</p>
+			{/* 見出しは1行だけ。図を見れば分かることを先に文で書かない（書き手と決めた） */}
+			<p class="tagline">動く図でわかる練習方法</p>
 			<figure class="hero-court">
 				<Court diagram={hero.data.drill.diagram} title={`見本: ${HERO_ID}`} />
 			</figure>
@@ -198,10 +198,6 @@ const tiles = categories
 		line-height: 1.3;
 		margin: 0;
 		color: var(--sl-color-white);
-	}
-	.hero .lead {
-		margin-top: 0.5rem;
-		color: var(--sl-color-gray-2);
 	}
 	.hero-court {
 		margin: 1rem 0 0;

@@ -2,16 +2,27 @@
 /**
  * ドリル一覧: カテゴリごとに、メインのカテゴリのドリルを表示順に並べ、その下に「ほかのカテゴリのドリル」として
  * サブカテゴリにこのカテゴリを持つドリルを並べる（書き手と決めた）。ドリルが1つもないカテゴリは出さない。
- * 見出しの id はカテゴリのコード（ドリルのページのカテゴリの印から飛んでくる）。
+ * 見出しの id はカテゴリのコード（トップページのタイルや、ドリルのページのカテゴリの印から飛んでくる）。
+ *
+ * 1行ずつのカード（書き手と決めた 2026-11-28、案A）: 左に小さな図、右に題名・練習の目的（focus）・ラリーの印。
+ * 小さな図は、共有の画像（public/og/<ID>.png）の右のコートのタイルだけを切り出して見せる（決めの場面の止まった図）。
+ * 上には、カテゴリへ飛ぶ小さなボタンを横に並べる。
  */
+import { existsSync, readFileSync } from 'node:fs';
 import { getCollection } from 'astro:content';
 import { categories } from '../config/categories';
-import { rallyLabel } from '../config/drill-display';
+import DrillRow from './DrillRow.astro';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const manifest: Record<string, string> = existsSync('public/og/manifest.json') ? JSON.parse(readFileSync('public/og/manifest.json', 'utf8')) : {};
 const docs = await getCollection('docs', (e) => !!e.data.drill);
 const drills = docs
-	.map((e) => ({ d: e.data.drill!, title: e.data.title, order: e.data.sidebar?.order ?? 999, url: `${base}/${e.id}/` }))
+	.map((e) => {
+		const d = e.data.drill!;
+		const hash = manifest[d.id];
+		const thumb = existsSync(`public/og/${d.id}.png`) ? `${base}/og/${d.id}.png${hash ? `?v=${hash.slice(0, 8)}` : ''}` : undefined;
+		return { d, title: e.data.title, order: e.data.sidebar?.order ?? 999, url: `${base}/${e.id}/`, thumb };
+	})
 	.sort((a, b) => a.order - b.order || a.d.id.localeCompare(b.d.id));
 const labelOf = (code: string) => categories.find((c) => c.code === code)?.label ?? code;
 const sections = categories
@@ -23,37 +34,26 @@ const sections = categories
 			.sort((a, b) => categories.findIndex((k) => k.code === a.d.category) - categories.findIndex((k) => k.code === b.d.category) || a.order - b.order),
 	}))
 	.filter((c) => c.main.length > 0 || c.sub.length > 0);
+type Row = (typeof drills)[number];
 ---
 
 <div class="drill-index">
+	<nav class="cat-nav" aria-label="カテゴリ">
+		{sections.map((c) => <a href={`#${c.code}`} data-cat={c.code}>{c.label}</a>)}
+	</nav>
 	{
 		sections.map((c) => (
 			<section>
 				<h2 id={c.code}>{c.label}</h2>
 				{c.main.length > 0 ? (
-					<ul>
-						{c.main.map((x) => (
-							<li>
-								<a href={x.url}>{x.title}</a>
-								<span class="rally" data-rally={x.d.diagram?.rally === false ? 'no' : 'yes'}>{rallyLabel(x.d.diagram?.rally)}</span>
-							</li>
-						))}
-					</ul>
+					<ul class="rows">{c.main.map((x: Row) => <DrillRow x={x} />)}</ul>
 				) : (
 					<p class="none">このカテゴリが主のドリルはまだありません。</p>
 				)}
 				{c.sub.length > 0 && (
 					<>
 						<h3>ほかのカテゴリのドリル</h3>
-						<ul class="sub">
-							{c.sub.map((x) => (
-								<li>
-									<a href={x.url}>{x.title}</a>
-									<span class="from">{labelOf(x.d.category)}</span>
-									<span class="rally" data-rally={x.d.diagram?.rally === false ? 'no' : 'yes'}>{rallyLabel(x.d.diagram?.rally)}</span>
-								</li>
-							))}
-						</ul>
+						<ul class="rows">{c.sub.map((x: Row) => <DrillRow x={x} from={labelOf(x.d.category)} />)}</ul>
 					</>
 				)}
 			</section>
@@ -61,35 +61,91 @@ const sections = categories
 	}
 </div>
 
+<script>
+	// トップページのタイルなどから #カテゴリ で来たとき、上のボタンのうちそのカテゴリを選んだ形にし、見える位置へ寄せる
+	const mark = () => {
+		const code = location.hash.slice(1);
+		document.querySelectorAll<HTMLAnchorElement>('.cat-nav a').forEach((a) => {
+			const on = a.dataset.cat === code;
+			a.toggleAttribute('aria-current', on);
+			if (on) a.scrollIntoView({ block: 'nearest', inline: 'center' });
+		});
+	};
+	mark();
+	window.addEventListener('hashchange', mark);
+</script>
+
 <style>
-	.drill-index ul {
-		padding-left: 1.1rem;
+	.drill-index h2 {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: var(--sl-text-xl);
+		margin-top: 2rem;
+		scroll-margin-top: 6.5rem;
 	}
-	.drill-index li {
-		margin: 0.2rem 0;
+	.drill-index h2::before {
+		content: '';
+		width: 0.35rem;
+		height: 1.2em;
+		border-radius: 999px;
+		background: #c6df4a;
 	}
 	.drill-index h3 {
-		font-size: var(--sl-text-base);
-		color: var(--sl-color-gray-2);
-		margin-top: 0.75rem;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+		margin-top: 1rem;
 	}
 	.drill-index .none {
 		color: var(--sl-color-gray-3);
 		font-size: var(--sl-text-sm);
 	}
-	.rally,
-	.from {
-		display: inline-block;
-		margin-left: 0.4rem;
-		padding: 0 0.45rem;
-		border-radius: 999px;
-		font-size: var(--sl-text-xs);
-		border: 1px solid var(--sl-color-gray-5);
-		color: var(--sl-color-gray-3);
-		vertical-align: 0.1em;
+	/* カテゴリへ飛ぶボタン: 横に並べ、はみ出したら横にスクロールする。スクロールしても上に残す */
+	.cat-nav {
+		position: sticky;
+		top: var(--sl-nav-height, 3.5rem);
+		z-index: 4;
+		display: flex;
+		gap: 0.4rem;
+		overflow-x: auto;
+		margin: 0 calc(-1 * var(--sl-content-pad-x, 1rem));
+		padding: 0.6rem var(--sl-content-pad-x, 1rem);
+		background: var(--sl-color-black);
+		border-bottom: 1px solid var(--sl-color-gray-6);
+		scrollbar-width: none;
 	}
-	.rally[data-rally='yes'] {
+	/* スマホではヘッダーが画面に残らない（custom.css）ので、画面の一番上に残す */
+	@media (max-width: 50rem) {
+		.cat-nav {
+			top: 0;
+		}
+		.drill-index h2 {
+			scroll-margin-top: 3.5rem;
+		}
+	}
+	.cat-nav a {
+		flex: none;
+		margin: 0;
+		padding: 0.25rem 0.75rem;
+		border-radius: 999px;
+		border: 1px solid var(--sl-color-gray-5);
+		font-size: var(--sl-text-xs);
+		font-weight: 600;
+		color: var(--sl-color-gray-2);
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.cat-nav a[aria-current] {
+		background: var(--sl-color-accent);
 		border-color: var(--sl-color-accent);
-		color: var(--sl-color-accent-high);
+		color: var(--sl-color-black);
+	}
+	.rows {
+		list-style: none;
+		padding: 0;
+		margin: 0.75rem 0 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+		gap: 0.6rem;
 	}
 </style>

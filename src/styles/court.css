@@ -1,66 +1,62 @@
 /* コート図のスタイル。Court.astro（図）と DiagramLegend.astro（図の見方）で共有する */
 .court {
+	/*
+	 * 図の配色（書き手と決めた 2026-11-28、案6）: サイトのテーマ（深い緑・生成り・ライム、src/config/og.ts）にそろえる。
+	 * コートはライトでもダークでも同じ見え方。打球の線は生成り、パドルは白、ボールは黄色、人は濃いインク、灰色は緑がかった灰色。
+	 * 横から見た図のパドルは、ライトでは帯の生成りの上で見えるよう濃い灰色、ダークでは白
+	 */
 	/* コートは実物と同じく濃い色の面に白い線で描き、ライトでもダークでも同じ見え方にする。
 	   ページの背景が明るいライトでは、面を少し明るくして重たく見えないようにする */
-	--court-surface: #2f6b48;
-	--court-apron: #24563a;
-	--court-kitchen: #3d8058;
-	--court-zone: rgb(255 214 10 / 0.18);
-	--court-line: #ffffff;
-	--court-net: #f3f4f6;
-	/* 打球の線は水色。濃い緑のコート、白い線、黄色のボール、人の色のどれとも見分けやすい */
-	--shot: #67e8f9;
+	--court-surface: #23663f;
+	--court-apron: #1b4a2f;
+	--court-kitchen: #2e7a4c;
+	--court-zone: rgb(198 223 74 / 0.16);
+	--court-line: #f4f1e6;
+	--court-net: #f4f1e6;
+	/* 打球の線は生成り（書き手と決めた。案6） */
+	--shot: #f4f1e6;
 	--ball: #facc15;
-	--sub: #d1d5db;
-	--label: #ffffff;
+	--sub: #c2c9bd;
+	--label: #f4f1e6;
 	/* 人には色を付けない。練習役（自分）だけ白い丸、ほかの人は濃い丸にして、明るさの差で見分ける */
-	--person: #1f2937;
-	--person-ink: #ffffff;
-	--me: #ffffff;
-	--me-ink: #111827;
-	--paddle: #f3f4f6;
+	--person: #10241a;
+	--person-ink: #f4f1e6;
+	--me: #f4f1e6;
+	--me-ink: #10241a;
+	--paddle: #f4f1e6;
 	/*
-	 * パドルの色（ローズ）。上から見た図と横から見た図で同じ色にして、2つの図を結び付ける（色の決まりの例外）。
-	 * コートの緑の上で見える明るさにし、横から見た図の明るい背景（ライト）ではもう少し濃くする
+	 * パドルの色（白。前はローズで、上から見た図と横から見た図を結び付けていた。2026-11-28 にテーマに合わせて白にした）。
+	 * 横から見た図の明るい背景（ライト）では白が見えないので、濃い灰色にする
 	 */
-	--paddle-face: #f0628f;
-	--side-paddle: #d63a6d;
-	--fence: #b8bec7;
+	--paddle-face: #ffffff;
+	--side-paddle: #5e6d63;
+	--fence: #a9b3a5;
 	/* コートの外（横から見た高さの帯）に描く線と文字。ページの背景の上で見えるように、ライトとダークで変える */
-	--side-ink: #6b7280;
+	--side-ink: #5e6d63;
 	/* 横から見た図の腕と手（肌の色）。パドルの大きさと見比べられるように、体とは別の色にする */
 	--side-skin: #c68655;
 	/* 横から見た図の髪（体より濃く） */
-	--side-hair: #3f4652;
+	--side-hair: #3b4b41;
 	/* 横から見た図のパドルのグリップ（グリップテープの色） */
-	--side-grip: #1f2937;
-	--side-panel: #eef1f4;
-	--side-mark: #a7aeb8;
+	--side-grip: #10241a;
+	--side-panel: #f4f1e6;
+	--side-mark: #a9b3a5;
 	/* 横から見た図の地面の線は、人（--side-ink）より薄く細くして、足や靴と見分けられるようにする */
-	--side-ground: #dde1e5;
+	--side-ground: #dcd8c8;
 	margin: 1rem auto;
 }
 .court.multi {
 	max-width: none;
 }
 [data-theme='dark'] .court {
-	--court-surface: #23382a;
-	--court-apron: #1a2b20;
-	--court-kitchen: #2d4a35;
-	--court-zone: rgb(250 204 21 / 0.12);
-	--court-line: #e5e7eb;
-	--sub: #9ca3af;
-	--label: #f9fafb;
-	--paddle: #e5e7eb;
-	--side-paddle: #f472a0;
-	--fence: #9aa1ab;
-	--side-ink: #9ca3af;
+	--side-paddle: #ffffff;
 	--side-skin: #e3ad84;
-	--side-hair: #4b5563;
-	--side-grip: #4b5563;
-	--side-panel: #1f2a24;
-	--side-mark: #5f6873;
-	--side-ground: #34403a;
+	--side-ink: #8d978b;
+	--side-hair: #3a4539;
+	--side-grip: #3a4539;
+	--side-panel: #123521;
+	--side-mark: #5b665a;
+	--side-ground: #2a3d30;
 }
 /* 図は本文の幅いっぱいに見せる（前は幅 340px が上限。図がいちばん大事なので広げた。書き手と決めた 2026-11-28）。
    縦長の図は、下の max-height（60vh）で高さが決まり、幅もそれに合わせて縮む */
@@ -294,7 +290,7 @@
 	stroke-linejoin: round;
 }
 .court .side-grip {
-	/* グリップは面（ピンク）と見分けられるよう、グリップテープの色 */
+	/* グリップは面と見分けられるよう、グリップテープの色 */
 	stroke: var(--side-grip);
 	stroke-linecap: round;
 }
@@ -331,12 +327,12 @@
 }
 .court .side-ball {
 	fill: var(--ball);
-	stroke: #1f2937;
+	stroke: #10241a;
 	stroke-width: 0.12;
 }
 .court .ball-body {
 	fill: var(--ball);
-	stroke: #1f2937;
+	stroke: #10241a;
 	stroke-width: 0.2;
 }
 /* ピックルボールの穴 */

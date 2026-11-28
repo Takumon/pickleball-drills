@@ -138,10 +138,11 @@ const isSub = (t: string) => t === 'move';
 	data-side-max={side ? side.width / side.k : undefined}
 >
 	<defs>
-		<marker id={`${uid}-arrow`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="1.9" markerHeight="1.9" orient="auto-start-reverse">
+		{/* 矢印の先の三角の大きさ（ft）。前は 1.9 で大きすぎた（書き手の指摘、2026-11-28） */}
+		<marker id={`${uid}-arrow`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="1.3" markerHeight="1.3" orient="auto-start-reverse">
 			<path d="M0 0 L10 5 L0 10 z" class="arrowhead" />
 		</marker>
-		<marker id={`${uid}-arrow-sub`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="1.9" markerHeight="1.9" orient="auto-start-reverse">
+		<marker id={`${uid}-arrow-sub`} viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="1.3" markerHeight="1.3" orient="auto-start-reverse">
 			<path d="M0 0 L10 5 L0 10 z" class="arrowhead sub" />
 		</marker>
 	</defs>

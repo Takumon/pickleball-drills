@@ -454,7 +454,8 @@ const panels = groups.map((g) => {
 			at: failed ? undefined : ([s.miss === 'net' ? pt[0] : COURT.width / 2 + (pt[0] < 0 ? -4 : 4), pt[1] + toward] as Point),
 			text: `残り${left}つ`,
 			span,
-			end: pt,
+			// 「×」はボールと重ならないよう、止まった所の少し横（コートの外側寄り）に出す
+			end: [pt[0] + (s.miss === 'net' ? (pt[0] < COURT.width / 2 ? -1.2 : 1.2) : 0), pt[1]] as Point,
 		};
 	};
 	const lines = g.shots.map((s) => {

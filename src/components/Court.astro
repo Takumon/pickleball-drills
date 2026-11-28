@@ -381,7 +381,7 @@ const panels = groups.map((g) => {
 	// あとの手になければ、ループで次に来る最初のほうの手から探す
 	// （書き手の指摘: 決めの高さ（約1.2m）の構えで待つと、振り終わりのように腕を上げたまま走って見えた）
 	const nextGroup = (id: string) => {
-		const involved = (x: { shots: Shot[] }) => x.shots.some((s) => s.type !== 'move' && (s.from === id || s.to === id));
+		const involved = (x: { shots: Shot[] }) => x.shots.some((s) => s.type !== 'move' && (s.from === id || (s.to === id && !s.miss)));
 		if (involved(g)) return g;
 		const i = groups.indexOf(g);
 		return groups.slice(i + 1).find(involved) ?? groups.slice(0, i).find(involved) ?? g;
@@ -390,7 +390,8 @@ const panels = groups.map((g) => {
 		for (const s of nextGroup(id).shots) {
 			if (s.type === 'move') continue;
 			if (s.from === id) return ft(s.hit ?? shotHeights[s.type].hit);
-			if (s.to === id) return receiveHeight(s);
+			// ネットにかかる球（miss）は受ける人に届かないので、受ける高さに使わない
+			if (s.to === id && !s.miss) return receiveHeight(s);
 		}
 		return ft(defaultReceiveHeight);
 	};
@@ -399,7 +400,7 @@ const panels = groups.map((g) => {
 		const ng = nextGroup(id);
 		for (const s of ng.shots) if (s.type !== 'move' && s.from === id) return s.type;
 		const later = diagram.shots.filter((s) => s.type !== 'move' && (s.n ?? 0) > (ng.n ?? 0) && s.from === id);
-		return ng.shots.some((s) => s.to === id) ? later[0]?.type : undefined;
+		return ng.shots.some((s) => s.to === id && !s.miss) ? later[0]?.type : undefined;
 	};
 	// リセットはバックハンドで取ることが多いので、リセットを打つ人（受ける手も含む）は、バックハンドの構えで描く（書き手と決めた）
 	const paddleOf = (p: Player): Player => {

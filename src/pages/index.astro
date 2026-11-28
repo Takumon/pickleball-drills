@@ -125,7 +125,9 @@ const tiles = categories
 		document.title = `${menu.theme ? `${menu.theme} | ` : ''}練習メニュー | ピックルボール ドリル集`;
 		const h1 = document.querySelector('main h1');
 		if (h1) h1.textContent = '練習メニュー';
-		render(menu);
+		// メニューを描き終えるまで下の欄（サークル・シェア）を隠しておき、描き終えたら出す。
+		// 先に出すと、メニューが後から入ってきて下の欄が下へずれ落ちて見える（書き手の指摘）
+		render(menu).finally(() => document.documentElement.classList.add('menu-ready'));
 	}
 
 	async function render(m: NonNullable<typeof menu>) {
@@ -490,6 +492,9 @@ const tiles = categories
 	}
 	html.menu-mode #menu-view {
 		display: block;
+	}
+	html.menu-mode:not(.menu-ready) .site-foot {
+		visibility: hidden;
 	}
 	/* 練習メニューも サイドバーなし（splash）で表示するので、広い画面では読みやすい幅にして真ん中に置く */
 	#menu-view {

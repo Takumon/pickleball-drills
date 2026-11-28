@@ -355,7 +355,16 @@ const strokes = strokeEntries.map(({ t, hand, high }) => {
 					card.style.gridColumn = '1 / -1';
 					card.querySelector('svg')?.setAttribute('style', 'width:100%;max-height:70vh');
 				});
-				document.querySelectorAll<HTMLElement>('.legend-page > :not(.stroke-grid)').forEach((el) => (el.style.display = 'none'));
+				// 調整するカードの並び（.stroke-grid）だけを残す。見た目の決まり（.court・.legend-page の下）を保つため、同じ入れ物に入れ直す
+				const grid = document.querySelector<HTMLElement>('.stroke-grid');
+				const page = grid?.closest<HTMLElement>('.legend-page');
+				if (grid && page) {
+					const holder = page.cloneNode(false) as HTMLElement;
+					holder.append(grid);
+					holder.style.margin = '0';
+					document.body.replaceChildren(holder);
+					document.body.style.padding = '8px';
+				}
 			}
 		}
 		const cards = [...document.querySelectorAll<HTMLElement>('[data-stroke]')].map((card) => {

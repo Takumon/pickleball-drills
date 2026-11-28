@@ -32,7 +32,8 @@ const tiles = categories
 	.filter((c) => c.count > 0);
 ---
 
-<StarlightPage frontmatter={{ title: 'ピックルボール ドリル集', head: [{ tag: 'title', content: 'ピックルボール ドリル集' }], description: 'ピックルボールの練習方法を、アニメーションで理解するドリル集です。打つ順と球の行き先が図で動くので、練習中にスマホで見てすぐ確かめられます。' }}>
+{/* トップページ（と練習メニュー）はサイドバーを出さない（splash）。広い画面でもトップの中身に目が行くようにする（書き手の指摘） */}
+<StarlightPage frontmatter={{ title: 'ピックルボール ドリル集', template: 'splash', head: [{ tag: 'title', content: 'ピックルボール ドリル集' }], description: 'ピックルボールの練習方法を、アニメーションで理解するドリル集です。打つ順と球の行き先が図で動くので、練習中にスマホで見てすぐ確かめられます。' }}>
 	<div id="top-page">
 		{/* デザイン: 深い緑の帯（練馬ピックルのロゴの緑。共有の画像と同じ配色）に、大きな見出しと動く図を載せる */}
 		<section class="hero">
@@ -210,6 +211,11 @@ const tiles = categories
 		--brand-ink: #10241a;
 		--brand-lime: #c6df4a;
 	}
+	/* サイドバーがないので、広い画面では中身の幅を決めて真ん中に置く */
+	#top-page {
+		max-width: 64rem;
+		margin-inline: auto;
+	}
 	.hero {
 		margin: 0.5rem 0 0;
 		padding: 1.5rem 1rem 1rem;
@@ -228,10 +234,20 @@ const tiles = categories
 		letter-spacing: 0.01em;
 		color: var(--brand-paper);
 	}
-	/* 広い画面では1行にする */
-	@media (min-width: 40rem) {
-		.hero .br {
-			display: none;
+	/* 広い画面では、見出しを左、動く図を右に並べる（紹介ページでよくある形） */
+	@media (min-width: 50rem) {
+		.hero {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+			align-items: center;
+			gap: 2rem;
+			padding: 2.5rem;
+		}
+		.hero .tagline {
+			font-size: clamp(2.4rem, 4.2vw, 3.4rem);
+		}
+		.hero-court {
+			margin: 0;
 		}
 	}
 	.hero-court {
@@ -321,6 +337,7 @@ const tiles = categories
 		color: var(--sl-color-accent-high);
 	}
 	.circle-card {
+		max-width: 48rem;
 		margin-top: 1rem;
 		padding: 1.25rem;
 		border-radius: 1.1rem;
@@ -383,6 +400,15 @@ const tiles = categories
 </style>
 
 <style is:global>
+	/* 練習メニューも サイドバーなし（splash）で表示するので、広い画面では読みやすい幅にして真ん中に置く */
+	#menu-view {
+		max-width: 45rem;
+		margin-inline: auto;
+	}
+	main:has(#menu-view:not([hidden])) h1#_top {
+		max-width: 45rem;
+		margin-inline: auto;
+	}
 	/* トップページでは、ページの見出し（サイト名と同じ）を画面に出さない。画面の上のサイト名と2回続いてうるさいため（書き手の指摘）。
 	   読み上げのために見出しは残す。練習メニューを表示するとき（#top-page を隠すとき）は、見出し「練習メニュー」を出す */
 	main:has(#top-page:not([hidden])) h1#_top {

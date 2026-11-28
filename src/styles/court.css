@@ -53,7 +53,8 @@
 	--side-skin: #e3ad84;
 	--side-ink: #8d978b;
 	--side-hair: #3a4539;
-	--side-grip: #3a4539;
+	/* 緑の背景の上で見えるように、明るい砂色にする（前は #3a4539 で見えにくかった。書き手の指摘 2026-11-28）。面の白・肌の色とも見分けられる */
+	--side-grip: #c4bca3;
 	--side-panel: #123521;
 	--side-mark: #5b665a;
 	--side-ground: #2a3d30;

@@ -116,8 +116,10 @@ type Row = (typeof drills)[number];
 	}
 	/* スマホではヘッダーが画面に残らない（custom.css）ので、画面の一番上に残す */
 	@media (max-width: 50rem) {
+		/* 右上に残るメニューボタンにかぶらないよう、右の余白を広げる */
 		.cat-nav {
 			top: 0;
+			padding-right: 3.5rem;
 		}
 		.drill-index h2 {
 			scroll-margin-top: 3.5rem;

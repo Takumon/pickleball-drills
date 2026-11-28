@@ -296,8 +296,13 @@ const isSub = (t: string) => t === 'move';
 	{
 		/* 失敗の決まり: 球が決まりの数まで減った手では、真ん中に「失敗 → 出し直し」。出し方は「〇 の勝ち」と同じ */
 		banner && (
-			<text class:list={['win-label', { on: !animated }]} x={COURT.width / 2} y={COURT.net} data-win>
-				{banner}
+			<text class:list={['win-label', 'banner', { on: !animated }]} x={COURT.width / 2} y={COURT.net - 1.2} data-win>
+				{/* 1行目を大きく、2行目（出し直しの案内）は小さく。長い1行だとコートからはみ出すため */}
+				{banner.split('\n').map((t, k) => (
+					<tspan x={COURT.width / 2} dy={k === 0 ? 0 : 3} class:list={{ sub: k > 0 }}>
+						{t}
+					</tspan>
+				))}
 			</text>
 		)
 	}

@@ -610,7 +610,7 @@ if (stillPanel) {
 							step={i}
 							score={scores?.[i]}
 							banner={diagram.failAt !== undefined && ballsLeft[i].after <= diagram.failAt && ballsLeft[i].before > diagram.failAt
-								? `失敗 → ${ballsLeft[0].before}つから出し直し`
+								? `失敗\n${ballsLeft[0].before}つから出し直し`
 								: undefined}
 							win={diagram.score && scores && Math.abs(scores[i].after) >= diagram.score.to && Math.abs(scores[i].before) < diagram.score.to
 								? (scores[i].after > 0 ? diagram.score.plus : diagram.score.minus)
